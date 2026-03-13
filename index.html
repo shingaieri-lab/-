@@ -294,11 +294,14 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig }) {
     setLoading(true);setError("");setResult(null);setSaved(false);
     const ctx=lead?`\n【リード】${lead.company} / ${lead.contact} / ${lead.status}`:"";
     try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:AI_SYSTEM_PROMPT}]},contents:[{role:"user",parts:[{text:ctx+"\n\n【メモ】\n"+memo}]}],generationConfig:{maxOutputTokens:1200}})});
+      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:AI_SYSTEM_PROMPT}]},contents:[{role:"user",parts:[{text:ctx+"\n\n【メモ】\n"+memo}]}],generationConfig:{maxOutputTokens:2048,responseMimeType:"application/json"}})});
       const data=await res.json();
       if(data.error) throw new Error(data.error.message||data.error.status);
       const text=(data.candidates[0].content.parts||[]).map(i=>i.text||"").join("");
-      const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
+      const cleaned=text.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
+      const jsonMatch=cleaned.match(/\{[\s\S]*\}/);
+      if(!jsonMatch) throw new Error("レスポンスからJSONを抽出できませんでした");
+      const parsed=JSON.parse(jsonMatch[0]);
       setResult(parsed);setEditEmail({subject:parsed.email_subject||"",body:parsed.email_body||""});setActiveTab("action");
     }catch(e){
       if(e.message==="Failed to fetch"){setError("APIへの接続に失敗しました。ネットワーク接続を確認するか、ブラウザのCORSエラーが原因の場合はローカルサーバー経由（http://localhost）でアクセスしてください。");}

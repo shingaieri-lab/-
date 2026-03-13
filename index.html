@@ -316,38 +316,8 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                 {/* 候補日時 - テンプレートのuseSlots設定に従って表示 */}
                 {showSlots && (
                 <div>
-                  <label style={lblStyle}>{"{{"+"候補日時"+"}}"}</label>
-                  {candidateSlots.length > 0 ? (
-                    <div>
-                      <div style={{fontSize:11,color:"#0369a1",background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:7,padding:"6px 10px",marginBottom:6}}>
-                        📅 候補日ツールから選択（最大3つ）　{selectedSlotIdxs.length > 0 && <span style={{fontWeight:700,color:"#059669"}}>{selectedSlotIdxs.length}件選択中</span>}
-                      </div>
-                      <div style={{maxHeight:160,overflowY:"auto",border:"1px solid #c0dece",borderRadius:7,padding:"6px 8px",background:"#f8fffe",marginBottom:6}}>
-                        {[...new Set(candidateSlots.map(s=>s.date))].map(date=>(
-                          <div key={date} style={{marginBottom:4}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#6a9a7a",marginBottom:2}}>
-                              {date}（{["日","月","火","水","木","金","土"][new Date(date+"T00:00:00").getDay()]}）
-                            </div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {candidateSlots.map((slot,i)=>slot.date!==date?null:(
-                                <label key={i} style={{display:"inline-flex",alignItems:"center",gap:4,cursor:selectedSlotIdxs.length>=3&&!selectedSlotIdxs.includes(i)?"not-allowed":"pointer",opacity:selectedSlotIdxs.length>=3&&!selectedSlotIdxs.includes(i)?0.4:1}}>
-                                  <input type="checkbox" checked={selectedSlotIdxs.includes(i)} onChange={()=>toggleSlot(i)} disabled={selectedSlotIdxs.length>=3&&!selectedSlotIdxs.includes(i)} style={{cursor:"inherit"}} />
-                                  <span style={{fontSize:12,padding:"3px 8px",borderRadius:6,background:selectedSlotIdxs.includes(i)?"#10b98133":"transparent",color:selectedSlotIdxs.includes(i)?"#059669":"#374151",fontWeight:selectedSlotIdxs.includes(i)?700:400}}>
-                                    {slot.start}〜{slot.end}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{fontSize:11,color:"#9ca3af",background:"#f9fafb",border:"1px dashed #d1d5db",borderRadius:7,padding:"6px 10px",marginBottom:6}}>
-                      📅 候補日ページで日程を検索・選択するか、下に直接入力してください
-                    </div>
-                  )}
-                  <textarea value={vars.候補日時||""} onChange={e=>setVars(v=>({...v,候補日時:e.target.value}))} rows={3} placeholder={"例：2026年3月20日（金）10:00〜11:00"} style={{...inpStyle,resize:"vertical",lineHeight:1.6}} />
+                  <label style={lblStyle}>{"{{"+"候補日時"+"}}"} {candidateSlots.length > 0 && <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>📅 候補日ツールから自動入力済</span>}</label>
+                  <textarea value={vars.候補日時||""} onChange={e=>setVars(v=>({...v,候補日時:e.target.value}))} rows={4} placeholder={"例：2026年3月20日（金）10:00〜11:00"} style={{...inpStyle,resize:"vertical",lineHeight:1.6}} />
                 </div>
                 )}
               </div>

@@ -937,7 +937,7 @@ function Nav({ page, setPage, count, currentUser, onLogout, onAccountMgr, onUpda
     { id:"settings",  icon:"⚙️", label:"設定" },
   ];
   return (
-    <nav style={{width:90,background:"#134e3a", display:"flex",flexDirection:"column", alignItems:"center",padding:"14px 0 12px", flexShrink:0, zIndex:10}}>
+    <nav style={{width:120,background:"#134e3a", display:"flex",flexDirection:"column", alignItems:"center",padding:"14px 0 12px", flexShrink:0, zIndex:10}}>
       {/* ロゴ */}
       <div style={{fontSize:22,marginBottom:12, lineHeight:1}}>🌿</div>
       <div style={{width:36, height:1,background:"#ffffff22",marginBottom:8}} />
@@ -953,7 +953,7 @@ function Nav({ page, setPage, count, currentUser, onLogout, onAccountMgr, onUpda
               <span style={{fontSize:9.5,color: page===item.id ? "#ffffff" : "#a7d9be", fontWeight: page===item.id ? 700 : 400,fontFamily:"inherit"}}>{item.label}</span>
             </button>
             {tooltip===item.id && (
-              <div style={{position:"absolute", left:94, top:"50%", transform:"translateY(-50%)", background:"#0d3d2b",color:"#fff",fontSize:12,fontWeight:600, padding:"5px 10px",borderRadius:7, whiteSpace:"nowrap", zIndex:300, pointerEvents:"none", boxShadow:"0 4px 14px #0005",border:"1px solid #10b98133"}}>
+              <div style={{position:"absolute", left:124, top:"50%", transform:"translateY(-50%)", background:"#0d3d2b",color:"#fff",fontSize:12,fontWeight:600, padding:"5px 10px",borderRadius:7, whiteSpace:"nowrap", zIndex:300, pointerEvents:"none", boxShadow:"0 4px 14px #0005",border:"1px solid #10b98133"}}>
                 {item.label}
                 <div style={{position:"absolute", left:-4, top:"50%", transform:"translateY(-50%)", borderTop:"4px solid transparent", borderBottom:"4px solid transparent", borderRight:"4px solid #0d3d2b", width:0, height:0}} />
               </div>
@@ -978,12 +978,12 @@ function Nav({ page, setPage, count, currentUser, onLogout, onAccountMgr, onUpda
           {currentUser?.name?.[0]||"?"}
         </button>
         {tooltip==="user" && !showUserMenu && (
-          <div style={{position:"absolute", left:46, bottom:0, background:"#0d3d2b",color:"#fff",fontSize:11,padding:"4px 9px", borderRadius:6, whiteSpace:"nowrap", zIndex:300, pointerEvents:"none",border:"1px solid #10b98133"}}>
+          <div style={{position:"absolute", left:50, bottom:0, background:"#0d3d2b",color:"#fff",fontSize:11,padding:"4px 9px", borderRadius:6, whiteSpace:"nowrap", zIndex:300, pointerEvents:"none",border:"1px solid #10b98133"}}>
             {currentUser?.name}
           </div>
         )}
         {showUserMenu && (
-          <div style={{position:"absolute", left:95, bottom:0,background:"#fff", borderRadius:12,padding:"14px 16px", minWidth:176, zIndex:300, boxShadow:"0 8px 28px #0003",border:"1px solid #d8ede1"}}>
+          <div style={{position:"absolute", left:125, bottom:0,background:"#fff", borderRadius:12,padding:"14px 16px", minWidth:176, zIndex:300, boxShadow:"0 8px 28px #0003",border:"1px solid #d8ede1"}}>
             <div style={{display:"flex",alignItems:"center", gap:8,marginBottom:12, paddingBottom:10, borderBottom:"1px solid #e8f5ee"}}>
               <div style={{width:30, height:30,borderRadius:"50%",background:currentUser?.color||"#059669", color:"#fff", display:"flex",alignItems:"center", justifyContent:"center", fontSize:12,fontWeight:800,flexShrink:0}}>
                 {currentUser?.name?.[0]||"?"}
@@ -1062,7 +1062,7 @@ function Dashboard({ leads, currentUser, onNavigate }) {
   ];
 
   return (
-    <div style={{padding:"14px 20px", maxWidth:1200, height:"calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow:"hidden"}}>
+    <div style={{padding:"14px 20px", height:"calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow:"hidden"}}>
       {/* ヘッダー */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center", flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -2936,8 +2936,8 @@ function Field({ label, value, onChange, type="text", placeholder }) {
 const S = {
   root:       { display:"flex",height:"100vh",background:"#f0f5f2",fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif",color:"#1f5c40",overflow:"hidden" },
   main:       { flex:1,overflow:"auto",background:"#f0f5f2" },
-  page:       { padding:"24px 28px",maxWidth:1200,minHeight:"100vh" },
-  nav:        { width:90,background:"#134e3a",display:"flex",flexDirection:"column",padding:"0",flexShrink:0 },
+  page:       { padding:"24px 28px",minHeight:"100vh" },
+  nav:        { width:120,background:"#134e3a",display:"flex",flexDirection:"column",padding:"0",flexShrink:0 },
   navLogo:    { display:"flex",gap:10,alignItems:"center",padding:"20px 16px 24px",borderBottom:"1px solid #e2f0e8" },
   navIconBox: { width:36,height:36,background:"linear-gradient(135deg,#10b981,#059669)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20 },
   navTitle:   { fontSize:13,fontWeight:700,color:"#174f35" },

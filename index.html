@@ -264,7 +264,7 @@ function EmailPage({ leads, onUpdate }) {
 }
 
 function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig }) {
-  const apiKey = (aiConfig||{}).geminiKey||"";
+  const apiKey = (aiConfig||{}).claudeKey||"";
   const [selLead, setSelLead] = React.useState("");
   const [memo, setMemo] = React.useState("");
   const [actionDate, setActionDate] = React.useState(new Date().toISOString().split("T")[0]);
@@ -294,10 +294,10 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig }) {
     setLoading(true);setError("");setResult(null);setSaved(false);
     const ctx=lead?`\n【リード】${lead.company} / ${lead.contact} / ${lead.status}`:"";
     try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:AI_SYSTEM_PROMPT}]},contents:[{role:"user",parts:[{text:ctx+"\n\n【メモ】\n"+memo}]}],generationConfig:{maxOutputTokens:1200}})});
+      const res=await fetch(`https://api.anthropic.com/v1/messages`,{method:"POST",headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-use":"true"},body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:1200,system:AI_SYSTEM_PROMPT,messages:[{role:"user",content:ctx+"\n\n【メモ】\n"+memo}]})});
       const data=await res.json();
-      if(data.error) throw new Error(data.error.message||data.error.status);
-      const text=(data.candidates[0].content.parts||[]).map(i=>i.text||"").join("");
+      if(data.error) throw new Error(data.error.message||data.error.type);
+      const text=(data.content||[]).map(i=>i.text||"").join("");
       const parsed=JSON.parse(text.replace(/```json|```/g,"").trim());
       setResult(parsed);setEditEmail({subject:parsed.email_subject||"",body:parsed.email_body||""});setActiveTab("action");
     }catch(e){setError("解析失敗: "+e.message);}
@@ -593,32 +593,32 @@ function SettingsPage({ aiConfig, onSave }) {
         )}
         {tab === "apikey" && (
           <div>
-            <div style={{fontSize:12,color:"#6a9a7a",marginBottom:16}}>AIアシスタント機能を使うにはGemini APIキーが必要です。</div>
+            <div style={{fontSize:12,color:"#6a9a7a",marginBottom:16}}>AIアシスタント機能を使うにはClaude APIキーが必要です。</div>
             <div style={{marginBottom:16}}>
-              <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🔑 Gemini APIキー</label>
+              <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🔑 Claude APIキー</label>
               <input type="password"
-                defaultValue={(() => { try { return JSON.parse(localStorage.getItem("ai_config")||"{}").geminiKey||""; } catch { return ""; } })()}
+                defaultValue={(() => { try { return JSON.parse(localStorage.getItem("ai_config")||"{}").claudeKey||""; } catch { return ""; } })()}
                 onBlur={e => {
                   try {
                     const cfg = JSON.parse(localStorage.getItem("ai_config")||"{}");
-                    cfg.geminiKey = e.target.value;
+                    cfg.claudeKey = e.target.value;
                     localStorage.setItem("ai_config", JSON.stringify(cfg));
                     if (onSave) onSave(cfg);
                     setMsg("保存しました ✓");
                     setTimeout(()=>setMsg(""),2000);
                   } catch {}
                 }}
-                placeholder="AIzaSy..."
+                placeholder="sk-ant-..."
                 style={{...inp, fontFamily:"monospace"}}
               />
               <div style={{fontSize:11,color:"#9ca3af",marginTop:6,lineHeight:1.6}}>
                 ※ フォームからフォーカスを外すと自動保存されます<br/>
-                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio</a> でAPIキーを取得できます
+                <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Anthropic Console</a> でAPIキーを取得できます
               </div>
             </div>
             <div style={{background:"#f0f5f2",borderRadius:8,padding:"12px 14px",fontSize:12,color:"#3d7a5e",lineHeight:1.8}}>
               <div style={{fontWeight:700,marginBottom:4}}>📋 使い方</div>
-              <div>① Google AI StudioでAPIキーを発行</div>
+              <div>① Anthropic ConsoleでAPIキーを発行</div>
               <div>② 上記フィールドに貼り付けてフォーカスを外す</div>
               <div>③ AIアシスタント画面でリードを選択して使用</div>
             </div>
@@ -791,7 +791,7 @@ function App() {
   const [aiConfig, setAiConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; }
   });
-  const apiKey = aiConfig.geminiKey || "";
+  const apiKey = aiConfig.claudeKey || "";
   const saveAiConfig = (cfg) => {
     setAiConfig(cfg);
     try { localStorage.setItem("ai_config", JSON.stringify(cfg)); } catch {}

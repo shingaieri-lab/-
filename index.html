@@ -215,8 +215,12 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
     });
   };
 
-  // 候補日ツールのスロットが変わったらインデックスをリセット
-  React.useEffect(()=>{ setSelectedSlotIdxs([]); },[candidateSlots]);
+  // 候補日ツールのスロットが変わったら最大3つ自動選択
+  React.useEffect(()=>{
+    const idxs = candidateSlots.slice(0,3).map((_,i)=>i);
+    setSelectedSlotIdxs(idxs);
+    setVars(v=>({...v,候補日時:idxs.map(i=>formatSlot(candidateSlots[i])).join("\n")}));
+  },[candidateSlots]);
 
   const body=tpl?applyVars(tpl.body,vars):"", subj=tpl?applyVars(tpl.subject,vars):"";
   const copy=(txt)=>{ navigator.clipboard?.writeText(txt); setCopied(true); setTimeout(()=>setCopied(false),2000); };

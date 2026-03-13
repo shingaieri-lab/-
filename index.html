@@ -2518,7 +2518,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
             // バッファ込みの占有時間帯
             const checkStart = new Date(slotStart.getTime() - bufBefore);
             const checkEnd   = new Date(slotEnd.getTime()   + bufAfter);
-            // 全メンバーがバッファ込みで空いているか確認
+            // 除外時間帯チェック
             const inExclude = excludeTimes.some(ex => {
               const [exSh,exSm]=ex.from.split(":").map(Number);
               const [exEh,exEm]=ex.to.split(":").map(Number);
@@ -2526,12 +2526,13 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
               const exE=new Date(slotStart);exE.setHours(exEh,exEm,0,0);
               return slotStart<exE&&slotEnd>exS;
             });
-            const allFree = !inExclude && selectedMembers.every(m => {
+            // OR検索：空いているメンバーを列挙
+            const freeMembers = inExclude ? [] : selectedMembers.filter(m => {
               const busy = busyByMember[m] || [];
               return !busy.some(b => checkStart < b.end && checkEnd > b.start);
             });
-            if (allFree) {
-              found.push({ date: ds, start: slotStart.toTimeString().slice(0,5), end: slotEnd.toTimeString().slice(0,5), members: [...selectedMembers] });
+            if (freeMembers.length > 0) {
+              found.push({ date: ds, start: slotStart.toTimeString().slice(0,5), end: slotEnd.toTimeString().slice(0,5), members: freeMembers });
               // 次スロットは商談終了＋後バッファ後から
               slotStart = new Date(slotEnd.getTime() + bufAfter);
             } else {

@@ -285,7 +285,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
               </div>
             </div>
           ) : (
-            <div>
+            <div style={{display:"flex",flexDirection:"column",minHeight:"calc(100vh - 220px)"}}>
               <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px",marginBottom:12}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:10}}>差し込み変数</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
@@ -322,7 +322,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                 )}
               </div>
               {tpl&&(
-                <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px"}}>
+                <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px",flex:1,display:"flex",flexDirection:"column"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                     <div style={{fontSize:12,fontWeight:700,color:"#174f35"}}>📝 メール本文（直接編集可）</div>
                     <div style={{display:"flex",gap:6}}>
@@ -334,9 +334,9 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                     <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>件名</label>
                     <input value={previewSubj} onChange={e=>setPreviewSubj(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe",color:"#174f35"}} />
                   </div>
-                  <div>
+                  <div style={{flex:1,display:"flex",flexDirection:"column"}}>
                     <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>本文</label>
-                    <textarea value={previewBody} onChange={e=>setPreviewBody(e.target.value)} style={{width:"100%",minHeight:280,padding:"10px 12px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",lineHeight:1.7,color:"#174f35",background:"#f8fffe"}} />
+                    <textarea value={previewBody} onChange={e=>setPreviewBody(e.target.value)} style={{flex:1,width:"100%",minHeight:200,padding:"10px 12px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",lineHeight:1.7,color:"#174f35",background:"#f8fffe"}} />
                   </div>
                 </div>
               )}

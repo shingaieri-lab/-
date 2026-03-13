@@ -479,7 +479,7 @@ ${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),20
   );
 }
 
-function SettingsPage({ aiConfig, setAiConfig }) {
+function SettingsPage({ aiConfig, onSave }) {
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState("portal");
   const [msg, setMsg] = React.useState("");
@@ -603,6 +603,7 @@ function SettingsPage({ aiConfig, setAiConfig }) {
                     const cfg = JSON.parse(localStorage.getItem("ai_config")||"{}");
                     cfg.geminiKey = e.target.value;
                     localStorage.setItem("ai_config", JSON.stringify(cfg));
+                    if (onSave) onSave(cfg);
                     setMsg("保存しました ✓");
                     setTimeout(()=>setMsg(""),2000);
                   } catch {}

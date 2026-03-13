@@ -311,7 +311,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig }) {
     if(!result||!selLead) return;
     const nextDate=result.next_action_date_offset?addBizDays(actionDate,result.next_action_date_offset):"";
     const newAct={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:result.action_type||manualType,result:result.action_result||manualResult,summary:result.action_summary||memo,date:actionDate,time:actionTime,nextDate,nextTime:result.next_action_time||"",next:result.next_action_memo||"",ts:new Date().toISOString(),recorded_by:(()=>{try{return JSON.parse(localStorage.getItem("current_user_v2")||"{}").name||"";}catch{return "";}})()};
-    onUpdate({...lead,actions:[...(lead.actions||[]),newAct],next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
+    onUpdate(lead.id,{actions:[...(lead.actions||[]),newAct],next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
     setSaved(true);setTimeout(()=>setSaved(false),3000);
   };
 

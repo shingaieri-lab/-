@@ -2814,7 +2814,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
                             color:selected?"#fff":"#059669",
                             opacity:maxed?0.4:1,
                             transition:"all 0.15s"}}>
-                          {selected ? "✓ " : ""}{slot.start}〜{slot.end}
+                          {selected ? "✓ " : ""}{slot.start}〜{slot.end}{selectedMembers.length > 1 && slot.members && slot.members.length > 0 ? `（${slot.members.join("・")}）` : ""}
                         </button>
                       );
                     })}

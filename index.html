@@ -1930,7 +1930,15 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
               <LeadRow key={lead.id} lead={lead} openId={openId} setOpenId={setOpenId}
                 onEdit={() => { setEditing(lead); setShowForm(true); }}
                 onDelete={() => onDelete(lead.id)}
-                onStatusChange={s => onUpdate(lead.id, { status: s })}
+                onStatusChange={s => {
+                  const patch = { status: s };
+                  if (lead.status === "商談確定" && s !== "商談確定") {
+                    patch.meeting_date = "";
+                    patch.meeting_time = "";
+                    patch.sales_member = "";
+                  }
+                  onUpdate(lead.id, patch);
+                }}
                 onUpdate={p => onUpdate(lead.id, p)}
               />
             ))}

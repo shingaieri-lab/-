@@ -809,9 +809,9 @@ ${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),20
   );
 }
 
-function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
+function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab }) {
   const [master, setMaster] = React.useState(() => getMaster());
-  const [tab, setTab] = React.useState(currentUser?.role === "admin" ? "leadmgmt" : "sales");
+  const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "sales"));
   const [msg, setMsg] = React.useState("");
   const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"" });
   const [profileMsg, setProfileMsg] = React.useState("");
@@ -1398,6 +1398,7 @@ function Trend({ leads }) {
 
 function App() {
   const [page, setPage] = useState("dashboard");
+  const [settingsTab, setSettingsTab] = useState(null);
   const [dashFilter, setDashFilter] = useState(null);
   const [leads, setLeads] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -1470,7 +1471,7 @@ function App() {
   return (
     <div style={S.root}>
       <style>{CSS}</style>
-      <Nav page={page} setPage={setPage} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} />
+      <Nav page={page} setPage={setPage} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} />
       <main style={S.main}>
         {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} />}
         {page === "trend"     && <Trend leads={leads} />}
@@ -1478,14 +1479,14 @@ function App() {
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} currentUser={currentUser} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
-        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} />}
+        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
       </main>
     </div>
   );
 }
 
-function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
+function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUpdateProfile }) {
   const [tooltip, setTooltip] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const openUserMenu = () => setShowUserMenu(v => !v);
@@ -1509,7 +1510,7 @@ function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
         {items.map(item => (
           <div key={item.id} style={{position:"relative", width:"100%"}}
             onMouseEnter={()=>setTooltip(item.id)} onMouseLeave={()=>setTooltip(null)}>
-            <button onClick={()=>{ setPage(item.id); setShowUserMenu(false); }}
+            <button onClick={()=>{ if(item.id==="settings") setSettingsTab(null); setPage(item.id); setShowUserMenu(false); }}
               style={{width:"100%",padding:"9px 0",border:"none",cursor:"pointer", fontFamily:"inherit", background: page===item.id ? "#10b98122" : "transparent", borderLeft: page===item.id ? "3px solid #10b981" : "3px solid transparent", display:"flex",flexDirection:"column", alignItems:"center", gap:2}}>
               <span style={{fontSize:19, lineHeight:1}}>{item.icon}</span>
               <span style={{fontSize:9.5,color: page===item.id ? "#ffffff" : "#a7d9be", fontWeight: page===item.id ? 700 : 400,fontFamily:"inherit"}}>{item.label}</span>
@@ -1555,7 +1556,7 @@ function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
                 {currentUser?.role==="admin" && <div style={{fontSize:10,color:"#d97706",fontWeight:700}}>管理者</div>}
               </div>
             </div>
-            <button onClick={()=>{ setPage("settings"); setShowUserMenu(false); }}
+            <button onClick={()=>{ setSettingsTab("accounts"); setPage("settings"); setShowUserMenu(false); }}
               style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:7, border:"1px solid #c0dece",background:"#f0f5f2",color:"#174f35", cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>
               ⚙️ 設定
             </button>

@@ -1784,6 +1784,7 @@ const CSV_COLUMNS = {
   "商談時刻":             "meeting_time",
   "担当営業":             "sales_member",
   "Zoho CRM URL":         "zoho_url",
+  "HP URL":               "hp_url",
   "ネクストアクション日": "next_action_date",
   "ネクストアクション時刻":"next_action_time",
   "ネクストアクションメモ":"next_action",
@@ -2056,8 +2057,8 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
       <Header title="リード一覧" sub={`${leads.length}件 / 表示 ${list.length}件`}>
         <div style={{display:"flex", gap:8}}>
           <button onClick={() => {
-            const headers = ["会社名","担当者名","反響日","流入元","ポータルサイト名","ポータル種別","課金対象外申請済","ステータス","IS担当","MQL判定","商談日","商談時刻","担当営業","Zoho CRM URL","ネクストアクション日","ネクストアクション時刻","ネクストアクションメモ"];
-            const rows = leads.map(l=>[l.company,l.contact,l.date,l.source,l.portal_site||"",l.portal_type||"",l.charge_applied?"TRUE":"FALSE",l.status,l.is_member||"",l.mql||"非MQL",l.meeting_date||"",l.meeting_time||"",l.sales_member||"",l.zoho_url||"",l.next_action_date||"",l.next_action_time||"",l.next_action||""].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","));
+            const headers = ["会社名","担当者名","反響日","流入元","ポータルサイト名","ポータル種別","課金対象外申請済","ステータス","IS担当","MQL判定","商談日","商談時刻","担当営業","Zoho CRM URL","HP URL","ネクストアクション日","ネクストアクション時刻","ネクストアクションメモ"];
+            const rows = leads.map(l=>[l.company,l.contact,l.date,l.source,l.portal_site||"",l.portal_type||"",l.charge_applied?"TRUE":"FALSE",l.status,l.is_member||"",l.mql||"非MQL",l.meeting_date||"",l.meeting_time||"",l.sales_member||"",l.zoho_url||"",l.hp_url||"",l.next_action_date||"",l.next_action_time||"",l.next_action||""].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","));
             const csv = "﻿" + headers.join(",") + "\n" + rows.join("\n");
             const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
             const url = URL.createObjectURL(blob);
@@ -2327,7 +2328,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
       </div>
 
       {/* Always-visible: next action + Zoho link */}
-      {(lead.next_action || lead.next_action_date || lead.zoho_url) && (() => {
+      {(lead.next_action || lead.next_action_date || lead.zoho_url || lead.hp_url) && (() => {
         const nad = lead.next_action_date;
         const overdue  = isOverdue(nad);
         const today    = isDueToday(nad);
@@ -2341,6 +2342,12 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
               <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer"
                 style={{...S.zohoLinkSmall, fontSize:11, padding:"3px 9px", flexShrink:0}} onClick={e=>e.stopPropagation()}>
                 🔗 Zoho
+              </a>
+            )}
+            {lead.hp_url && (
+              <a href={lead.hp_url} target="_blank" rel="noopener noreferrer"
+                style={{...S.zohoLinkSmall, fontSize:11, padding:"3px 9px", flexShrink:0, background:"#e0f2fe", borderColor:"#7dd3fc", color:"#0369a1"}} onClick={e=>e.stopPropagation()}>
+                🌐 HP
               </a>
             )}
             {(nad || lead.next_action) && (
@@ -2393,7 +2400,7 @@ function LeadForm({ initial, onSave, onClose }) {
       portal_site:"", portal_type:"", charge_applied:false,
       meeting_date:"", meeting_time:"", sales_member:"",
       is_member:"", mql:"非MQL",
-      status:"新規", date:TODAY, zoho_url:"",
+      status:"新規", date:TODAY, zoho_url:"", hp_url:"",
       memo:"",
       ...(initial||{})
     };
@@ -2504,6 +2511,12 @@ function LeadForm({ initial, onSave, onClose }) {
             <label style={S.lbl}>Zoho CRM URL</label>
             <input value={d.zoho_url} onChange={e=>set("zoho_url",e.target.value)}
               placeholder="https://crm.zoho.com/crm/..." style={S.inp} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label style={S.lbl}>HP URL</label>
+            <input value={d.hp_url||""} onChange={e=>set("hp_url",e.target.value)}
+              placeholder="https://example.com/" style={S.inp} />
           </div>
 
           <div style={{marginTop:10}}>

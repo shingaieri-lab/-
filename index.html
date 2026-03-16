@@ -1933,7 +1933,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
 
       <div style={{display:"flex", gap:12, marginTop:16, height:"calc(100vh - 178px)"}}>
         {/* 左側：リード一覧 */}
-        <div style={{flex:1, minWidth:0, overflowY:"auto"}}>
+        <div style={{flex:"0 0 460px", width:460, overflowY:"auto"}}>
           <div style={{display:"flex", flexDirection:"column", gap:6}}>
             {list.length === 0 && <div style={{...S.empty,padding:"32px"}}>リードがありません</div>}
             {list.map(lead => (
@@ -2044,7 +2044,6 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
   const nad = lead.next_action_date;
   const subParts = [
     lead.contact,
-    lead.email || null,
     lead.date ? `反響日：${lead.date}` : null,
     last ? `最終：${last.date}${last.time ? " "+last.time : ""}` : null,
   ].filter(Boolean);
@@ -2480,8 +2479,12 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8}}>
           <div style={{flex:1, minWidth:0}}>
             <div style={{fontSize:14, fontWeight:700, color:"#174f35", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{lead.company}</div>
-            {lead.contact && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>{lead.contact}</div>}
-            {lead.email && <div style={{fontSize:11, color:"#0ea5e9", marginTop:2}}><a href={`mailto:${lead.email}`} style={{color:"#0ea5e9", textDecoration:"none"}}>✉️ {lead.email}</a></div>}
+            {(lead.contact || lead.email) && (
+              <div style={{fontSize:11, color:"#6a9a7a", marginTop:2, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap"}}>
+                {lead.contact && <span>{lead.contact}</span>}
+                {lead.email && <a href={`mailto:${lead.email}`} style={{color:"#0ea5e9", textDecoration:"none"}}>✉️ {lead.email}</a>}
+              </div>
+            )}
           </div>
           <div style={{display:"flex", alignItems:"center", gap:4, flexShrink:0}}>
             <button onClick={onEdit} style={{background:"none", border:"1px solid #10b98166", borderRadius:6, cursor:"pointer", color:"#059669", fontSize:12, padding:"2px 8px", lineHeight:1.4}}>✏️ 編集</button>

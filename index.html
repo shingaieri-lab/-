@@ -910,7 +910,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
   const addRow = { display:"flex", gap:8, marginBottom:12 };
 
   return (
-    <div style={{padding:"24px 28px", maxWidth:900}}>
+    <div style={{padding:"24px 28px", width:"60vw", margin:"0 auto"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
       <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "ポータルサイト・プラン・営業担当・リード管理（流入元・ステータス）・API設定・アカウントを管理できます。" : "営業設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
@@ -3147,7 +3147,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const inp2 = { ...S.inp, marginBottom:0 };
 
   return (
-    <div style={S.page}>
+    <div style={{...S.page, width:"60vw", margin:"0 auto"}}>
       <Header title="📅 商談候補日検索" sub="Google Calendarの空き時間を自動検索します">
         <button onClick={()=>{ setEditCfg(loadGCalConfig()); setShowSetup(v=>!v); }}
           style={{...S.btnSec, fontSize:12}}>⚙️ カレンダー設定</button>

@@ -203,10 +203,11 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   React.useEffect(()=>{
     if(vars.商談月 && vars.商談日){
       const today = new Date();
+      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       let year = today.getFullYear();
       const m = parseInt(vars.商談月), d = parseInt(vars.商談日);
       let dt = new Date(year, m-1, d);
-      if(dt < today){ year++; dt = new Date(year, m-1, d); }
+      if(dt < todayMidnight){ year++; dt = new Date(year, m-1, d); }
       setVars(v=>({...v, 商談曜日:["日","月","火","水","木","金","土"][dt.getDay()]}));
     } else {
       setVars(v=>({...v, 商談曜日:""}));

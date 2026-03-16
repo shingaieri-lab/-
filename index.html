@@ -793,8 +793,16 @@ ${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),20
 
 function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
   const [master, setMaster] = React.useState(() => getMaster());
-  const [tab, setTab] = React.useState("portal");
+  const [tab, setTab] = React.useState(currentUser?.role === "admin" ? "portal" : "sales");
   const [msg, setMsg] = React.useState("");
+  const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"" });
+  const [profileMsg, setProfileMsg] = React.useState("");
+  const saveProfile = () => {
+    if (!profileForm.name.trim()) return;
+    onUpdateProfile(profileForm);
+    setProfileMsg("保存しました ✓");
+    setTimeout(() => setProfileMsg(""), 2000);
+  };
 
   const save = (next) => { setMaster(next); saveMasterSettings(next); setMsg("保存しました ✓"); setTimeout(()=>setMsg(""),2000); };
 
@@ -847,11 +855,17 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
   const addRow = { display:"flex", gap:8, marginBottom:12 };
 
   return (
-    <div style={{padding:"24px 28px", maxWidth:"50%"}}>
-      <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ マスタ管理</div>
-      <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>ポータルサイト・プラン・営業担当・APIキーを管理できます。</div>
+    <div style={{padding:"24px 28px", maxWidth:900}}>
+      <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
+      <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "ポータルサイト・プラン・営業担当・API設定・アカウントを管理できます。" : "営業設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
-      <div style={{marginBottom:0}}>{tabBtn("portal","🏢 ポータルサイト")}{tabBtn("sales","👤 営業担当")}{tabBtn("apikey","🔑 APIキー設定")}{currentUser?.role==="admin" && tabBtn("accounts","👥 アカウント管理")}</div>
+      <div style={{marginBottom:0}}>
+        {currentUser?.role==="admin" && tabBtn("portal","🏢 ポータルサイト")}
+        {currentUser?.role==="admin" ? tabBtn("sales","👤 営業担当") : tabBtn("sales","👤 営業設定")}
+        {currentUser?.role==="admin" && tabBtn("apikey","🔑 API設定")}
+        {currentUser?.role==="admin" && tabBtn("accounts","👥 アカウント管理（管理者）")}
+        {tabBtn("myaccount","👤 アカウント管理")}
+      </div>
       <div style={{background:"#fff",borderRadius:"0 8px 8px 8px",border:"1px solid #d8ede1",padding:"20px"}}>
         {tab === "portal" && (
           <div>
@@ -1015,6 +1029,40 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
           <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
+        )}
+        {tab === "myaccount" && (
+          <div>
+            <div style={{fontSize:14,fontWeight:700,color:"#174f35",marginBottom:16}}>👤 アカウント管理</div>
+            <div style={{maxWidth:400}}>
+              {[["表示名","name","text"],["パスワード","password","password"],["メールアドレス","email","email"]].map(([lbl,key,type])=>(
+                <div key={key} style={{marginBottom:14}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>{lbl}</label>
+                  <input type={type} value={profileForm[key]||""} onChange={e=>{ const v=e.target.value; if(key==="email"){ const prefix=v.includes("@")?v.split("@")[0]:v; setProfileForm(p=>({...p,email:v,id:prefix})); } else { setProfileForm(p=>({...p,[key]:v})); } }}
+                    style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"}} />
+                </div>
+              ))}
+              <div style={{marginBottom:14}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🎨 アイコン色</label>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {PALETTE.map(c => (
+                    <button key={c} onClick={()=>setProfileForm(p=>({...p,color:c}))}
+                      style={{width:26,height:26,borderRadius:"50%",background:c, border: profileForm.color===c ? "3px solid #174f35" : "2px solid #fff", cursor:"pointer", boxShadow: profileForm.color===c ? "0 0 0 2px "+c : "0 1px 3px #0002", flexShrink:0}} />
+                  ))}
+                </div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>✍️ メール署名</label>
+                <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
+                  placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
+                  style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:88,lineHeight:1.5}} />
+              </div>
+              {profileMsg && <div style={{fontSize:12,color:"#059669",fontWeight:700,marginBottom:10}}>{profileMsg}</div>}
+              <button onClick={saveProfile}
+                style={{padding:"8px 28px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                保存
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -1250,21 +1298,7 @@ function App() {
 function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
   const [tooltip, setTooltip] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name:"", password:"", email:"", color:"", id:"", signature:"" });
-  const [profileMsg, setProfileMsg] = useState("");
-  const openUserMenu = () => {
-    if (!showUserMenu) {
-      setProfileForm({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"" });
-      setProfileMsg("");
-    }
-    setShowUserMenu(v => !v);
-  };
-  const saveProfile = () => {
-    if (!profileForm.name.trim()) return;
-    onUpdateProfile(profileForm);
-    setProfileMsg("保存しました ✓");
-    setTimeout(() => setProfileMsg(""), 2000);
-  };
+  const openUserMenu = () => setShowUserMenu(v => !v);
   const items = [
     { id:"dashboard", icon:"📊", label:"ダッシュボード" },
     { id:"trend",     icon:"📈", label:"月別推移" },
@@ -1321,45 +1355,19 @@ function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
           </div>
         )}
         {showUserMenu && (
-          <div style={{position:"absolute", left:50, bottom:0,background:"#fff", borderRadius:12,padding:"14px 16px", minWidth:220, zIndex:300, boxShadow:"0 8px 28px #0003",border:"1px solid #d8ede1"}}>
+          <div style={{position:"absolute", left:50, bottom:0,background:"#fff", borderRadius:12,padding:"14px 16px", minWidth:180, zIndex:300, boxShadow:"0 8px 28px #0003",border:"1px solid #d8ede1"}}>
             <div style={{display:"flex",alignItems:"center", gap:8,marginBottom:12, paddingBottom:10, borderBottom:"1px solid #e8f5ee"}}>
-              <div style={{width:30, height:30,borderRadius:"50%",background:profileForm.color||currentUser?.color||"#059669", color:"#fff", display:"flex",alignItems:"center", justifyContent:"center", fontSize:12,fontWeight:800,flexShrink:0}}>
-                {(profileForm.name||currentUser?.name||"?")?.[0]}
+              <div style={{width:30, height:30,borderRadius:"50%",background:currentUser?.color||"#059669", color:"#fff", display:"flex",alignItems:"center", justifyContent:"center", fontSize:12,fontWeight:800,flexShrink:0}}>
+                {currentUser?.name?.[0]||"?"}
               </div>
               <div>
                 <div style={{fontSize:12,fontWeight:700,color:"#174f35"}}>{currentUser?.name}</div>
                 {currentUser?.role==="admin" && <div style={{fontSize:10,color:"#d97706",fontWeight:700}}>管理者</div>}
               </div>
             </div>
-            {/* プロフィール編集 */}
-            <div style={{marginBottom:10}}>
-              {[["表示名","name","text"],["パスワード","password","password"],["メールアドレス","email","email"]].map(([lbl,key,type])=>(
-                <div key={key} style={{marginBottom:7}}>
-                  <div style={{fontSize:10,color:"#6a9a7a",marginBottom:2}}>{lbl}</div>
-                  <input type={type} value={profileForm[key]||""} onChange={e=>{ const v=e.target.value; if(key==="email"){ const prefix=v.includes("@")?v.split("@")[0]:v; setProfileForm(p=>({...p,email:v,id:prefix})); } else { setProfileForm(p=>({...p,[key]:v})); } }}
-                    style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #c0dece",fontSize:11,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"}} />
-                </div>
-              ))}
-              <div style={{marginBottom:7}}>
-                <div style={{fontSize:10,color:"#6a9a7a",marginBottom:4}}>🎨 アイコン色</div>
-                <div style={{display:"flex",flexWrap:"wrap", gap:4}}>
-                  {PALETTE.map(c => (
-                    <button key={c} onClick={()=>setProfileForm(p=>({...p,color:c}))}
-                      style={{width:20, height:20,borderRadius:"50%",background:c, border: profileForm.color===c ? "2px solid #174f35" : "2px solid #fff", cursor:"pointer", boxShadow: profileForm.color===c ? "0 0 0 1.5px "+c : "0 1px 3px #0002", flexShrink:0}} />
-                  ))}
-                </div>
-              </div>
-              <div style={{marginBottom:7}}>
-                <div style={{fontSize:10,color:"#6a9a7a",marginBottom:2}}>✍️ メール署名</div>
-                <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
-                  placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
-                  style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #c0dece",fontSize:11,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:64,lineHeight:1.5}} />
-              </div>
-            </div>
-            {profileMsg && <div style={{fontSize:11,color:"#059669",fontWeight:700,marginBottom:6}}>{profileMsg}</div>}
-            <button onClick={saveProfile}
-              style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:7, border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff", cursor:"pointer",fontFamily:"inherit",marginBottom:6, fontWeight:700}}>
-              保存
+            <button onClick={()=>{ setPage("settings"); setShowUserMenu(false); }}
+              style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:7, border:"1px solid #c0dece",background:"#f0f5f2",color:"#174f35", cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>
+              ⚙️ 設定
             </button>
             <button onClick={()=>{ onLogout(); setShowUserMenu(false); }}
               style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:7, border:"1px solid #c0dece",background:"#f0f5f2",color:"#6a9a7a", cursor:"pointer",fontFamily:"inherit", textAlign:"left"}}>

@@ -324,6 +324,24 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
       }
       setGmailSaved(true);
       setTimeout(() => setGmailSaved(false), 3000);
+      // 商談確定テンプレート（useMeeting）の場合、リード管理のステータスと商談情報を更新
+      if (showMeeting && selLead) {
+        const patch = { status: "商談確定" };
+        if (vars.商談月 && vars.商談日) {
+          const today = new Date();
+          const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          let year = today.getFullYear();
+          const m = parseInt(vars.商談月), d = parseInt(vars.商談日);
+          let dt = new Date(year, m-1, d);
+          if (dt < todayMidnight) { year++; dt = new Date(year, m-1, d); }
+          patch.meeting_date = `${year}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+        }
+        if (vars.商談時 && vars.商談分 !== undefined && vars.商談分 !== "") {
+          patch.meeting_time = `${String(vars.商談時).padStart(2,"0")}:${vars.商談分}`;
+        }
+        if (vars.商談担当) patch.sales_member = vars.商談担当;
+        onUpdate(selLead, patch);
+      }
     } catch(e) {
       alert('Gmail下書き保存エラー: ' + e.message);
     } finally {

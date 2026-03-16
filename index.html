@@ -1037,7 +1037,7 @@ function SVGBarChart({ data, keys, colors, height=200 }) {
           const gx=padL+di*groupW+groupW/2;
           const tw=barW*keys.length+(keys.length-1)*4;
           return <g key={di}>
-            {keys.map((k,ki)=>{const val=d[k]||0;const bh=Math.max((val/maxVal)*chartH,val>0?3:0);const x=gx-tw/2+ki*(barW+4);const y=padT+chartH-bh;return <rect key={k} x={x} y={y} width={barW} height={bh} fill={colors[k]} rx={3} style={{cursor:"pointer"}} onMouseEnter={e=>setTooltip({x:e.clientX,y:e.clientY,label:d.month,key:k,val})} onMouseLeave={()=>setTooltip(null)}/>;})};
+            {keys.map((k,ki)=>{const val=d[k]||0;const bh=Math.max((val/maxVal)*chartH,val>0?3:0);const x=gx-tw/2+ki*(barW+4);const y=padT+chartH-bh;return <g key={k}><rect x={x} y={y} width={barW} height={bh} fill={colors[k]} rx={3} style={{cursor:"pointer"}} onMouseEnter={e=>setTooltip({x:e.clientX,y:e.clientY,label:d.month,key:k,val})} onMouseLeave={()=>setTooltip(null)}/>{val>0&&<text x={x+barW/2} y={Math.max(y-3,padT+8)} textAnchor="middle" fontSize={9} fill={colors[k]} fontWeight={700}>{val}</text>}</g>;})};
             <text x={gx} y={H-padB+14} textAnchor="middle" fontSize={10} fill="#6a9a7a">{d.month}</text>
           </g>;
         })}
@@ -1068,7 +1068,7 @@ function SVGLineChart({ data, keys, colors, height=200 }) {
           const pts=data.map((d,i)=>`${px(i)},${py(d[k]||0)}`).join(" ");
           return <g key={k}>
             <polyline points={pts} fill="none" stroke={colors[k]} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round"/>
-            {data.map((d,i)=><circle key={i} cx={px(i)} cy={py(d[k]||0)} r={4} fill={colors[k]} stroke="#fff" strokeWidth={1.5} style={{cursor:"pointer"}} onMouseEnter={e=>setTooltip({x:e.clientX,y:e.clientY,label:d.month,key:k,val:d[k]||0})} onMouseLeave={()=>setTooltip(null)}/>)}
+            {data.map((d,i)=>{const val=d[k]||0;const cx=px(i),cy=py(val);return <g key={i}><circle cx={cx} cy={cy} r={4} fill={colors[k]} stroke="#fff" strokeWidth={1.5} style={{cursor:"pointer"}} onMouseEnter={e=>setTooltip({x:e.clientX,y:e.clientY,label:d.month,key:k,val})} onMouseLeave={()=>setTooltip(null)}/>{val>0&&<text x={cx} y={Math.max(cy-8,padT+8)} textAnchor="middle" fontSize={9} fill={colors[k]} fontWeight={700}>{val}</text>}</g>;})}
           </g>;
         })}
         {data.map((d,i)=><text key={i} x={px(i)} y={H-padB+14} textAnchor="middle" fontSize={10} fill="#6a9a7a">{d.month}</text>)}
@@ -1117,6 +1117,52 @@ function Trend({ leads }) {
           <SVGLineChart data={data} keys={["HP","ポータル","電話"]} colors={{"HP":"#0ea5e9","ポータル":"#8b5cf6","電話":"#f59e0b"}} height={200}/>
         </div>
       </div>
+      {(()=>{
+        const sources=[{key:"HP",label:"HP",color:"#0ea5e9"},{key:"ポータルサイト",label:"ポータル",color:"#8b5cf6"},{key:"電話",label:"電話",color:"#f59e0b"}];
+        const total=leads.length||1;
+        return (
+          <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8",overflowX:"auto",marginBottom:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📊 流入元別集計</div>
+            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+              <thead><tr style={{background:"#f0f5f2"}}>
+                {["流入元","反響数","割合","商談数","商談化率","MQL数","MQL率"].map(h=>(
+                  <th key={h} style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a",fontWeight:700,borderBottom:"1px solid #e2f0e8",whiteSpace:"nowrap"}}>{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {sources.map(({key,label,color},i)=>{
+                  const fl=leads.filter(l=>l.source===key);
+                  const cnt=fl.length;
+                  const deals=fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
+                  const mql=fl.filter(l=>l.mql==="MQL").length;
+                  return <tr key={key} style={{borderBottom:"1px solid #f0f5f2",background:i%2===0?"#fff":"#f8fbf9"}}>
+                    <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color}}>{label}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color,fontWeight:700}}>{cnt}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a"}}>{Math.round(cnt/total*100)}%</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b",fontWeight:700}}>{deals}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{cnt?Math.round(deals/cnt*100):0}%</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6",fontWeight:700}}>{mql}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?Math.round(mql/cnt*100):0}%</td>
+                  </tr>;
+                })}
+                {(()=>{
+                  const deals=leads.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
+                  const mql=leads.filter(l=>l.mql==="MQL").length;
+                  return <tr style={{borderTop:"2px solid #e2f0e8",background:"#f0f5f2",fontWeight:700}}>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#174f35"}}>合計</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#174f35"}}>{leads.length}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a"}}>100%</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b"}}>{deals}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{leads.length?Math.round(deals/leads.length*100):0}%</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6"}}>{mql}</td>
+                    <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{leads.length?Math.round(mql/leads.length*100):0}%</td>
+                  </tr>;
+                })()}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
       <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8",overflowX:"auto"}}>
         <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📋 月別詳細データ</div>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>

@@ -45,22 +45,19 @@ const PORTAL_PRICE = (site, type) => {
   if (type === "一括請求") return 10000;
   return 0;
 };
-const DEFAULT_STATUSES_DATA = [
-  { label: "新規",      color: "#0ea5e9" },
-  { label: "架電済",    color: "#8b5cf6" },
-  { label: "日程調整中", color: "#0d9488" },
-  { label: "商談確定",  color: "#d97706" },
-  { label: "育成対象外", color: "#dc2626" },
-  { label: "ナーチャリング", color: "#ea580c" },
+const DEFAULT_SOURCES = ["HP", "ポータルサイト", "電話"];
+const DEFAULT_STATUSES_WITH_COLORS = [
+  {label:"新規", color:"#0ea5e9"}, {label:"架電済", color:"#8b5cf6"},
+  {label:"日程調整中", color:"#0d9488"}, {label:"商談確定", color:"#d97706"},
+  {label:"育成対象外", color:"#dc2626"}, {label:"ナーチャリング", color:"#ea580c"}
 ];
-function getStatuses() {
-  const m = getMaster();
-  return (m.statuses || DEFAULT_STATUSES_DATA).map(s => s.label);
-}
+const SOURCE_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#d97706","#ea580c","#6366f1","#ec4899"];
+const STATUS_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#0d9488","#d97706","#dc2626","#ea580c","#10b981","#f59e0b","#6366f1","#ec4899"];
+function getStatuses() { return (getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS).map(s => s.label || s); }
 function getStatusColor(label) {
-  const m = getMaster();
-  const s = (m.statuses || DEFAULT_STATUSES_DATA).find(s => s.label === label);
-  return s ? s.color : "#6a9a7a";
+  const statuses = getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS;
+  const found = statuses.find(s => (s.label || s) === label);
+  return found ? (found.color || "#6a9a7a") : "#6a9a7a";
 }
 const MQL_OPTIONS = ["MQL", "非MQL"];
 const ACTION_TYPES = [
@@ -87,13 +84,20 @@ function saveMasterSettings(s) {
 }
 function getMaster() {
   const s = loadMasterSettings();
-  if (!s) return {
+  const defaults = {
     salesMembers: DEFAULT_SALES_MEMBERS,
     portalSites: DEFAULT_PORTAL_SITES,
     portalTypes: DEFAULT_PORTAL_TYPES,
-    statuses: DEFAULT_STATUSES_DATA,
+    sources: DEFAULT_SOURCES,
+    statuses: DEFAULT_STATUSES_WITH_COLORS,
   };
-  return { ...s, statuses: s.statuses || DEFAULT_STATUSES_DATA };
+  if (!s) return defaults;
+  return {
+    ...defaults,
+    ...s,
+    sources: s.sources || DEFAULT_SOURCES,
+    statuses: s.statuses || DEFAULT_STATUSES_WITH_COLORS,
+  };
 }
 // 動的取得関数
 function getSalesMembers() { return getMaster().salesMembers; }
@@ -104,6 +108,13 @@ function getPortalPrice(site, type) {
   const types = getPortalTypes()[site] || [];
   const found = types.find(t => t.label === type);
   return found ? found.price : 0;
+}
+function getSources() { return getMaster().sources || DEFAULT_SOURCES; }
+function getStatuses() { return (getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS).map(s => s.label || s); }
+function getStatusColor(label) {
+  const statuses = getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS;
+  const found = statuses.find(s => (s.label || s) === label);
+  return found ? (found.color || "#6a9a7a") : (STATUS_COLORS[label] || "#6a9a7a");
 }
 // IS担当者はis_staffフラグがtrueのアカウントのみ
 function getISMembers() {
@@ -892,7 +903,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
   };
 
   // リード管理（ステータス）
-  const getStatusData = () => master.statuses || DEFAULT_STATUSES_DATA;
+  const getStatusData = () => master.statuses || DEFAULT_STATUSES_WITH_COLORS;
   const [editStatusIdx, setEditStatusIdx] = React.useState(null);
   const [editStatusForm, setEditStatusForm] = React.useState({ label:"", color:"" });
   const [newStatusForm, setNewStatusForm] = React.useState({ label:"", color:"#0ea5e9" });
@@ -920,6 +931,19 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
     else return; save({ ...master, statuses: data });
   };
 
+  // リード管理（流入元）
+  const [newSource, setNewSource] = React.useState("");
+  const addSource = () => {
+    const s = newSource.trim(); if (!s) return;
+    if ((master.sources||DEFAULT_SOURCES).includes(s)) { alert("既に存在します"); return; }
+    save({ ...master, sources: [...(master.sources||DEFAULT_SOURCES), s] });
+    setNewSource("");
+  };
+  const removeSource = (s) => {
+    if ((master.sources||DEFAULT_SOURCES).length <= 1) { alert("最低1つ必要です"); return; }
+    save({ ...master, sources: (master.sources||DEFAULT_SOURCES).filter(x=>x!==s) });
+  };
+
   const tabBtn = (key, label) => (
     <button onClick={()=>setTab(key)} style={{padding:"7px 18px",borderRadius:"8px 8px 0 0",border:"1px solid #d8ede1",borderBottom: tab===key ? "1px solid #fff" : "1px solid #d8ede1", background: tab===key ? "#fff" : "#f0f5f2", color: tab===key ? "#174f35" : "#6a9a7a", fontWeight: tab===key ? 700 : 400, fontSize:12, cursor:"pointer", fontFamily:"inherit", marginRight:4, marginBottom:-1}}>
       {label}
@@ -929,7 +953,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
   const addRow = { display:"flex", gap:8, marginBottom:12 };
 
   return (
-    <div style={{padding:"24px 28px", maxWidth:900}}>
+    <div style={{padding:"24px 28px", width:"60vw", margin:"0 auto"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
       <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "営業設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
@@ -1130,7 +1154,24 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
         )}
         {tab === "leadmgmt" && currentUser?.role==="admin" && (
           <div>
-            <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:12}}>ステータス管理</div>
+            {/* 流入元 */}
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:8}}>流入元</div>
+              <div style={addRow}>
+                <input value={newSource} onChange={e=>setNewSource(e.target.value)} placeholder="新しい流入元" style={{...inp,flex:1}} onKeyDown={e=>e.key==="Enter"&&addSource()} />
+                <button onClick={addSource} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {(master.sources||DEFAULT_SOURCES).map(s=>(
+                  <div key={s} style={{display:"flex",alignItems:"center",gap:4,background:"#f0f5f2",border:"1px solid #d8ede1",borderRadius:8,padding:"5px 10px"}}>
+                    <span style={{fontSize:12,color:"#174f35",fontWeight:600}}>{s}</span>
+                    <button onClick={()=>removeSource(s)} style={{fontSize:11,color:"#dc2626",background:"none",border:"none",cursor:"pointer",padding:0,lineHeight:1}}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* ステータス */}
+            <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>ステータス管理</div>
             <div style={{marginBottom:12}}>
               {getStatusData().map((s, idx) => (
                 <div key={idx} style={{display:"flex",alignItems:"center",gap:8,background:"#f8fbf9",borderRadius:8,border:"1px solid #e2f0e8",padding:"8px 12px",marginBottom:6}}>
@@ -1623,12 +1664,12 @@ function Dashboard({ leads, currentUser, onNavigate }) {
           <div style={{fontSize:11,color:"#6a9a7a",marginBottom:14}}>
             各流入元ごとの「反響数」と「商談設定数（日程調整中＋商談確定）」、商談化率を表示
           </div>
-          {SOURCES.map(src => {
+          {getSources().map((src, srcIdx) => {
             const arr = bySrc(src);
             const ap = arr.filter(isAppt).length;
             const won = arr.filter(isWon).length;
             const pct = arr.length ? ap/arr.length : 0;
-            const srcColor = src==="HP" ? "#0ea5e9" : src==="ポータルサイト" ? "#8b5cf6" : "#f59e0b";
+            const srcColor = src==="HP" ? "#0ea5e9" : src==="ポータルサイト" ? "#8b5cf6" : src==="電話" ? "#f59e0b" : SOURCE_COLOR_PALETTE[(srcIdx+3) % SOURCE_COLOR_PALETTE.length];
             const HP_ICON2 = <img src="data:image/png;base64,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" style={{width:16,height:16,objectFit:"contain",verticalAlign:"middle"}} alt="HP" />;
             const srcIcon  = src==="HP" ? HP_ICON2 : src==="ポータルサイト" ? <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iMzAiIGhlaWdodD0iMjYiIHJ4PSI1IiBmaWxsPSIjOGI1Y2Y2Ii8+CiAgPHJlY3QgeD0iMiIgeT0iNCIgd2lkdGg9IjMwIiBoZWlnaHQ9IjgiIHJ4PSI1IiBmaWxsPSIjN2MzYWVkIi8+CiAgPGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjIiIGZpbGw9IiNmYmJmMjQiLz4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjgiIHI9IjIiIGZpbGw9IiNhNzhiZmEiIG9wYWNpdHk9IjAuNyIvPgogIDxjaXJjbGUgY3g9IjIwIiBjeT0iOCIgcj0iMiIgZmlsbD0iI2M0YjVmZCIgb3BhY2l0eT0iMC41Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIyMSIgcj0iNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjUiLz4KICA8bGluZSB4MT0iMjEiIHkxPSIyNiIgeDI9IjI2IiB5Mj0iMzEiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+" style={{width:16,height:16,objectFit:"contain",verticalAlign:"middle"}} alt="ポータル" /> : "📞";
             return (
@@ -2037,7 +2078,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
           placeholder="🔍 会社名・担当者" style={{...S.sel, width:220, flexShrink:0}} />
         <select value={fSource} onChange={e => { setFSrc(e.target.value); setFPortal(""); }} style={{...S.sel, flexShrink:0}}>
           <option value="">全流入元</option>
-          {SOURCES.map(s => <option key={s}>{s}</option>)}
+          {getSources().map(s => <option key={s}>{s}</option>)}
         </select>
         {fSource === "ポータルサイト" && (
           <select value={fPortal} onChange={e => setFPortal(e.target.value)} style={{...S.sel, flexShrink:0}}>
@@ -2390,7 +2431,7 @@ function LeadForm({ initial, onSave, onClose }) {
             <div>
               <label style={S.lbl}>流入元 *</label>
               <select value={d.source} onChange={e=>set("source",e.target.value)} style={S.inp}>
-                {SOURCES.map(s=><option key={s}>{s}</option>)}
+                {getSources().map(s=><option key={s}>{s}</option>)}
               </select>
             </div>
           </Row2>
@@ -3189,7 +3230,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const inp2 = { ...S.inp, marginBottom:0 };
 
   return (
-    <div style={S.page}>
+    <div style={{...S.page, width:"60vw", margin:"0 auto"}}>
       <Header title="📅 商談候補日検索" sub="Google Calendarの空き時間を自動検索します">
         <button onClick={()=>{ setEditCfg(loadGCalConfig()); setShowSetup(v=>!v); }}
           style={{...S.btnSec, fontSize:12}}>⚙️ カレンダー設定</button>

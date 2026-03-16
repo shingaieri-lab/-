@@ -2463,7 +2463,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const [bufferBefore, setBufferBefore] = useState(30);
   const [bufferAfter,  setBufferAfter]  = useState(30);
   const [activeDays, setActiveDays] = useState([1,2,3,4,5]);
-  const [includeHolidays, setIncludeHolidays] = useState(false);
+  const [includeHolidays, setIncludeHolidays] = useState(true);
   const [excludeTimes, setExcludeTimes] = useState([{from:"12:00",to:"13:00"}]);
 
   // 結果

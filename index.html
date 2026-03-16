@@ -1117,74 +1117,38 @@ function Trend({ leads }) {
           <SVGLineChart data={data} keys={["HP","ポータル","電話"]} colors={{"HP":"#0ea5e9","ポータル":"#8b5cf6","電話":"#f59e0b"}} height={200}/>
         </div>
       </div>
-      {(()=>{
-        const sources=[{key:"HP",label:"HP",color:"#0ea5e9"},{key:"ポータルサイト",label:"ポータル",color:"#8b5cf6"},{key:"電話",label:"電話",color:"#f59e0b"}];
-        const total=leads.length||1;
-        return (
-          <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8",overflowX:"auto",marginBottom:16}}>
-            <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📊 流入元別集計</div>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-              <thead><tr style={{background:"#f0f5f2"}}>
-                {["流入元","反響数","割合","商談数","商談化率","MQL数","MQL率"].map(h=>(
-                  <th key={h} style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a",fontWeight:700,borderBottom:"1px solid #e2f0e8",whiteSpace:"nowrap"}}>{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {sources.map(({key,label,color},i)=>{
-                  const fl=leads.filter(l=>l.source===key);
-                  const cnt=fl.length;
-                  const deals=fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
-                  const mql=fl.filter(l=>l.mql==="MQL").length;
-                  return <tr key={key} style={{borderBottom:"1px solid #f0f5f2",background:i%2===0?"#fff":"#f8fbf9"}}>
-                    <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color}}>{label}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color,fontWeight:700}}>{cnt}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a"}}>{Math.round(cnt/total*100)}%</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b",fontWeight:700}}>{deals}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{cnt?Math.round(deals/cnt*100):0}%</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6",fontWeight:700}}>{mql}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?Math.round(mql/cnt*100):0}%</td>
-                  </tr>;
-                })}
-                {(()=>{
-                  const deals=leads.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
-                  const mql=leads.filter(l=>l.mql==="MQL").length;
-                  return <tr style={{borderTop:"2px solid #e2f0e8",background:"#f0f5f2",fontWeight:700}}>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#174f35"}}>合計</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#174f35"}}>{leads.length}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a"}}>100%</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b"}}>{deals}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{leads.length?Math.round(deals/leads.length*100):0}%</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6"}}>{mql}</td>
-                    <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{leads.length?Math.round(mql/leads.length*100):0}%</td>
-                  </tr>;
-                })()}
-              </tbody>
-            </table>
-          </div>
-        );
-      })()}
       <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8",overflowX:"auto"}}>
         <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📋 月別詳細データ</div>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
           <thead><tr style={{background:"#f0f5f2"}}>
-            {["月","反響数","商談数","商談化率","MQL数","MQL率","HP","ポータル","電話"].map(h=>(
+            {["月","流入元","反響数","商談数","商談化率","MQL数","MQL率"].map(h=>(
               <th key={h} style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a",fontWeight:700,borderBottom:"1px solid #e2f0e8",whiteSpace:"nowrap"}}>{h}</th>
             ))}
           </tr></thead>
           <tbody>
-            {[...data].reverse().map((d,i)=>{
-              const isLatest=i===0;
-              return <tr key={i} style={{borderBottom:"1px solid #f0f5f2",background:isLatest?"#f0fdf4":i%2===0?"#fff":"#f8fbf9"}}>
-                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35"}}>{d.month}{isLatest&&<span style={{fontSize:9,marginLeft:4,background:"#10b981",color:"#fff",borderRadius:3,padding:"1px 4px"}}>最新</span>}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#10b981",fontWeight:700}}>{d.反響数}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b",fontWeight:700}}>{d.商談数}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{d.反響数?Math.round(d.商談数/d.反響数*100):0}%</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6",fontWeight:700}}>{d.MQL数}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{d.反響数?Math.round(d.MQL数/d.反響数*100):0}%</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#0ea5e9"}}>{d.HP}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6"}}>{d.ポータル}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b"}}>{d.電話}</td>
-              </tr>;
+            {[...data].reverse().flatMap((d,mi)=>{
+              const isLatest=mi===0;
+              const monthKey=months[months.length-1-mi];
+              const monthLeads=leads.filter(l=>normYM(l.date)===monthKey);
+              const srcList=[{key:"HP",label:"HP",color:"#0ea5e9"},{key:"ポータルサイト",label:"ポータル",color:"#8b5cf6"},{key:"電話",label:"電話",color:"#f59e0b"}];
+              const bgMonth=isLatest?"#f0fdf4":mi%2===0?"#fff":"#f8fbf9";
+              return srcList.map((src,si)=>{
+                const fl=monthLeads.filter(l=>l.source===src.key);
+                const cnt=fl.length;
+                const deals=fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
+                const mql=fl.filter(l=>l.mql==="MQL").length;
+                const isFirst=si===0;
+                const isLast=si===srcList.length-1;
+                return <tr key={`${mi}-${si}`} style={{borderBottom:isLast?"2px solid #e2f0e8":"1px solid #f0f5f2",background:bgMonth}}>
+                  {isFirst&&<td rowSpan={srcList.length} style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35",borderRight:"1px solid #e2f0e8",verticalAlign:"middle"}}>{d.month}{isLatest&&<span style={{fontSize:9,marginLeft:4,background:"#10b981",color:"#fff",borderRadius:3,padding:"1px 4px"}}>最新</span>}</td>}
+                  <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:src.color}}>{src.label}</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:src.color,fontWeight:700}}>{cnt}</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b",fontWeight:700}}>{deals}</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{cnt?Math.round(deals/cnt*100):0}%</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6",fontWeight:700}}>{mql}</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?Math.round(mql/cnt*100):0}%</td>
+                </tr>;
+              });
             })}
           </tbody>
         </table>

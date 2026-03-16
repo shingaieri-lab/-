@@ -2499,6 +2499,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         <div style={{display:"flex", gap:6, flexWrap:"wrap", marginTop:8, alignItems:"center"}}>
           <span style={{fontSize:11, fontWeight:700, color:sc, background:sc+"15", border:`1px solid ${sc}44`, borderRadius:8, padding:"2px 8px"}}>{lead.status||"新規"}</span>
           {lead.date && <span style={{fontSize:11, color:"#6a9a7a"}}>反響日：{lead.date}</span>}
+          {actions[0] && <span style={{fontSize:11, color:"#6a9a7a"}}>最終：{actions[0].date}{actions[0].time ? " "+actions[0].time : ""}</span>}
           {lead.source === "ポータルサイト" && lead.portal_site && <span style={{fontSize:11, color:"#8b5cf6", background:"#8b5cf622", borderRadius:6, padding:"1px 7px"}}>{lead.portal_site}</span>}
           {lead.meeting_date && <span style={{fontSize:11, color:"#10b981", fontWeight:600}}>🤝 {lead.meeting_date}</span>}
           {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{...S.zohoLinkSmall, fontSize:10, padding:"2px 8px"}}>🔗 Zoho</a>}

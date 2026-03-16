@@ -960,9 +960,15 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
               <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
                 「承認済みの JavaScript 生成元」の <b>「URIを追加」</b> をクリックし、以下のURLを入力してください：<br/>
                 <code style={{background:"#c8e6c9",padding:"2px 8px",borderRadius:3,fontFamily:"monospace",fontSize:13,color:"#1b5e20"}}>{window.location.origin}</code><br/>
+                このURLをそのままコピーして貼り付けてください。
+              </div>
+              <div><b>⑥ 承認済みリダイレクト URI にURLを追加</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                同様に「承認済みのリダイレクト URI」の <b>「URIを追加」</b> をクリックし、以下のURLを入力してください：<br/>
+                <code style={{background:"#c8e6c9",padding:"2px 8px",borderRadius:3,fontFamily:"monospace",fontSize:13,color:"#1b5e20"}}>{window.location.origin}</code><br/>
                 このURLをそのままコピーして貼り付けてください。「作成」をクリック。
               </div>
-              <div><b>⑥ クライアント ID をコピーして貼り付け</b></div>
+              <div><b>⑦ クライアント ID をコピーして貼り付け</b></div>
               <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6}}>
                 作成完了画面に表示される <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>xxxxxxxxxx.apps.googleusercontent.com</code> 形式のクライアント ID をコピーし、上記フィールドに貼り付けてフォーカスを外すと保存されます。
               </div>

@@ -701,7 +701,7 @@ ${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),20
   );
 }
 
-function SettingsPage({ aiConfig, onSave, currentUser }) {
+function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState("portal");
   const [msg, setMsg] = React.useState("");
@@ -916,7 +916,7 @@ function SettingsPage({ aiConfig, onSave, currentUser }) {
           </div>
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
-          <AccountManager currentUser={currentUser} onClose={null} inline={true} />
+          <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
         )}
       </div>
     </div>
@@ -1119,7 +1119,7 @@ function App() {
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
-        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} />}
+        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
       </main>
     </div>
@@ -2548,20 +2548,27 @@ function LoginScreen({ onLogin }) {
   );
 }
 
-function AccountManager({ currentUser, onClose, inline }) {
+function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [accounts, setAccounts] = React.useState(loadAccounts);
   const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true });
   const [editingId, setEditingId] = React.useState(null);
   const [err, setErr] = React.useState("");
 
-  const save = (updated) => { setAccounts(updated); saveAccounts(updated); };
+  const save = (updated, editedId) => {
+    setAccounts(updated);
+    saveAccounts(updated);
+    if (onUpdateProfile && editedId && editedId === currentUser?.id) {
+      const updatedAccount = updated.find(a => a.id === editedId);
+      if (updatedAccount) onUpdateProfile(updatedAccount);
+    }
+  };
   const handleSubmit = () => {
     if (!form.id.trim() || !form.name.trim() || !form.password.trim()) { setErr("全項目入力してください"); return; }
     if (accounts.some(a => a.id === form.id.trim() && a.id !== editingId)) { setErr("このIDは既に使われています"); return; }
     const updated = editingId !== null
       ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)
       : [...accounts, { ...form, id: form.id.trim() }];
-    save(updated);
+    save(updated, editingId);
     setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true });
     setEditingId(null); setErr("");
   };
@@ -2570,7 +2577,7 @@ function AccountManager({ currentUser, onClose, inline }) {
   const deleteAccount = (id) => {
     if (id === currentUser.id) { alert("自分のアカウントは削除できません"); return; }
     if (!window.confirm("削除しますか？")) return;
-    save(accounts.filter(a => a.id !== id));
+    save(accounts.filter(a => a.id !== id), null);
   };
 
   const content = (

@@ -110,12 +110,6 @@ function getPortalPrice(site, type) {
   return found ? found.price : 0;
 }
 function getSources() { return getMaster().sources || DEFAULT_SOURCES; }
-function getStatuses() { return (getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS).map(s => s.label || s); }
-function getStatusColor(label) {
-  const statuses = getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS;
-  const found = statuses.find(s => (s.label || s) === label);
-  return found ? (found.color || "#6a9a7a") : (STATUS_COLORS[label] || "#6a9a7a");
-}
 // IS担当者はis_staffフラグがtrueのアカウントのみ
 function getISMembers() {
   try {

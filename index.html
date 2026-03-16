@@ -177,9 +177,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const [tpls, setTpls] = React.useState(loadTpls);
   const [selTpl, setSelTpl] = React.useState(tpls[0]?.id||"");
   const [selLead, setSelLead] = React.useState("");
-  const [toEmail, setToEmail] = React.useState("");
-  const [copiedTo, setCopiedTo] = React.useState(false);
-  const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:"",商談月:"",商談日:"",商談曜日:"",商談時:"",商談分:"",商談担当:""});
+  const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:"",商談月:"",商談日:"",商談曜日:"",商談時:"",商談分:"",商談担当:"",宛先メール:""});
   const [previewSubj, setPreviewSubj] = React.useState("");
   const [previewBody, setPreviewBody] = React.useState("");
   const [editMode, setEditMode] = React.useState(false);
@@ -194,8 +192,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
     if(lead){
       const contact=lead.contact||lead.company||"";
       const surname=contact.split(/[ \u3000]/)[0]||contact;
-      setVars(v=>({...v,担当者名:contact,担当者苗字:surname,会社名:lead.company||""}));
-      setToEmail(lead.email||"");
+      setVars(v=>({...v,担当者名:contact,担当者苗字:surname,会社名:lead.company||"",宛先メール:lead.email||""}));
     }
   },[selLead]);
 
@@ -249,6 +246,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
 
   const body=tpl?applyVars(tpl.body,vars):"", subj=tpl?applyVars(tpl.subject,vars):"";
   const showSlots = tpl ? (tpl.useSlots !== undefined ? tpl.useSlots : tpl.body.includes("{{候補日時}}")) : false;
+  const showMeeting = tpl ? (tpl.useMeeting !== undefined ? tpl.useMeeting : false) : false;
   // プレビューを変数・テンプレート変更に追従
   React.useEffect(()=>{ setPreviewSubj(subj); setPreviewBody(body); },[body,subj]);
   const [gmailToken, setGmailToken] = React.useState(null);
@@ -317,7 +315,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
 
   const saveEdit=()=>{ const u=tpls.map(t=>t.id===editTpl.id?editTpl:t); setTpls(u); saveTpls(u); setEditMode(false); };
   const deleteTpl=(id)=>{ if(!window.confirm("削除しますか？")) return; const u=tpls.filter(t=>t.id!==id); setTpls(u); saveTpls(u); if(selTpl===id) setSelTpl(u[0]?.id||""); };
-  const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
+  const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,useMeeting:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
   const inpStyle = {width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe"};
   const lblStyle = {fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3};
   return (
@@ -348,10 +346,16 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                   <input value={editTpl[k]} onChange={e=>setEditTpl(p=>({...p,[k]:e.target.value}))} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}} />
                 </div>
               ))}
-              <div style={{marginBottom:10}}>
+              <div style={{marginBottom:6}}>
                 <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}>
                   <input type="checkbox" checked={!!editTpl.useSlots} onChange={e=>setEditTpl(p=>({...p,useSlots:e.target.checked}))} />
                   <span>{'{{候補日時}}'} を使用する（日程調整テンプレート）</span>
+                </label>
+              </div>
+              <div style={{marginBottom:10}}>
+                <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}>
+                  <input type="checkbox" checked={!!editTpl.useMeeting} onChange={e=>setEditTpl(p=>({...p,useMeeting:e.target.checked}))} />
+                  <span>{'{{商談月}}'}{'{{商談日}}'}{'{{商談曜日}}'}{'{{商談時}}'}{'{{商談分}}'}{'{{商談担当}}'} を使用する（確定商談テンプレート）</span>
                 </label>
               </div>
               <div style={{flex:1,display:"flex",flexDirection:"column",marginBottom:12}}>
@@ -392,22 +396,16 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                   <div><label style={lblStyle}>{"{{"+"送信者名"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
                     <input value={vars.送信者名||""} onChange={e=>setVars(v=>({...v,送信者名:e.target.value}))} style={inpStyle} />
                   </div>
-                  {/* 商談担当 */}
-                  <div><label style={lblStyle}>{"{{"+"商談担当"+"}}"}</label>
-                    <select value={vars.商談担当||""} onChange={e=>setVars(v=>({...v,商談担当:e.target.value}))} style={inpStyle}>
-                      <option value="">選択してください</option>
-                      {getSalesMembers().map(m=><option key={m} value={m}>{m}</option>)}
-                    </select>
-                  </div>
                   {/* 宛先メール */}
-                  <div style={{gridColumn:"1/-1"}}><label style={lblStyle}>宛先メールアドレス <span style={{color:"#9ca3af",fontSize:10}}>（Gmail下書き保存時のTo欄・任意）</span></label>
+                  <div style={{gridColumn:"1/-1"}}><label style={lblStyle}>宛先メールアドレス <span style={{color:"#9ca3af",fontSize:10}}>（Gmail下書き保存時のTo欄・任意）</span> <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
                     <input value={vars.宛先メール||""} onChange={e=>setVars(v=>({...v,宛先メール:e.target.value}))} style={inpStyle} placeholder="例：yamada@example.com" type="email" />
                   </div>
                 </div>
-                {/* 商談日時 */}
-                <div style={{gridColumn:"1/-1",marginTop:4}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#174f35",marginBottom:6,borderTop:"1px solid #e2f0e8",paddingTop:8}}>商談日時</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:6}}>
+                {/* 商談日時・担当者 - テンプレートのuseMeeting設定に従って表示 */}
+                {showMeeting && (
+                <div style={{marginTop:4}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#174f35",marginBottom:6,borderTop:"1px solid #e2f0e8",paddingTop:8}}>商談日時・担当者</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr",gap:6}}>
                     <div><label style={lblStyle}>{"{{"+"商談月"+"}}"}</label>
                       <select value={vars.商談月||""} onChange={e=>setVars(v=>({...v,商談月:e.target.value}))} style={inpStyle}>
                         <option value="">--</option>
@@ -435,8 +433,15 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                         {["00","15","30","45"].map(m=><option key={m} value={m}>{m}</option>)}
                       </select>
                     </div>
+                    <div><label style={lblStyle}>{"{{"+"商談担当"+"}}"}</label>
+                      <select value={vars.商談担当||""} onChange={e=>setVars(v=>({...v,商談担当:e.target.value}))} style={inpStyle}>
+                        <option value="">--</option>
+                        {getSalesMembers().map(m=><option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
+                )}
                 {/* 候補日時 - テンプレートのuseSlots設定に従って表示 */}
                 {showSlots && (
                 <div>
@@ -453,14 +458,6 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                       <button onClick={()=>{setPreviewSubj(subj);setPreviewBody(body);}} style={{padding:"5px 12px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#6a9a7a",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>↩ リセット</button>
                       <button onClick={saveGmailDraft} disabled={gmailSaving} style={{padding:"5px 14px",borderRadius:7,border:"none",background:gmailSaved?"#2563eb":gmailSaving?"#93c5fd":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",fontSize:12,fontWeight:700,cursor:gmailSaving?"not-allowed":"pointer",fontFamily:"inherit",opacity:gmailSaving?0.7:1}}>{gmailSaving?"保存中...":gmailSaved?"✅ 下書き保存済":"📨 Gmailに下書き保存"}</button>
                       <button onClick={()=>copy(previewSubj+"\n\n"+previewBody)} style={{padding:"5px 14px",borderRadius:7,border:"none",background:copied?"#059669":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copied?"✅ コピー済み":"📋 全文コピー"}</button>
-                    </div>
-                  </div>
-                  {/* 宛先 */}
-                  <div style={{marginBottom:8}}>
-                    <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>宛先</label>
-                    <div style={{display:"flex",gap:4}}>
-                      <input type="email" value={toEmail} onChange={e=>setToEmail(e.target.value)} placeholder="メールアドレスが自動入力されます" style={{flex:1,padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:toEmail?"#f0fdf4":"#f8fffe",color:"#174f35"}} />
-                      {toEmail && <button onClick={()=>{navigator.clipboard?.writeText(toEmail);setCopiedTo(true);setTimeout(()=>setCopiedTo(false),2000);}} style={{padding:"0 10px",borderRadius:7,border:"1px solid #c0dece",background:copiedTo?"#059669":"#f0f5f2",color:copiedTo?"#fff":"#6a9a7a",fontSize:11,cursor:"pointer",fontFamily:"inherit",flexShrink:0,whiteSpace:"nowrap"}}>{copiedTo?"✅ コピー済み":"📋 コピー"}</button>}
                     </div>
                   </div>
                   <div style={{marginBottom:8}}>

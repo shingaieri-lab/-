@@ -2700,7 +2700,15 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
   const [showAF, setShowAF] = useState(false);
   const [editingAction, setEditingAction] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [dealCopied, setDealCopied] = useState(false);
   const actions = lead.actions || [];
+  const copyDealInfo = () => {
+    const meetingDateTime = [lead.meeting_date, lead.meeting_time].filter(Boolean).join(' ');
+    const text = `商談担当：${lead.sales_member||''}\n商談日時：${meetingDateTime}\n会社名：${lead.company||''}\nHP：${lead.hp_url||''}\nzoho：${lead.zoho_url||''}\nIS確度：${lead.is_accuracy||''}`;
+    navigator.clipboard?.writeText(text);
+    setDealCopied(true);
+    setTimeout(() => setDealCopied(false), 2000);
+  };
   const sc = getStatusColor(lead.status);
   const nad = lead.next_action_date;
   const overdue = isOverdue(nad);
@@ -2722,6 +2730,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
             )}
           </div>
           <div style={{display:"flex", alignItems:"center", gap:4, flexShrink:0}}>
+            <button onClick={copyDealInfo} style={{background: dealCopied?"#10b981":"none", border:`1px solid ${dealCopied?"#10b981":"#10b98166"}`, borderRadius:6, cursor:"pointer", color: dealCopied?"#fff":"#059669", fontSize:12, padding:"2px 8px", lineHeight:1.4, fontWeight:600, transition:"all 0.2s"}}>{dealCopied ? "✅ コピー済み" : "📋 商談共有用"}</button>
             <button onClick={onEdit} style={{background:"none", border:"1px solid #10b98166", borderRadius:6, cursor:"pointer", color:"#059669", fontSize:12, padding:"2px 8px", lineHeight:1.4}}>✏️ 編集</button>
             {confirmDelete
               ? <>

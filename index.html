@@ -305,7 +305,8 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
     setVars(v=>({...v,候補日時:idxs.map(i=>formatSlot(candidateSlots[i])).join("\n")}));
   },[candidateSlots]);
 
-  const body=tpl?applyVars(tpl.body,vars):"", subj=tpl?applyVars(tpl.subject,vars):"";
+  const signature = currentUser?.signature||"";
+  const body=tpl?(applyVars(tpl.body,vars)+(signature?"\n\n"+signature:"")):"", subj=tpl?applyVars(tpl.subject,vars):"";
   const showSlots = tpl ? (tpl.useSlots !== undefined ? tpl.useSlots : tpl.body.includes("{{候補日時}}")) : false;
   const showMeeting = tpl ? (tpl.useMeeting !== undefined ? tpl.useMeeting : false) : false;
   // プレビューを変数・テンプレート変更に追従
@@ -1249,11 +1250,11 @@ function App() {
 function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
   const [tooltip, setTooltip] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [profileForm, setProfileForm] = useState({ name:"", password:"", email:"", color:"", id:"" });
+  const [profileForm, setProfileForm] = useState({ name:"", password:"", email:"", color:"", id:"", signature:"" });
   const [profileMsg, setProfileMsg] = useState("");
   const openUserMenu = () => {
     if (!showUserMenu) {
-      setProfileForm({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"" });
+      setProfileForm({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"" });
       setProfileMsg("");
     }
     setShowUserMenu(v => !v);
@@ -1347,6 +1348,12 @@ function Nav({ page, setPage, count, currentUser, onLogout, onUpdateProfile }) {
                       style={{width:20, height:20,borderRadius:"50%",background:c, border: profileForm.color===c ? "2px solid #174f35" : "2px solid #fff", cursor:"pointer", boxShadow: profileForm.color===c ? "0 0 0 1.5px "+c : "0 1px 3px #0002", flexShrink:0}} />
                   ))}
                 </div>
+              </div>
+              <div style={{marginBottom:7}}>
+                <div style={{fontSize:10,color:"#6a9a7a",marginBottom:2}}>✍️ メール署名</div>
+                <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
+                  placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
+                  style={{width:"100%",padding:"5px 8px",borderRadius:6,border:"1px solid #c0dece",fontSize:11,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:64,lineHeight:1.5}} />
               </div>
             </div>
             {profileMsg && <div style={{fontSize:11,color:"#059669",fontWeight:700,marginBottom:6}}>{profileMsg}</div>}
@@ -2718,7 +2725,7 @@ function LoginScreen({ onLogin }) {
 
 function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [accounts, setAccounts] = React.useState(loadAccounts);
-  const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true });
+  const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" });
   const [editingId, setEditingId] = React.useState(null);
   const [err, setErr] = React.useState("");
 
@@ -2737,11 +2744,11 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
       ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)
       : [...accounts, { ...form, id: form.id.trim() }];
     save(updated, editingId);
-    setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true });
+    setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" });
     setEditingId(null); setErr("");
   };
   const startEdit = (a) => { setForm({ ...a, is_staff: a.is_staff !== false }); setEditingId(a.id); setErr(""); };
-  const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true }); setEditingId(null); setErr(""); };
+  const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" }); setEditingId(null); setErr(""); };
   const deleteAccount = (id) => {
     if (id === currentUser.id) { alert("自分のアカウントは削除できません"); return; }
     if (!window.confirm("削除しますか？")) return;
@@ -2794,6 +2801,12 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                 <option value="admin">管理者</option>
               </select>
             </div>
+          </div>
+          <div style={{marginBottom:10}}>
+            <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>✍️ メール署名</label>
+            <textarea value={form.signature||""} onChange={e=>setForm(p=>({...p,signature:e.target.value}))}
+              placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
+              style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",background:"#fff",fontSize:12,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",minHeight:72,lineHeight:1.5}} />
           </div>
           <div style={{marginBottom:12}}>
             <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>

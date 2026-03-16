@@ -2715,7 +2715,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         </div>
         {/* ネクストアクション */}
         {(nad || lead.next_action) && (
-          <div style={{marginTop:8, padding:"5px 8px", background: overdue?"#fef2f2":today?"#ecfdf5":"#f0faf5", borderRadius:6, border:`1px solid ${overdue?"#ef444466":today?"#10b98166":"#c0dece"}`, fontSize:12}}>
+          <div style={{marginTop:8, padding:"5px 8px", background:"#ffffff", borderRadius:6, border:`1px solid ${overdue?"#ef444466":today?"#10b98166":"#c0dece"}`, fontSize:12}}>
             <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:4}}>
               <div style={{display:"flex", alignItems:"center", flexWrap:"wrap", gap:4, minWidth:0}}>
                 {overdue && <span style={{fontSize:10,background:"#ef4444",color:"#fff",borderRadius:4,padding:"1px 5px",fontWeight:700}}>期限切れ</span>}

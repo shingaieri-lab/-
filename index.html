@@ -927,6 +927,8 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
 
   // リード管理（流入元）
   const [newSource, setNewSource] = React.useState("");
+  const [editSourceIdx, setEditSourceIdx] = React.useState(null);
+  const [editSourceVal, setEditSourceVal] = React.useState("");
   const addSource = () => {
     const s = newSource.trim(); if (!s) return;
     if ((master.sources||DEFAULT_SOURCES).includes(s)) { alert("既に存在します"); return; }
@@ -936,6 +938,25 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
   const removeSource = (s) => {
     if ((master.sources||DEFAULT_SOURCES).length <= 1) { alert("最低1つ必要です"); return; }
     save({ ...master, sources: (master.sources||DEFAULT_SOURCES).filter(x=>x!==s) });
+  };
+  const startEditSource = (idx) => {
+    setEditSourceIdx(idx);
+    setEditSourceVal((master.sources||DEFAULT_SOURCES)[idx]);
+  };
+  const saveSource = async () => {
+    const newVal = editSourceVal.trim();
+    if (!newVal) return;
+    const sources = master.sources||DEFAULT_SOURCES;
+    const oldVal = sources[editSourceIdx];
+    if (newVal === oldVal) { setEditSourceIdx(null); return; }
+    if (sources.includes(newVal)) { alert("既に存在します"); return; }
+    const newSources = sources.map((s,i) => i===editSourceIdx ? newVal : s);
+    save({ ...master, sources: newSources });
+    // 既存リードの流入元も一括更新
+    const leads = await loadLeads();
+    const updated = leads.map(l => l.source === oldVal ? { ...l, source: newVal } : l);
+    await saveLeads(updated);
+    setEditSourceIdx(null);
   };
 
   const tabBtn = (key, label) => (
@@ -1156,10 +1177,21 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                 <button onClick={addSource} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {(master.sources||DEFAULT_SOURCES).map(s=>(
+                {(master.sources||DEFAULT_SOURCES).map((s,idx)=>(
                   <div key={s} style={{display:"flex",alignItems:"center",gap:4,background:"#f0f5f2",border:"1px solid #d8ede1",borderRadius:8,padding:"5px 10px"}}>
-                    <span style={{fontSize:12,color:"#174f35",fontWeight:600}}>{s}</span>
-                    <button onClick={()=>removeSource(s)} style={{fontSize:11,color:"#dc2626",background:"none",border:"none",cursor:"pointer",padding:0,lineHeight:1}}>✕</button>
+                    {editSourceIdx===idx ? (
+                      <>
+                        <input value={editSourceVal} onChange={e=>setEditSourceVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveSource();if(e.key==="Escape")setEditSourceIdx(null);}} style={{...inp,width:90,padding:"2px 6px",fontSize:12}} autoFocus />
+                        <button onClick={saveSource} style={{fontSize:11,padding:"2px 8px",borderRadius:5,border:"none",background:"#10b981",color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>保存</button>
+                        <button onClick={()=>setEditSourceIdx(null)} style={{fontSize:11,color:"#6a9a7a",background:"none",border:"none",cursor:"pointer",padding:0,lineHeight:1}}>✕</button>
+                      </>
+                    ) : (
+                      <>
+                        <span style={{fontSize:12,color:"#174f35",fontWeight:600}}>{s}</span>
+                        <button onClick={()=>startEditSource(idx)} style={{fontSize:11,padding:"1px 7px",borderRadius:5,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit"}}>編集</button>
+                        <button onClick={()=>removeSource(s)} style={{fontSize:11,color:"#dc2626",background:"none",border:"none",cursor:"pointer",padding:0,lineHeight:1}}>✕</button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

@@ -278,7 +278,24 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
           const client = window.google.accounts.oauth2.initTokenClient({
             client_id: clientId,
             scope: 'https://www.googleapis.com/auth/gmail.compose',
-            callback: (resp) => resp.error ? rej(new Error(resp.error)) : res(resp.access_token)
+            callback: (resp) => {
+              if (resp.error) {
+                if (resp.error === 'redirect_uri_mismatch' || resp.error === 'invalid_client') {
+                  rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" を追加してください。`));
+                } else {
+                  rej(new Error(resp.error));
+                }
+              } else {
+                res(resp.access_token);
+              }
+            },
+            error_callback: (err) => {
+              if (err.type === 'popup_blocked_by_browser') {
+                rej(new Error('ポップアップがブロックされました。ブラウザのポップアップブロックを解除してください。'));
+              } else {
+                rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" が登録されているか確認してください。`));
+              }
+            }
           });
           client.requestAccessToken();
         });
@@ -906,7 +923,9 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile }) {
               </div>
               <div><b>⑤ 承認済みJavaScript オリジンにURLを追加</b></div>
               <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                「承認済みの JavaScript 生成元」の <b>「URIを追加」</b> をクリックし、このアプリのURL（例：<code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>https://your-app.github.io</code>）を入力。ローカルで使う場合は <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>http://localhost</code> も追加します。「作成」をクリック。
+                「承認済みの JavaScript 生成元」の <b>「URIを追加」</b> をクリックし、以下のURLを入力してください：<br/>
+                <code style={{background:"#c8e6c9",padding:"2px 8px",borderRadius:3,fontFamily:"monospace",fontSize:13,color:"#1b5e20"}}>{window.location.origin}</code><br/>
+                このURLをそのままコピーして貼り付けてください。「作成」をクリック。
               </div>
               <div><b>⑥ クライアント ID をコピーして貼り付け</b></div>
               <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6}}>

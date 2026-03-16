@@ -2050,8 +2050,8 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
   const selectedLead = openId ? leads.find(l => l.id === openId) : null;
 
   return (
-    <div style={{...S.page, paddingTop:0}}>
-      <div style={{position:"sticky", top:0, zIndex:20,background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
+    <div style={{paddingLeft:28, paddingRight:28, height:"100%", overflow:"hidden", display:"flex", flexDirection:"column"}}>
+      <div style={{flexShrink:0, background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
       <Header title="リード一覧" sub={`${leads.length}件 / 表示 ${list.length}件`}>
         <div style={{display:"flex", gap:8}}>
           <button onClick={() => {
@@ -2136,7 +2136,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         />
       )}
 
-      <div style={{display:"flex", gap:12, marginTop:16, height:"calc(100vh - 178px)"}}>
+      <div style={{display:"flex", gap:12, marginTop:16, flex:1, minHeight:0, overflow:"hidden"}}>
         {/* 左側：リード一覧 */}
         <div style={{flex:"0 0 50%", width:"50%", overflowY:"auto"}}>
           <div style={{display:"flex", flexDirection:"column", gap:6}}>

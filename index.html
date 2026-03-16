@@ -2503,19 +2503,28 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
           <span style={{fontSize:11, fontWeight:700, color:sc, background:sc+"15", border:`1px solid ${sc}44`, borderRadius:8, padding:"2px 8px"}}>{lead.status||"新規"}</span>
           {lead.date && <span style={{fontSize:11, color:"#6a9a7a"}}>反響日：{lead.date}</span>}
           {actions[0] && <span style={{fontSize:11, color:"#6a9a7a"}}>最終：{actions[0].date}{actions[0].time ? " "+actions[0].time : ""}</span>}
-          {lead.source === "ポータルサイト" && lead.portal_site && <span style={{fontSize:11, color:"#8b5cf6", background:"#8b5cf622", borderRadius:6, padding:"1px 7px"}}>{lead.portal_site}</span>}
+          {lead.source && <span style={{fontSize:11, color: lead.source==="HP"?"#0ea5e9":lead.source==="ポータルサイト"?"#8b5cf6":"#f59e0b", background: lead.source==="HP"?"#e0f2fe":lead.source==="ポータルサイト"?"#f3f0ff":"#fff7ed", borderRadius:6, padding:"1px 7px", fontWeight:600}}>📥 {lead.source}{lead.source==="ポータルサイト"&&lead.portal_site?" / "+lead.portal_site:""}</span>}
           {lead.meeting_date && <span style={{fontSize:11, color:"#10b981", fontWeight:600}}>🤝 {lead.meeting_date}</span>}
           {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{...S.zohoLinkSmall, fontSize:10, padding:"2px 8px"}}>🔗 Zoho</a>}
         </div>
         {/* ネクストアクション */}
         {(nad || lead.next_action) && (
           <div style={{marginTop:8, padding:"5px 8px", background: overdue?"#fef2f2":today?"#ecfdf5":"#f0faf5", borderRadius:6, border:`1px solid ${overdue?"#ef444466":today?"#10b98166":"#c0dece"}`, fontSize:12}}>
-            {overdue && <span style={{fontSize:10,background:"#ef4444",color:"#fff",borderRadius:4,padding:"1px 5px",marginRight:5,fontWeight:700}}>期限切れ</span>}
-            {today   && <span style={{fontSize:10,background:"#059669",color:"#fff",borderRadius:4,padding:"1px 5px",marginRight:5,fontWeight:700}}>本日</span>}
-            {soon && !today && !overdue && <span style={{fontSize:10,background:"#f97316",color:"#fff",borderRadius:4,padding:"1px 5px",marginRight:5,fontWeight:700}}>まもなく</span>}
-            <span style={{color: overdue?"#dc2626":today?"#059669":"#059669", marginRight:4}}>→</span>
-            {nad && <span style={{fontWeight:700, color: overdue?"#dc2626":"#059669", marginRight:4}}>{nad}{lead.next_action_time ? " "+lead.next_action_time : ""}</span>}
-            {lead.next_action && <span style={{color:"#174f35"}}>{lead.next_action}</span>}
+            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", gap:4}}>
+              <div style={{display:"flex", alignItems:"center", flexWrap:"wrap", gap:4, minWidth:0}}>
+                {overdue && <span style={{fontSize:10,background:"#ef4444",color:"#fff",borderRadius:4,padding:"1px 5px",fontWeight:700}}>期限切れ</span>}
+                {today   && <span style={{fontSize:10,background:"#059669",color:"#fff",borderRadius:4,padding:"1px 5px",fontWeight:700}}>本日</span>}
+                {soon && !today && !overdue && <span style={{fontSize:10,background:"#f97316",color:"#fff",borderRadius:4,padding:"1px 5px",fontWeight:700}}>まもなく</span>}
+                <span style={{color: overdue?"#dc2626":"#059669"}}>→</span>
+                {nad && <span style={{fontWeight:700, color: overdue?"#dc2626":"#059669"}}>{nad}{lead.next_action_time ? " "+lead.next_action_time : ""}</span>}
+              </div>
+              <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} />
+            </div>
+            {lead.next_action && (
+              <div style={{color:"#174f35", marginTop:3, lineHeight:1.5, wordBreak:"break-word", whiteSpace:"pre-wrap", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>
+                {lead.next_action}
+              </div>
+            )}
           </div>
         )}
       </div>

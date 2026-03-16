@@ -188,11 +188,24 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const lead = leads.find(l=>l.id===selLead);
 
   // リード選択時に担当者名・担当者苗字・会社名・宛先メールアドレスを自動入力
+  // 商談確定リードの場合は商談日時・担当者も自動反映
   React.useEffect(()=>{
     if(lead){
       const contact=lead.contact||lead.company||"";
       const surname=contact.split(/[ \u3000]/)[0]||contact;
-      setVars(v=>({...v,担当者名:contact,担当者苗字:surname,会社名:lead.company||"",宛先メール:lead.email||""}));
+      const meetingVars = {};
+      if(lead.meeting_date){
+        const [,mm,dd] = lead.meeting_date.split("-");
+        meetingVars.商談月 = String(parseInt(mm));
+        meetingVars.商談日 = String(parseInt(dd));
+      }
+      if(lead.meeting_time){
+        const [hh,min] = lead.meeting_time.split(":");
+        meetingVars.商談時 = String(parseInt(hh));
+        meetingVars.商談分 = min||"00";
+      }
+      if(lead.sales_member) meetingVars.商談担当 = lead.sales_member;
+      setVars(v=>({...v,担当者名:contact,担当者苗字:surname,会社名:lead.company||"",宛先メール:lead.email||"",...meetingVars}));
     }
   },[selLead]);
 

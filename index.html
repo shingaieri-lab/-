@@ -2463,6 +2463,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const [bufferBefore, setBufferBefore] = useState(30);
   const [bufferAfter,  setBufferAfter]  = useState(30);
   const [activeDays, setActiveDays] = useState([1,2,3,4,5]);
+  const [includeHolidays, setIncludeHolidays] = useState(true);
   const [excludeTimes, setExcludeTimes] = useState([{from:"12:00",to:"13:00"}]);
 
   // 結果
@@ -2528,7 +2529,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
         const jstDate = new Date(cur.getTime() + 9*60*60000);
         const dow = jstDate.getUTCDay();
         const ds  = jstDate.toISOString().split("T")[0];
-        if (activeDays.includes(dow) && !JP_HOLIDAYS.has(ds)) {
+        if (activeDays.includes(dow) && (!JP_HOLIDAYS.has(ds) || includeHolidays)) {
           // この日の稼働時間内でスロットを探す
           let slotStart = new Date(cur);
           slotStart.setHours(sh, sm, 0, 0);
@@ -2712,13 +2713,16 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
           {/* 曜日選択 */}
           <div style={{marginBottom:12}}>
             <label style={S.lbl}>対象曜日</label>
-            <div style={{display:"flex",gap:6}}>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
               {[["日",0,"#ef4444"],["月",1,"#3b82f6"],["火",2,"#3b82f6"],["水",3,"#3b82f6"],["木",4,"#3b82f6"],["金",5,"#3b82f6"],["土",6,"#8b5cf6"]].map(([label,val,col])=>{
                 const active=activeDays.includes(val);
                 return <button key={val} onClick={()=>setActiveDays(prev=>active?prev.filter(d=>d!==val):[...prev,val].sort())} style={{width:40,height:40,borderRadius:20,border:"none",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,background:active?col:"#f0f5f2",color:active?"#fff":col,transition:"all 0.15s"}}>
                   {label}
                 </button>;
               })}
+              <button onClick={()=>setIncludeHolidays(v=>!v)} style={{height:40,padding:"0 12px",borderRadius:20,border:includeHolidays?"none":"1.5px dashed #f59e0b",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:700,background:includeHolidays?"#f59e0b":"#f0f5f2",color:includeHolidays?"#fff":"#f59e0b",transition:"all 0.15s",whiteSpace:"nowrap"}}>
+                祝日
+              </button>
             </div>
             {activeDays.length===0&&<div style={{fontSize:11,color:"#ef4444",marginTop:4}}>⚠️ 曜日を1つ以上選択</div>}
           </div>

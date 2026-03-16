@@ -1271,7 +1271,7 @@ function App() {
       <main style={S.main}>
         {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} />}
         {page === "trend"     && <Trend leads={leads} />}
-        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction}
+        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} currentUser={currentUser} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
@@ -1822,7 +1822,7 @@ function CSVImport({ onImport, onClose, result }) {
   );
 }
 
-function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed }) {
+function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, currentUser }) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -1998,6 +1998,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
               lead={selectedLead}
               onClose={() => setOpenId(null)}
               onUpdate={p => onUpdate(selectedLead.id, p)}
+              currentUser={currentUser}
               onEditAction={(aid, updated) => {
                 const newActions = (selectedLead.actions||[]).map(a => a.id === aid ? { ...a, ...updated } : a);
                 const patch = { actions: newActions };
@@ -2495,7 +2496,7 @@ function ActEntry({ a, onEdit, onDelete }) {
   );
 }
 
-function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAction }) {
+function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAction, currentUser }) {
   const [showAF, setShowAF] = useState(false);
   const [editingAction, setEditingAction] = useState(null);
   const actions = lead.actions || [];
@@ -2550,7 +2551,8 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         {showAF && (
           <ActionForm
             onSave={a => {
-              const patch = { actions: [a, ...(lead.actions || [])] };
+              const actionWithRecorder = { ...a, recorded_by: currentUser?.name || "" };
+              const patch = { actions: [actionWithRecorder, ...(lead.actions || [])] };
               if (a.nextDate) { patch.next_action_date = a.nextDate; patch.next_action_time = a.nextTime||""; patch.next_action = a.next||""; }
               onUpdate(patch);
               setShowAF(false);

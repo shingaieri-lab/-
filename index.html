@@ -2561,9 +2561,9 @@ function AccountManager({ currentUser, onClose, inline }) {
   const save = (updated) => { setAccounts(updated); saveAccounts(updated); };
   const handleSubmit = () => {
     if (!form.id.trim() || !form.name.trim() || !form.password.trim()) { setErr("全項目入力してください"); return; }
-    if (editingId === null && accounts.some(a => a.id === form.id.trim())) { setErr("このIDは既に使われています"); return; }
+    if (accounts.some(a => a.id === form.id.trim() && a.id !== editingId)) { setErr("このIDは既に使われています"); return; }
     const updated = editingId !== null
-      ? accounts.map(a => a.id === editingId ? { ...form, id: editingId } : a)
+      ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)
       : [...accounts, { ...form, id: form.id.trim() }];
     save(updated);
     setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true });

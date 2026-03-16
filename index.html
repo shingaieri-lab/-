@@ -2419,23 +2419,11 @@ const DEFAULT_ACCOUNTS = [
 function loadAccounts() {
   try {
     const saved = JSON.parse(localStorage.getItem("is_accounts") || "null");
-    if (!saved) {
+    if (!saved || saved.length === 0) {
       localStorage.setItem("is_accounts", JSON.stringify(DEFAULT_ACCOUNTS));
       return DEFAULT_ACCOUNTS;
     }
-    let updated = [...saved];
-    let changed = false;
-    DEFAULT_ACCOUNTS.forEach(def => {
-      if (!updated.some(a => a.id === def.id)) {
-        updated = updated.filter(a => a.name !== def.name); // 同名の古いIDを削除
-        updated.unshift(def);
-        changed = true;
-      }
-    });
-    if (changed) {
-      localStorage.setItem("is_accounts", JSON.stringify(updated));
-    }
-    return updated;
+    return saved;
   } catch { return DEFAULT_ACCOUNTS; }
 }
 function saveAccounts(accounts) {

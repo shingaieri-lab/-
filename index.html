@@ -2187,6 +2187,14 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
         );
       })()}
 
+      {/* Always-visible: メモ */}
+      {lead.memo && (
+        <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"5px 14px",borderTop:"1px solid #e8f5ee",background:"#fffdf0"}} onClick={e=>e.stopPropagation()}>
+          <span style={{fontSize:12,color:"#b45309",flexShrink:0,marginTop:1}}>📝</span>
+          <span style={{fontSize:12,color:"#78350f",lineHeight:1.5,wordBreak:"break-word"}}>{lead.memo}</span>
+        </div>
+      )}
+
       {/* Always-visible: 商談情報 */}
       {(lead.meeting_date || lead.sales_member) && (
         <div style={{...S.meetingBar,padding:"5px 16px", borderTop:"1px solid #e8f5ee"}} onClick={e=>e.stopPropagation()}>
@@ -2214,6 +2222,7 @@ function LeadForm({ initial, onSave, onClose }) {
       meeting_date:"", meeting_time:"", sales_member:"",
       is_member:"", mql:"非MQL",
       status:"新規", date:TODAY, zoho_url:"",
+      memo:"",
       ...(initial||{})
     };
     // 日付フィールドをYYYY-MM-DD形式に正規化（input[type=date]対応）
@@ -2323,6 +2332,13 @@ function LeadForm({ initial, onSave, onClose }) {
             <label style={S.lbl}>Zoho CRM URL</label>
             <input value={d.zoho_url} onChange={e=>set("zoho_url",e.target.value)}
               placeholder="https://crm.zoho.com/crm/..." style={S.inp} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label style={S.lbl}>メモ</label>
+            <textarea value={d.memo||""} onChange={e=>set("memo",e.target.value)}
+              placeholder="定休日（例：水・木）、連絡可能時間帯など特記事項を入力"
+              style={{...S.inp, height:72, resize:"vertical", fontFamily:"inherit", lineHeight:1.5}} />
           </div>
 
           {(d.status === "商談確定" || d.status === "日程調整中") && (

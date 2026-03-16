@@ -837,11 +837,32 @@ function SettingsPage({ aiConfig, onSave }) {
                 <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio</a> でAPIキーを取得できます
               </div>
             </div>
-            <div style={{background:"#f0f5f2",borderRadius:8,padding:"12px 14px",fontSize:12,color:"#3d7a5e",lineHeight:1.8}}>
-              <div style={{fontWeight:700,marginBottom:4}}>📋 使い方</div>
-              <div>① Google AI StudioでAPIキーを発行</div>
-              <div>② 上記フィールドに貼り付けてフォーカスを外す</div>
-              <div>③ AIアシスタント画面でリードを選択して使用</div>
+            <div style={{background:"#f0f5f2",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#3d7a5e",lineHeight:2}}>
+              <div style={{fontWeight:700,marginBottom:6,fontSize:13}}>📋 Gemini APIキー 取得手順</div>
+              <div><b>① Googleアカウントでサインイン</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio（aistudio.google.com）</a> にアクセスし、Googleアカウントでログインします。
+              </div>
+              <div><b>② 「APIキーを作成」をクリック</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                左メニューまたは画面上部の <b>「Get API key」→「Create API key」</b> をクリックします。
+              </div>
+              <div><b>③ プロジェクトを選択または作成</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                既存のGoogle Cloudプロジェクトを選択するか、「新しいプロジェクトでAPIキーを作成」を選びます。
+              </div>
+              <div><b>④ APIキーをコピー</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                発行された <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>AIzaSy...</code> で始まるキーをコピーします。
+              </div>
+              <div><b>⑤ 上記フィールドに貼り付けてフォーカスを外す</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                入力欄にペーストし、フィールド外をクリックすると自動で保存されます（「保存しました ✓」と表示されます）。
+              </div>
+              <div><b>⑥ AIアシスタント画面で使用</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6}}>
+                左メニューの「AIアシスタント」を開き、リードを選択してAI分析・メール作成を利用できます。
+              </div>
             </div>
             <div style={{marginTop:20,marginBottom:16}}>
               <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>📨 Gmail OAuth Client ID</label>
@@ -860,11 +881,35 @@ function SettingsPage({ aiConfig, onSave }) {
                 placeholder="xxxxxxxxxx.apps.googleusercontent.com"
                 style={{...inp, fontFamily:"monospace"}}
               />
-              <div style={{fontSize:11,color:"#9ca3af",marginTop:6,lineHeight:1.7}}>
-                ※ フォームからフォーカスを外すと自動保存されます<br/>
-                ① <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a> でOAuthクライアントID（ウェブアプリ）を作成<br/>
-                ② 承認済みJavaScriptオリジンにこのアプリのURLを追加<br/>
-                ③ Gmail APIを有効化してClient IDを上記に貼り付け
+              <div style={{fontSize:11,color:"#9ca3af",marginTop:6,lineHeight:1.6}}>
+                ※ フォームからフォーカスを外すと自動保存されます
+              </div>
+            </div>
+            <div style={{background:"#f0f5f2",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#3d7a5e",lineHeight:2,marginTop:10}}>
+              <div style={{fontWeight:700,marginBottom:6,fontSize:13}}>📋 Gmail OAuth Client ID 取得手順</div>
+              <div><b>① Google Cloud Console でプロジェクトを準備</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a> にアクセスし、Googleアカウントでログイン。画面上部のプロジェクト選択から既存のプロジェクトを選ぶか「新しいプロジェクト」を作成します。
+              </div>
+              <div><b>② Gmail API を有効化</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                左メニュー「APIとサービス」→「ライブラリ」→ 検索欄に <b>「Gmail API」</b> と入力 → 「Gmail API」を選択 →「有効にする」をクリック。
+              </div>
+              <div><b>③ OAuth 同意画面を設定</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                「APIとサービス」→「OAuth 同意画面」→ ユーザーの種類は <b>「外部」</b> を選択 →「作成」。アプリ名・サポートメールを入力し「保存して次へ」を繰り返して完了します。
+              </div>
+              <div><b>④ OAuth クライアント ID を作成</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                「APIとサービス」→「<a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>認証情報</a>」→「認証情報を作成」→「OAuth クライアント ID」をクリック。アプリケーションの種類は <b>「ウェブ アプリケーション」</b> を選択します。
+              </div>
+              <div><b>⑤ 承認済みJavaScript オリジンにURLを追加</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
+                「承認済みの JavaScript 生成元」の <b>「URIを追加」</b> をクリックし、このアプリのURL（例：<code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>https://your-app.github.io</code>）を入力。ローカルで使う場合は <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>http://localhost</code> も追加します。「作成」をクリック。
+              </div>
+              <div><b>⑥ クライアント ID をコピーして貼り付け</b></div>
+              <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6}}>
+                作成完了画面に表示される <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>xxxxxxxxxx.apps.googleusercontent.com</code> 形式のクライアント ID をコピーし、上記フィールドに貼り付けてフォーカスを外すと保存されます。
               </div>
             </div>
           </div>

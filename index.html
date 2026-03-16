@@ -177,7 +177,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const [tpls, setTpls] = React.useState(loadTpls);
   const [selTpl, setSelTpl] = React.useState(tpls[0]?.id||"");
   const [selLead, setSelLead] = React.useState("");
-  const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:""});
+  const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:"",商談月:"",商談日:"",商談曜日:"",商談時:"",商談分:""});
   const [previewSubj, setPreviewSubj] = React.useState("");
   const [previewBody, setPreviewBody] = React.useState("");
   const [editMode, setEditMode] = React.useState(false);
@@ -198,6 +198,20 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
 
   // ログインユーザーの名前を送信者名に自動入力
   React.useEffect(()=>{ if(currentUser?.name) setVars(v=>({...v,送信者名:currentUser.name})); },[currentUser?.name]);
+
+  // 商談月・商談日から商談曜日を自動計算
+  React.useEffect(()=>{
+    if(vars.商談月 && vars.商談日){
+      const today = new Date();
+      let year = today.getFullYear();
+      const m = parseInt(vars.商談月), d = parseInt(vars.商談日);
+      let dt = new Date(year, m-1, d);
+      if(dt < today){ year++; dt = new Date(year, m-1, d); }
+      setVars(v=>({...v, 商談曜日:["日","月","火","水","木","金","土"][dt.getDay()]}));
+    } else {
+      setVars(v=>({...v, 商談曜日:""}));
+    }
+  },[vars.商談月, vars.商談日]);
 
   // 候補日スロットのフォーマット
   const formatSlot = (slot) => {
@@ -278,7 +292,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                 <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>本文</label>
                 <textarea value={editTpl.body} onChange={e=>setEditTpl(p=>({...p,body:e.target.value}))} style={{flex:1,width:"100%",minHeight:320,padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"none",lineHeight:1.7}} />
               </div>
-              <div style={{fontSize:11,color:"#9ca3af",marginBottom:10}}>使用可能な変数：{"{{"+"担当者名"+"}}"}　{"{{"+"担当者苗字"+"}}"}　{"{{"+"会社名"+"}}"}　{"{{"+"送信者名"+"}}"}　{"{{"+"候補日時"+"}}"}（useSlots ON時）</div>
+              <div style={{fontSize:11,color:"#9ca3af",marginBottom:10}}>使用可能な変数：{"{{"+"担当者名"+"}}"}　{"{{"+"担当者苗字"+"}}"}　{"{{"+"会社名"+"}}"}　{"{{"+"送信者名"+"}}"}　{"{{"+"候補日時"+"}}"}（useSlots ON時）　{"{{"+"商談月"+"}}"}　{"{{"+"商談日"+"}}"}　{"{{"+"商談曜日"+"}}"}　{"{{"+"商談時"+"}}"}　{"{{"+"商談分"+"}}"}</div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button onClick={()=>setEditMode(false)} style={{padding:"7px 16px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#6a9a7a",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>キャンセル</button>
                 <button onClick={saveEdit} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>保存</button>
@@ -311,6 +325,39 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                   {/* 送信者名（ログインユーザー自動入力） */}
                   <div><label style={lblStyle}>{"{{"+"送信者名"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
                     <input value={vars.送信者名||""} onChange={e=>setVars(v=>({...v,送信者名:e.target.value}))} style={inpStyle} />
+                  </div>
+                </div>
+                {/* 商談日時 */}
+                <div style={{gridColumn:"1/-1",marginTop:4}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#174f35",marginBottom:6,borderTop:"1px solid #e2f0e8",paddingTop:8}}>商談日時</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr",gap:6}}>
+                    <div><label style={lblStyle}>{"{{"+"商談月"+"}}"}</label>
+                      <select value={vars.商談月||""} onChange={e=>setVars(v=>({...v,商談月:e.target.value}))} style={inpStyle}>
+                        <option value="">--</option>
+                        {Array.from({length:12},(_,i)=><option key={i+1} value={String(i+1)}>{i+1}</option>)}
+                      </select>
+                    </div>
+                    <div><label style={lblStyle}>{"{{"+"商談日"+"}}"}</label>
+                      <select value={vars.商談日||""} onChange={e=>setVars(v=>({...v,商談日:e.target.value}))} style={inpStyle}>
+                        <option value="">--</option>
+                        {Array.from({length:31},(_,i)=><option key={i+1} value={String(i+1)}>{i+1}</option>)}
+                      </select>
+                    </div>
+                    <div><label style={lblStyle}>{"{{"+"商談曜日"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動</span></label>
+                      <input value={vars.商談曜日||""} readOnly style={{...inpStyle,background:"#f0f5f2",color:"#6a9a7a",cursor:"default"}} placeholder="自動" />
+                    </div>
+                    <div><label style={lblStyle}>{"{{"+"商談時"+"}}"}</label>
+                      <select value={vars.商談時||""} onChange={e=>setVars(v=>({...v,商談時:e.target.value}))} style={inpStyle}>
+                        <option value="">--</option>
+                        {Array.from({length:24},(_,i)=><option key={i} value={String(i)}>{i}</option>)}
+                      </select>
+                    </div>
+                    <div><label style={lblStyle}>{"{{"+"商談分"+"}}"}</label>
+                      <select value={vars.商談分||""} onChange={e=>setVars(v=>({...v,商談分:e.target.value}))} style={inpStyle}>
+                        <option value="">--</option>
+                        {["00","15","30","45"].map(m=><option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
                   </div>
                 </div>
                 {/* 候補日時 - テンプレートのuseSlots設定に従って表示 */}

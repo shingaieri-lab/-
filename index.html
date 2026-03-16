@@ -1586,9 +1586,9 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         />
       )}
 
-      <div style={{display:"flex", gap:12, marginTop:16, alignItems:"stretch", height:"calc(100vh - 208px)"}}>
+      <div style={{display:"flex", gap:12, marginTop:16, alignItems:"flex-start"}}>
         {/* 左側：リード一覧 */}
-        <div style={{flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:6, overflowY:"auto", paddingRight:4}}>
+        <div style={{flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:6}}>
           {list.length === 0 && <div style={{...S.empty,padding:"32px"}}>リードがありません</div>}
           {list.map(lead => (
             <LeadRow key={lead.id} lead={lead} openId={openId} setOpenId={setOpenId}
@@ -1602,7 +1602,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
 
         {/* 右パネル：アクション履歴 */}
         {selectedLead && (
-          <div style={{flex:1, minWidth:0, background:"#fff", border:"1px solid #e2f0e8", borderRadius:12, boxShadow:"0 2px 12px #0569690a", overflowY:"auto"}}>
+          <div style={{flex:1, minWidth:0, background:"#fff", border:"1px solid #e2f0e8", borderRadius:12, boxShadow:"0 2px 12px #0569690a", overflow:"hidden", position:"sticky", top:162, maxHeight:"calc(100vh - 162px)", overflowY:"auto"}}>
             <ActionHistoryPanel
               lead={selectedLead}
               onClose={() => setOpenId(null)}

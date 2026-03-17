@@ -809,7 +809,7 @@ ${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),20
   );
 }
 
-function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab }) {
+function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange }) {
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "sales"));
   const [msg, setMsg] = React.useState("");
@@ -956,6 +956,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
     const leads = await loadLeads();
     const updated = leads.map(l => l.source === oldVal ? { ...l, source: newVal } : l);
     await saveLeads(updated);
+    if (onLeadsChange) onLeadsChange(updated);
     setEditSourceIdx(null);
   };
 
@@ -1354,10 +1355,13 @@ function SVGLineChart({ data, keys, colors, height=200 }) {
 
 function Trend({ leads }) {
   const normYM=s=>{if(!s)return"";if(/^\d{4}-\d{2}/.test(s))return s.slice(0,7);const m=s.match(/^(\d{4})[\/-](\d{1,2})/);return m?m[1]+"-"+m[2].padStart(2,"0"):"";};
+  const sources=getSources();
+  const srcColors=Object.fromEntries(sources.map((src,i)=>[src,src==="HP"?"#0ea5e9":src==="ポータルサイト"?"#8b5cf6":src==="電話"?"#f59e0b":SOURCE_COLOR_PALETTE[i%SOURCE_COLOR_PALETTE.length]]));
   const months=[...new Set(leads.map(l=>normYM(l.date)).filter(Boolean))].sort();
   const data=months.map(m=>{
     const fl=leads.filter(l=>normYM(l.date)===m);
-    return { month:m.slice(5)+"月", 反響数:fl.length, 商談数:fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length, MQL数:fl.filter(l=>l.mql==="MQL").length, HP:fl.filter(l=>l.source==="HP").length, ポータル:fl.filter(l=>l.source==="ポータルサイト").length, 電話:fl.filter(l=>l.source==="電話").length };
+    const srcCounts=Object.fromEntries(sources.map(src=>[src,fl.filter(l=>l.source===src).length]));
+    return { month:m.slice(5)+"月", 反響数:fl.length, 商談数:fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length, MQL数:fl.filter(l=>l.mql==="MQL").length, ...srcCounts };
   });
   if (data.length===0) return (
     <div style={{padding:"24px 28px"}}>
@@ -1385,7 +1389,7 @@ function Trend({ leads }) {
         </div>
         <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8"}}>
           <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📉 流入元別推移</div>
-          <SVGLineChart data={data} keys={["HP","ポータル","電話"]} colors={{"HP":"#0ea5e9","ポータル":"#8b5cf6","電話":"#f59e0b"}} height={200}/>
+          <SVGLineChart data={data} keys={sources} colors={srcColors} height={200}/>
         </div>
       </div>
       <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8",overflowX:"auto"}}>
@@ -1401,7 +1405,7 @@ function Trend({ leads }) {
               const isLatest=mi===0;
               const monthKey=months[months.length-1-mi];
               const monthLeads=leads.filter(l=>normYM(l.date)===monthKey);
-              const srcList=[{key:"HP",label:"HP",color:"#0ea5e9"},{key:"ポータルサイト",label:"ポータル",color:"#8b5cf6"},{key:"電話",label:"電話",color:"#f59e0b"}];
+              const srcList=sources.map(src=>({key:src,label:src,color:srcColors[src]}));
               const bgMonth=isLatest?"#f0fdf4":mi%2===0?"#fff":"#f8fbf9";
               return srcList.map((src,si)=>{
                 const fl=monthLeads.filter(l=>l.source===src.key);
@@ -1511,7 +1515,7 @@ function App() {
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} currentUser={currentUser} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
-        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} />}
+        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
       </main>
     </div>

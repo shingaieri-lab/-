@@ -2694,25 +2694,6 @@ function LeadForm({ initial, onSave, onClose }) {
             <div />
           </Row2>
 
-          <div>
-            <label style={S.lbl}>Zoho CRM URL</label>
-            <input value={d.zoho_url} onChange={e=>set("zoho_url",e.target.value)}
-              placeholder="https://crm.zoho.com/crm/..." style={S.inp} />
-          </div>
-
-          <div style={{marginTop:10}}>
-            <label style={S.lbl}>HP URL</label>
-            <input value={d.hp_url||""} onChange={e=>set("hp_url",e.target.value)}
-              placeholder="https://example.com/" style={S.inp} />
-          </div>
-
-          <div style={{marginTop:10}}>
-            <label style={S.lbl}>メモ</label>
-            <textarea value={d.memo||""} onChange={e=>set("memo",e.target.value)}
-              placeholder="定休日（例：水・木）、連絡可能時間帯など特記事項を入力"
-              style={{...S.inp, height:72, resize:"vertical", fontFamily:"inherit", lineHeight:1.5}} />
-          </div>
-
           {(d.status === "商談確定" || d.status === "日程調整中") && (
             <div style={{marginTop:12,padding:"12px 14px",background:"#d1fae522",border:"1px solid #10b98144",borderRadius:8}}>
               <div style={{fontSize:12,fontWeight:700,color:"#10b981",marginBottom:10, textTransform:"uppercase", letterSpacing:"0.06em"}}>🤝 商談情報</div>
@@ -2751,6 +2732,25 @@ function LeadForm({ initial, onSave, onClose }) {
               )}
             </div>
           )}
+
+          <div>
+            <label style={S.lbl}>Zoho CRM URL</label>
+            <input value={d.zoho_url} onChange={e=>set("zoho_url",e.target.value)}
+              placeholder="https://crm.zoho.com/crm/..." style={S.inp} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label style={S.lbl}>HP URL</label>
+            <input value={d.hp_url||""} onChange={e=>set("hp_url",e.target.value)}
+              placeholder="https://example.com/" style={S.inp} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label style={S.lbl}>メモ</label>
+            <textarea value={d.memo||""} onChange={e=>set("memo",e.target.value)}
+              placeholder="定休日（例：水・木）、連絡可能時間帯など特記事項を入力"
+              style={{...S.inp, height:72, resize:"vertical", fontFamily:"inherit", lineHeight:1.5}} />
+          </div>
         </div>
         <div style={S.modalFoot}>
           <button onClick={onClose} style={S.btnSec}>キャンセル</button>

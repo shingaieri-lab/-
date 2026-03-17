@@ -53,6 +53,28 @@ const DEFAULT_STATUSES_WITH_COLORS = [
 ];
 const SOURCE_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#d97706","#ea580c","#6366f1","#ec4899"];
 const STATUS_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#0d9488","#d97706","#dc2626","#ea580c","#10b981","#f59e0b","#6366f1","#ec4899"];
+const LEAD_SOURCE_ICONS = [
+  { key: "home",       label: "ホーム・HP",    color: "#10b981" },
+  { key: "search",     label: "ポータル検索",  color: "#8b5cf6" },
+  { key: "phone",      label: "電話",          color: "#f59e0b" },
+  { key: "mail",       label: "メール",        color: "#0ea5e9" },
+  { key: "chat",       label: "チャット",      color: "#0d9488" },
+  { key: "megaphone",  label: "広告",          color: "#ea580c" },
+  { key: "star",       label: "口コミ",        color: "#eab308" },
+  { key: "people",     label: "紹介",          color: "#6366f1" },
+  { key: "briefcase",  label: "飛び込み",      color: "#d97706" },
+  { key: "map",        label: "マップ",        color: "#dc2626" },
+  { key: "globe",      label: "Web広告",       color: "#06b6d4" },
+  { key: "newspaper",  label: "媒体・メディア",color: "#6a9a7a" },
+  { key: "video",      label: "動画広告",      color: "#f43f5e" },
+  { key: "qr",         label: "QRコード",      color: "#374151" },
+  { key: "social",     label: "SNS",           color: "#ec4899" },
+  { key: "document",   label: "資料請求",      color: "#475569" },
+  { key: "building",   label: "施設・展示場",  color: "#92400e" },
+  { key: "lightbulb",  label: "セミナー",      color: "#ca8a04" },
+  { key: "event",      label: "イベント",      color: "#7c3aed" },
+  { key: "referral",   label: "他社紹介",      color: "#65a30d" },
+];
 function getStatuses() { return (getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS).map(s => s.label || s); }
 function getStatusColor(label) {
   const statuses = getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS;
@@ -109,7 +131,20 @@ function getPortalPrice(site, type) {
   const found = types.find(t => t.label === type);
   return found ? found.price : 0;
 }
-function getSources() { return getMaster().sources || DEFAULT_SOURCES; }
+function getSources() { return (getMaster().sources || DEFAULT_SOURCES).map(s => typeof s === "string" ? s : s.label); }
+function getSourcesWithMeta() { return (getMaster().sources || DEFAULT_SOURCES).map(s => typeof s === "string" ? {label:s, icon:null} : s); }
+function getSourceIcon(sourceName) {
+  const src = (getMaster().sources || DEFAULT_SOURCES).find(s => (typeof s === "string" ? s : s.label) === sourceName);
+  return (src && typeof src === "object") ? src.icon : null;
+}
+function getSourceColor(sourceName, fallbackIdx) {
+  const iconKey = getSourceIcon(sourceName);
+  if (iconKey) { const def = LEAD_SOURCE_ICONS.find(d => d.key === iconKey); if (def) return def.color; }
+  if (sourceName === "HP") return "#0ea5e9";
+  if (sourceName === "ポータルサイト") return "#8b5cf6";
+  if (sourceName === "電話") return "#f59e0b";
+  return SOURCE_COLOR_PALETTE[(fallbackIdx + 3) % SOURCE_COLOR_PALETTE.length];
+}
 // IS担当者はis_staffフラグがtrueのアカウントのみ
 function getISMembers() {
   try {
@@ -163,7 +198,7 @@ const isDueSoon = (dateStr) => {
 const TODAY = new Date().toISOString().split("T")[0];
 const THIS_MONTH = TODAY.slice(0, 7);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-const at = (v) => ACTION_TYPES.find(a => a.v === v) || ACTION_TYPES[4];
+const at = (v) => ACTION_TYPES.find(a => a.v === v) || ACTION_TYPES[0];
 
 const DEFAULT_EMAIL_TEMPLATES = [
   { id:"t1", name:"初回フォロー", subject:"【ダンドリワーク】資料のご確認のお願い", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
@@ -220,7 +255,7 @@ function LeadCombobox({ leads, value, onChange, placeholder, inputStyle, darkMod
               onMouseEnter={e=>e.currentTarget.style.background=hoverBg}
               onMouseLeave={e=>e.currentTarget.style.background="none"}>
               {l.company}{l.contact?`（${l.contact}）`:""}
-              {darkMode&&l.status?<span style={{marginLeft:6,fontSize:11,color:"#64748b"}}>[{l.status}]</span>:null}
+              {darkMode&&l.status?<span style={{marginLeft:6,fontSize:11,color:"#64748b"}}>[{typeof l.status==="object"?l.status.label||"":String(l.status)}]</span>:null}
             </div>
           ))}
         </div>
@@ -336,7 +371,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const copy=(txt)=>{ navigator.clipboard?.writeText(txt); setCopied(true); setTimeout(()=>setCopied(false),2000); };
 
   const saveGmailDraft = async () => {
-    const cfg = (() => { try { return JSON.parse(localStorage.getItem("ai_config")||"{}"); } catch { return {}; } })();
+    const cfg = getEffectiveAiConfig(currentUser);
     const clientId = cfg.gmailClientId;
     if (!clientId) { alert("設定 > APIキー設定 で Gmail Client ID を入力してください"); return; }
     setGmailSaving(true);
@@ -668,8 +703,8 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
               {lead&&(lead.actions||[]).length>0&&(
                 <div style={{marginTop:8,background:"#1e293b",borderRadius:8,padding:"10px 12px",border:"1px solid #334155"}}>
                   <div style={{fontSize:11,color:"#64748b",marginBottom:4}}>直近のアクション</div>
-                  {[...(lead.actions||[])].sort((a,b)=>(b.ts||"").localeCompare(a.ts||"")).slice(0,2).map(a=>(
-                    <div key={a.id} style={{fontSize:11,color:"#94a3b8",borderLeft:"2px solid #334155",paddingLeft:8,marginBottom:4}}>{a.date} {a.time} {ACTION_TYPES.find(t=>t.v===a.type)?.icon||"📞"} {a.result} — {(a.summary||"").slice(0,40)}</div>
+                  {[...(lead.actions||[])].filter(a=>a&&typeof a==="object").sort((a,b)=>(String(b.ts||"")).localeCompare(String(a.ts||""))).slice(0,2).map((a,i)=>(
+                    <div key={a.id||i} style={{fontSize:11,color:"#94a3b8",borderLeft:"2px solid #334155",paddingLeft:8,marginBottom:4}}>{String(a.date||"")} {String(a.time||"")} {ACTION_TYPES.find(t=>t.v===a.type)?.icon||"📞"} {String(a.result||"")} — {String(a.summary||"").slice(0,40)}</div>
                   ))}
                 </div>
               )}
@@ -809,11 +844,41 @@ ${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),20
   );
 }
 
-function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange }) {
+function SourceIconSVG({ iconKey, size=28, color }) {
+  const def = LEAD_SOURCE_ICONS.find(d => d.key === iconKey);
+  const c = color || (def ? def.color : "#6a9a7a");
+  const sym = iconKey === "home" ? <polygon points="20,8 8,20 12,20 12,32 18,32 18,25 22,25 22,32 28,32 28,20 32,20" fill="white"/>
+    : iconKey === "search" ? <><circle cx="16" cy="21" r="6" fill="none" stroke="white" strokeWidth="2.5"/><line x1="21" y1="26" x2="27" y2="32" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></>
+    : iconKey === "phone" ? <path d="M12 10 C11 10 9 11 9 13 C9 20 20 31 27 31 C29 31 30 29 30 28 L28 24 C28 23 27 23 26 23 L23 24 C22 24 21 24 21 23 C19 20 18 18 17 16 C16 15 17 14 17 13 L18 10 C18 9 17 8 16 8 Z" fill="white" stroke="white" strokeWidth="0.5"/>
+    : iconKey === "mail" ? <><rect x="8" y="13" width="24" height="17" rx="2" fill="none" stroke="white" strokeWidth="2"/><polyline points="8,15 20,23 32,15" fill="none" stroke="white" strokeWidth="2"/></>
+    : iconKey === "chat" ? <><rect x="7" y="10" width="22" height="15" rx="4" fill="none" stroke="white" strokeWidth="2.5"/><circle cx="13" cy="18" r="1.5" fill="white"/><circle cx="18" cy="18" r="1.5" fill="white"/><circle cx="23" cy="18" r="1.5" fill="white"/><path d="M11 25 L14 29 L14 25" fill="white"/></>
+    : iconKey === "megaphone" ? <><path d="M10 15 L10 25 L14 25 L14 15 Z" fill="white"/><path d="M14 12 L28 7 L28 28 L14 28 Z" fill="white"/><line x1="31" y1="15" x2="31" y2="25" stroke="white" strokeWidth="3" strokeLinecap="round"/></>
+    : iconKey === "star" ? <polygon points="20,7 23,16 33,16 25,22 28,31 20,25 12,31 15,22 7,16 17,16" fill="white"/>
+    : iconKey === "people" ? <><circle cx="14" cy="14" r="5" fill="white"/><path d="M5 30 C5 23 23 23 23 30" fill="white"/><circle cx="27" cy="13" r="4" fill="none" stroke="white" strokeWidth="2"/><path d="M20 29 C20 23 35 23 35 29" fill="none" stroke="white" strokeWidth="2"/></>
+    : iconKey === "briefcase" ? <><rect x="9" y="18" width="22" height="14" rx="2" fill="none" stroke="white" strokeWidth="2.5"/><path d="M15 18 L15 14 C15 13 16 12 17 12 L23 12 C24 12 25 13 25 14 L25 18" fill="none" stroke="white" strokeWidth="2.5"/><line x1="9" y1="25" x2="31" y2="25" stroke="white" strokeWidth="2"/></>
+    : iconKey === "map" ? <path d="M20 6 C14 6 10 11 10 17 C10 25 20 35 20 35 C20 35 30 25 30 17 C30 11 26 6 20 6 Z M20 22 C17.2 22 15 19.8 15 17 C15 14.2 17.2 12 20 12 C22.8 12 25 14.2 25 17 C25 19.8 22.8 22 20 22 Z" fill="white"/>
+    : iconKey === "globe" ? <><circle cx="20" cy="20" r="12" fill="none" stroke="white" strokeWidth="2"/><ellipse cx="20" cy="20" rx="5.5" ry="12" fill="none" stroke="white" strokeWidth="1.5"/><line x1="8" y1="20" x2="32" y2="20" stroke="white" strokeWidth="1.5"/><line x1="9" y1="14" x2="31" y2="14" stroke="white" strokeWidth="1.2"/><line x1="9" y1="26" x2="31" y2="26" stroke="white" strokeWidth="1.2"/></>
+    : iconKey === "newspaper" ? <><rect x="8" y="9" width="22" height="22" rx="2" fill="none" stroke="white" strokeWidth="2"/><rect x="11" y="13" width="8" height="7" rx="1" fill="white"/><line x1="21" y1="13" x2="27" y2="13" stroke="white" strokeWidth="1.5"/><line x1="21" y1="17" x2="27" y2="17" stroke="white" strokeWidth="1.5"/><line x1="11" y1="23" x2="27" y2="23" stroke="white" strokeWidth="1.5"/><line x1="11" y1="27" x2="22" y2="27" stroke="white" strokeWidth="1.5"/></>
+    : iconKey === "video" ? <><circle cx="20" cy="20" r="13" fill="none" stroke="white" strokeWidth="2"/><polygon points="16,13 30,20 16,27" fill="white"/></>
+    : iconKey === "qr" ? <><rect x="8" y="8" width="9" height="9" rx="1" fill="none" stroke="white" strokeWidth="2"/><rect x="11" y="11" width="3" height="3" fill="white"/><rect x="23" y="8" width="9" height="9" rx="1" fill="none" stroke="white" strokeWidth="2"/><rect x="26" y="11" width="3" height="3" fill="white"/><rect x="8" y="23" width="9" height="9" rx="1" fill="none" stroke="white" strokeWidth="2"/><rect x="11" y="26" width="3" height="3" fill="white"/><rect x="23" y="23" width="3" height="3" fill="white"/><rect x="28" y="23" width="3" height="3" fill="white"/><rect x="23" y="28" width="9" height="3" fill="white"/></>
+    : iconKey === "social" ? <><circle cx="11" cy="20" r="4" fill="white"/><circle cx="29" cy="11" r="4" fill="white"/><circle cx="29" cy="29" r="4" fill="white"/><line x1="15" y1="18" x2="25" y2="13" stroke="white" strokeWidth="2"/><line x1="15" y1="22" x2="25" y2="27" stroke="white" strokeWidth="2"/></>
+    : iconKey === "document" ? <><rect x="10" y="7" width="17" height="26" rx="2" fill="none" stroke="white" strokeWidth="2"/><path d="M21 7 L21 12 L27 12" fill="none" stroke="white" strokeWidth="2"/><line x1="13" y1="17" x2="24" y2="17" stroke="white" strokeWidth="1.5"/><line x1="13" y1="21" x2="24" y2="21" stroke="white" strokeWidth="1.5"/><line x1="13" y1="25" x2="20" y2="25" stroke="white" strokeWidth="1.5"/></>
+    : iconKey === "building" ? <><rect x="8" y="11" width="14" height="21" rx="1" fill="none" stroke="white" strokeWidth="2"/><rect x="22" y="18" width="10" height="14" rx="1" fill="none" stroke="white" strokeWidth="2"/><rect x="11" y="15" width="3" height="3" fill="white"/><rect x="16" y="15" width="3" height="3" fill="white"/><rect x="11" y="21" width="3" height="3" fill="white"/><rect x="16" y="21" width="3" height="3" fill="white"/><rect x="25" y="22" width="3" height="3" fill="white"/><line x1="14" y1="32" x2="14" y2="27" stroke="white" strokeWidth="3"/></>
+    : iconKey === "lightbulb" ? <><path d="M20 8 C14.5 8 10 12.5 10 18 C10 21.5 11.5 24.5 14.5 26.5 L15 29 L25 29 L25.5 26.5 C28.5 24.5 30 21.5 30 18 C30 12.5 25.5 8 20 8 Z" fill="white"/><line x1="15" y1="31" x2="25" y2="31" stroke="white" strokeWidth="2" strokeLinecap="round"/><line x1="16.5" y1="34" x2="23.5" y2="34" stroke="white" strokeWidth="2" strokeLinecap="round"/></>
+    : iconKey === "event" ? <><rect x="7" y="10" width="26" height="22" rx="3" fill="none" stroke="white" strokeWidth="2"/><line x1="7" y1="17" x2="33" y2="17" stroke="white" strokeWidth="2"/><line x1="13" y1="7" x2="13" y2="13" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><line x1="27" y1="7" x2="27" y2="13" stroke="white" strokeWidth="2.5" strokeLinecap="round"/><rect x="11" y="21" width="4" height="4" rx="1" fill="white"/><rect x="18" y="21" width="4" height="4" rx="1" fill="white"/><rect x="25" y="21" width="4" height="4" rx="1" fill="white"/></>
+    : iconKey === "referral" ? <><circle cx="20" cy="20" r="11" fill="none" stroke="white" strokeWidth="2.5"/><polyline points="16,20 20,15 24,20" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/><line x1="20" y1="15" x2="20" y2="27" stroke="white" strokeWidth="2.5" strokeLinecap="round"/></>
+    : <text x="20" y="26" textAnchor="middle" fill="white" fontSize="18" fontFamily="sans-serif">?</text>;
+  return <svg width={size} height={size} viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" style={{display:"block",flexShrink:0}}>
+    <rect x="1" y="1" width="38" height="38" rx="8" fill={c}/>
+    {sym}
+  </svg>;
+}
+
+function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave }) {
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "sales"));
   const [msg, setMsg] = React.useState("");
-  const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"" });
+  const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
   const [profileMsg, setProfileMsg] = React.useState("");
   const saveProfile = () => {
     if (!profileForm.name.trim()) return;
@@ -822,7 +887,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
     setTimeout(() => setProfileMsg(""), 2000);
   };
 
-  const save = (next) => { setMaster(next); saveMasterSettings(next); setMsg("保存しました ✓"); setTimeout(()=>setMsg(""),2000); };
+  const save = (next) => { setMaster(next); saveMasterSettings(next); onMasterSave?.(); setMsg("保存しました ✓"); setTimeout(()=>setMsg(""),2000); };
 
   // ポータルサイト
   const [newSite, setNewSite] = React.useState("");
@@ -927,36 +992,45 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
 
   // リード管理（流入元）
   const [newSource, setNewSource] = React.useState("");
+  const [newSourceIcon, setNewSourceIcon] = React.useState("home");
   const [editSourceIdx, setEditSourceIdx] = React.useState(null);
   const [editSourceVal, setEditSourceVal] = React.useState("");
+  const [editSourceIcon, setEditSourceIcon] = React.useState(null);
+  const [showIconPicker, setShowIconPicker] = React.useState(null); // null | "new" | idx number
   const addSource = () => {
     const s = newSource.trim(); if (!s) return;
-    if ((master.sources||DEFAULT_SOURCES).includes(s)) { alert("既に存在します"); return; }
-    save({ ...master, sources: [...(master.sources||DEFAULT_SOURCES), s] });
-    setNewSource("");
+    const currentSources = master.sources || DEFAULT_SOURCES;
+    if (currentSources.some(x => (typeof x === "string" ? x : x.label) === s)) { alert("既に存在します"); return; }
+    save({ ...master, sources: [...currentSources, {label: s, icon: newSourceIcon}] });
+    setNewSource(""); setNewSourceIcon("home");
   };
   const removeSource = (s) => {
     if ((master.sources||DEFAULT_SOURCES).length <= 1) { alert("最低1つ必要です"); return; }
-    save({ ...master, sources: (master.sources||DEFAULT_SOURCES).filter(x=>x!==s) });
+    save({ ...master, sources: (master.sources||DEFAULT_SOURCES).filter(x => (typeof x === "string" ? x : x.label) !== s) });
   };
   const startEditSource = (idx) => {
     setEditSourceIdx(idx);
-    setEditSourceVal((master.sources||DEFAULT_SOURCES)[idx]);
+    const src = (master.sources||DEFAULT_SOURCES)[idx];
+    setEditSourceVal(typeof src === "string" ? src : src.label);
+    setEditSourceIcon(typeof src === "object" ? src.icon : null);
   };
   const saveSource = async () => {
     const newVal = editSourceVal.trim();
     if (!newVal) return;
     const sources = master.sources||DEFAULT_SOURCES;
-    const oldVal = sources[editSourceIdx];
-    if (newVal === oldVal) { setEditSourceIdx(null); return; }
-    if (sources.includes(newVal)) { alert("既に存在します"); return; }
-    const newSources = sources.map((s,i) => i===editSourceIdx ? newVal : s);
+    const oldSrc = sources[editSourceIdx];
+    const oldVal = typeof oldSrc === "string" ? oldSrc : oldSrc.label;
+    if (newVal === oldVal && editSourceIcon === (typeof oldSrc === "object" ? oldSrc.icon : null)) { setEditSourceIdx(null); return; }
+    if (sources.some((s,i) => i !== editSourceIdx && (typeof s === "string" ? s : s.label) === newVal)) { alert("既に存在します"); return; }
+    const newSources = sources.map((s,i) => i===editSourceIdx ? {label: newVal, icon: editSourceIcon} : s);
     save({ ...master, sources: newSources });
     // 既存リードの流入元も一括更新
-    const leads = await loadLeads();
-    const updated = leads.map(l => l.source === oldVal ? { ...l, source: newVal } : l);
-    await saveLeads(updated);
-    if (onLeadsChange) onLeadsChange(updated);
+    if (newVal !== oldVal) {
+      const leads = await loadLeads();
+      const updated = leads.map(l => l.source === oldVal ? { ...l, source: newVal } : l);
+      await saveLeads(updated);
+      if (onLeadsChange) onLeadsChange(updated);
+    }
     setEditSourceIdx(null);
   };
 
@@ -1060,7 +1134,8 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
         )}
         {tab === "apikey" && (
           <div>
-            <div style={{fontSize:12,color:"#6a9a7a",marginBottom:16}}>AIアシスタント機能を使うにはGemini APIキーが必要です。</div>
+            <div style={{fontSize:12,color:"#6a9a7a",marginBottom:8}}>AIアシスタント機能を使うにはGemini APIキーが必要です。</div>
+            <div style={{fontSize:11,color:"#9ca3af",marginBottom:16,background:"#f0f5f2",borderRadius:6,padding:"8px 12px"}}>💡 各アカウントで個別に設定できます（アカウント管理タブ → API連携設定）。個別設定がある場合はそちらが優先されます。</div>
             <div style={{marginBottom:16}}>
               <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🔑 Gemini APIキー</label>
               <input type="password"
@@ -1173,28 +1248,70 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
             {/* 流入元 */}
             <div style={{marginBottom:24}}>
               <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:8}}>流入元</div>
-              <div style={addRow}>
-                <input value={newSource} onChange={e=>setNewSource(e.target.value)} placeholder="新しい流入元" style={{...inp,flex:1}} onKeyDown={e=>e.key==="Enter"&&addSource()} />
+              {/* 新規追加行 */}
+              <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
+                {/* アイコン選択ボタン */}
+                <div style={{position:"relative"}}>
+                  <button onClick={()=>setShowIconPicker(showIconPicker==="new"?null:"new")} title="アイコン選択"
+                    style={{padding:4,borderRadius:8,border:"2px solid #c0dece",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38}}>
+                    <SourceIconSVG iconKey={newSourceIcon} size={26}/>
+                  </button>
+                  {showIconPicker==="new" && (
+                    <div style={{position:"absolute",top:42,left:0,zIndex:200,background:"#fff",border:"1px solid #d8ede1",borderRadius:12,padding:10,boxShadow:"0 6px 24px #0003",display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5,width:218}}>
+                      <div style={{gridColumn:"1/-1",fontSize:11,fontWeight:700,color:"#6a9a7a",marginBottom:4}}>アイコンを選択</div>
+                      {LEAD_SOURCE_ICONS.map(icon=>(
+                        <button key={icon.key} onClick={()=>{setNewSourceIcon(icon.key);setShowIconPicker(null);}} title={icon.label}
+                          style={{padding:2,borderRadius:8,border:"none",boxShadow:newSourceIcon===icon.key?"0 0 0 2.5px #10b981":"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
+                          <SourceIconSVG iconKey={icon.key} size={32}/>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <input value={newSource} onChange={e=>setNewSource(e.target.value)} placeholder="新しい流入元" style={{...inp,flex:1,minWidth:120}} onKeyDown={e=>e.key==="Enter"&&addSource()} />
                 <button onClick={addSource} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
               </div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {(master.sources||DEFAULT_SOURCES).map((s,idx)=>(
-                  <div key={s} style={{display:"flex",alignItems:"center",gap:4,background:"#f0f5f2",border:"1px solid #d8ede1",borderRadius:8,padding:"5px 10px"}}>
-                    {editSourceIdx===idx ? (
-                      <>
-                        <input value={editSourceVal} onChange={e=>setEditSourceVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveSource();if(e.key==="Escape")setEditSourceIdx(null);}} style={{...inp,width:90,padding:"2px 6px",fontSize:12}} autoFocus />
-                        <button onClick={saveSource} style={{fontSize:11,padding:"2px 8px",borderRadius:5,border:"none",background:"#10b981",color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>保存</button>
-                        <button onClick={()=>setEditSourceIdx(null)} style={{fontSize:11,color:"#6a9a7a",background:"none",border:"none",cursor:"pointer",padding:0,lineHeight:1}}>✕</button>
-                      </>
-                    ) : (
-                      <>
-                        <span style={{fontSize:12,color:"#174f35",fontWeight:600}}>{s}</span>
-                        <button onClick={()=>startEditSource(idx)} style={{fontSize:11,padding:"1px 7px",borderRadius:5,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>編集</button>
-                        <button onClick={()=>removeSource(s)} style={{fontSize:11,color:"#dc2626",background:"none",border:"none",cursor:"pointer",padding:0,lineHeight:1,opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>✕</button>
-                      </>
-                    )}
-                  </div>
-                ))}
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {(master.sources||DEFAULT_SOURCES).map((srcObj,idx)=>{
+                  const sLabel = typeof srcObj==="string" ? srcObj : srcObj.label;
+                  const sIcon  = typeof srcObj==="object" ? srcObj.icon : null;
+                  return (
+                    <div key={sLabel} style={{display:"flex",alignItems:"center",gap:8,background:"#f8fbf9",border:"1px solid #e2f0e8",borderRadius:10,padding:"8px 12px"}}>
+                      {editSourceIdx===idx ? (
+                        <div style={{display:"flex",alignItems:"center",gap:6,flex:1,flexWrap:"wrap"}}>
+                          {/* アイコン選択 (編集中) */}
+                          <div style={{position:"relative"}}>
+                            <button onClick={()=>setShowIconPicker(showIconPicker===idx?null:idx)} title="アイコン選択"
+                              style={{padding:3,borderRadius:7,border:"2px solid #c0dece",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34}}>
+                              <SourceIconSVG iconKey={editSourceIcon||"home"} size={24}/>
+                            </button>
+                            {showIconPicker===idx && (
+                              <div style={{position:"absolute",top:38,left:0,zIndex:200,background:"#fff",border:"1px solid #d8ede1",borderRadius:12,padding:10,boxShadow:"0 6px 24px #0003",display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5,width:218}}>
+                                <div style={{gridColumn:"1/-1",fontSize:11,fontWeight:700,color:"#6a9a7a",marginBottom:4}}>アイコンを選択</div>
+                                {LEAD_SOURCE_ICONS.map(icon=>(
+                                  <button key={icon.key} onClick={()=>{setEditSourceIcon(icon.key);setShowIconPicker(null);}} title={icon.label}
+                                    style={{padding:2,borderRadius:8,border:"none",boxShadow:editSourceIcon===icon.key?"0 0 0 2.5px #10b981":"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
+                                    <SourceIconSVG iconKey={icon.key} size={32}/>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <input value={editSourceVal} onChange={e=>setEditSourceVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveSource();if(e.key==="Escape")setEditSourceIdx(null);}} style={{...inp,flex:1,minWidth:80,padding:"4px 8px"}} autoFocus />
+                          <button onClick={saveSource} style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:"none",background:"#10b981",color:"#fff",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>保存</button>
+                          <button onClick={()=>{setEditSourceIdx(null);setShowIconPicker(null);}} style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"1px solid #c0dece",background:"#fff",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕</button>
+                        </div>
+                      ) : (
+                        <>
+                          <SourceIconSVG iconKey={sIcon||"home"} size={28}/>
+                          <span style={{fontSize:13,color:"#174f35",fontWeight:600,flex:1}}>{sLabel}</span>
+                          <button onClick={()=>startEditSource(idx)} style={{fontSize:11,padding:"3px 10px",borderRadius:6,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit",flexShrink:0,opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>編集</button>
+                          <button onClick={()=>removeSource(sLabel)} style={{fontSize:11,padding:"3px 8px",borderRadius:5,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",cursor:"pointer",fontFamily:"inherit",flexShrink:0,opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>削除</button>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
             {/* ステータス */}
@@ -1278,6 +1395,30 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                 <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
                   placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
                   style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:100,lineHeight:1.5}} />
+              </div>
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #e2f0e8"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>🔑 API連携設定</div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>Gemini APIキー</label>
+                  <input type="password" value={profileForm.geminiKey||""} onChange={e=>setProfileForm(p=>({...p,geminiKey:e.target.value}))}
+                    placeholder="AIzaSy..."
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"monospace",background:"#fff"}} />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>AIアシスタント機能に使用します。<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio</a>で取得できます。</div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>Gmail OAuth Client ID</label>
+                  <input type="text" value={profileForm.gmailClientId||""} onChange={e=>setProfileForm(p=>({...p,gmailClientId:e.target.value}))}
+                    placeholder="xxxxxxxxxx.apps.googleusercontent.com"
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"monospace",background:"#fff"}} />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>Gmail送信機能に使用します。<a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a>で取得できます。</div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>GoogleカレンダーID</label>
+                  <input type="text" value={profileForm.calendarId||""} onChange={e=>setProfileForm(p=>({...p,calendarId:e.target.value}))}
+                    placeholder="例：tanaka@gmail.com"
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"monospace",background:"#fff"}} />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>商談候補日検索に使用します（自分のGoogleカレンダーID）。カレンダー設定→「カレンダーのID」で確認できます。</div>
+                </div>
               </div>
               {profileMsg && <div style={{fontSize:12,color:"#059669",fontWeight:700,marginBottom:10}}>{profileMsg}</div>}
               <button onClick={saveProfile}
@@ -1438,6 +1579,7 @@ function App() {
   const [dashFilter, setDashFilter] = useState(null);
   const [leads, setLeads] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [masterVer, setMasterVer] = useState(0);
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       // current_user_id のみ保存し、アカウント情報は is_accounts から取得
@@ -1482,7 +1624,12 @@ function App() {
   const [aiConfig, setAiConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; }
   });
-  const apiKey = aiConfig.geminiKey || "";
+  const effectiveAiConfig = useMemo(() => ({
+    ...aiConfig,
+    geminiKey: currentUser?.geminiKey || aiConfig.geminiKey || "",
+    gmailClientId: currentUser?.gmailClientId || aiConfig.gmailClientId || ""
+  }), [currentUser, aiConfig]);
+  const apiKey = effectiveAiConfig.geminiKey;
   const saveAiConfig = (cfg) => {
     setAiConfig(cfg);
     try { localStorage.setItem("ai_config", JSON.stringify(cfg)); } catch {}
@@ -1509,13 +1656,13 @@ function App() {
       <style>{CSS}</style>
       <Nav page={page} setPage={setPage} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} />
       <main style={S.main}>
-        {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} />}
+        {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} masterVer={masterVer} />}
         {page === "trend"     && <Trend leads={leads} />}
         {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
-        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} currentUser={currentUser} />}
-        {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
-        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} />}
+        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} />}
+        {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} currentUser={currentUser} />}
+        {page === "settings"  && <SettingsPage aiConfig={effectiveAiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} onMasterSave={() => setMasterVer(v => v + 1)} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
       </main>
     </div>
@@ -1607,7 +1754,7 @@ function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUp
   );
 }
 
-function Dashboard({ leads, currentUser, onNavigate }) {
+function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
   // 日付を "YYYY-MM" 形式に正規化（スラッシュ・ハイフン両対応）
   const toYM = (dateStr) => {
     if (!dateStr) return "";
@@ -1705,14 +1852,13 @@ function Dashboard({ leads, currentUser, onNavigate }) {
             const ap = arr.filter(isAppt).length;
             const won = arr.filter(isWon).length;
             const pct = arr.length ? ap/arr.length : 0;
-            const srcColor = src==="HP" ? "#0ea5e9" : src==="ポータルサイト" ? "#8b5cf6" : src==="電話" ? "#f59e0b" : SOURCE_COLOR_PALETTE[(srcIdx+3) % SOURCE_COLOR_PALETTE.length];
-            const HP_ICON2 = <img src="data:image/png;base64,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" style={{width:16,height:16,objectFit:"contain",verticalAlign:"middle"}} alt="HP" />;
-            const srcIcon  = src==="HP" ? HP_ICON2 : src==="ポータルサイト" ? <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iMzAiIGhlaWdodD0iMjYiIHJ4PSI1IiBmaWxsPSIjOGI1Y2Y2Ii8+CiAgPHJlY3QgeD0iMiIgeT0iNCIgd2lkdGg9IjMwIiBoZWlnaHQ9IjgiIHJ4PSI1IiBmaWxsPSIjN2MzYWVkIi8+CiAgPGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjIiIGZpbGw9IiNmYmJmMjQiLz4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjgiIHI9IjIiIGZpbGw9IiNhNzhiZmEiIG9wYWNpdHk9IjAuNyIvPgogIDxjaXJjbGUgY3g9IjIwIiBjeT0iOCIgcj0iMiIgZmlsbD0iI2M0YjVmZCIgb3BhY2l0eT0iMC41Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIyMSIgcj0iNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjUiLz4KICA8bGluZSB4MT0iMjEiIHkxPSIyNiIgeDI9IjI2IiB5Mj0iMzEiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+" style={{width:16,height:16,objectFit:"contain",verticalAlign:"middle"}} alt="ポータル" /> : "📞";
+            const srcColor = getSourceColor(src, srcIdx);
+            const srcIconKey = getSourceIcon(src) || (src==="HP"?"home":src==="ポータルサイト"?"search":src==="電話"?"phone":"document");
             return (
               <div key={src} style={{marginBottom:6,background:"#f8fbf9",borderRadius:10, padding:"7px 10px",border:`1px solid ${srcColor}22`}}>
                 {/* 1行目：名前＋数値 */}
                 <div style={{display:"flex",alignItems:"center", gap:8,marginBottom:4}}>
-                  <span style={{fontSize:12,fontWeight:700,color:srcColor,flexShrink:0}}>{srcIcon} {src}</span>
+                  <span style={{fontSize:12,fontWeight:700,color:srcColor,flexShrink:0,display:"flex",alignItems:"center",gap:5}}><SourceIconSVG iconKey={srcIconKey} size={18}/> {src}</span>
                   <div style={{flex:1, display:"flex", gap:6, justifyContent:"flex-end",flexWrap:"wrap"}}>
                     <span style={{fontSize:11,background:"#fff",border:"1px solid #e2f0e8", borderRadius:6,padding:"2px 8px",color:"#6a9a7a"}}>
                       反響 <b style={{color:"#174f35"}}>{arr.length}</b>
@@ -2282,8 +2428,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
   const actions = lead.actions || [];
   const last = actions[0];
 
-  const HP_ICON = <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHJ4PSI4IiBmaWxsPSIjMTBiOTgxIi8+CiAgPHBvbHlnb24gcG9pbnRzPSIyMCw4IDgsMjAgMTIsMjAgMTIsMzIgMTgsMzIgMTgsMjUgMjIsMjUgMjIsMzIgMjgsMzIgMjgsMjAgMzIsMjAiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPg==" style={{width:28,height:28,objectFit:"contain"}} alt="HP" />;
-  const srcIcon = lead.source==="HP"?HP_ICON:lead.source==="ポータルサイト"?<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iMzAiIGhlaWdodD0iMjYiIHJ4PSI1IiBmaWxsPSIjOGI1Y2Y2Ii8+CiAgPHJlY3QgeD0iMiIgeT0iNCIgd2lkdGg9IjMwIiBoZWlnaHQ9IjgiIHJ4PSI1IiBmaWxsPSIjN2MzYWVkIi8+CiAgPGNpcmNsZSBjeD0iOCIgY3k9IjgiIHI9IjIiIGZpbGw9IiNmYmJmMjQiLz4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjgiIHI9IjIiIGZpbGw9IiNhNzhiZmEiIG9wYWNpdHk9IjAuNyIvPgogIDxjaXJjbGUgY3g9IjIwIiBjeT0iOCIgcj0iMiIgZmlsbD0iI2M0YjVmZCIgb3BhY2l0eT0iMC41Ii8+CiAgPGNpcmNsZSBjeD0iMTYiIGN5PSIyMSIgcj0iNiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLXdpZHRoPSIyLjUiLz4KICA8bGluZSB4MT0iMjEiIHkxPSIyNiIgeDI9IjI2IiB5Mj0iMzEiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMi41IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9zdmc+" style={{width:28,height:28,objectFit:"contain"}} alt="ポータル" />:lead.source==="電話"?<img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB4PSIyIiB5PSIyIiB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHJ4PSI4IiBmaWxsPSIjZjU5ZTBiIi8+CiAgPHBhdGggZD0iTTEyIDEwIEMxMSAxMCA5IDExIDkgMTMgQzkgMjAgMjAgMzEgMjcgMzEgQzI5IDMxIDMwIDI5IDMwIDI4IEwyOCAyNCBDMjggMjMgMjcgMjMgMjYgMjMgTDIzIDI0IEMyMiAyNCAyMSAyNCAyMSAyMyBDMTkgMjAgMTggMTggMTcgMTYgQzE2IDE1IDE3IDE0IDE3IDEzIEwxOCAxMCBDMTggOSAxNyA4IDE2IDggWiIgZmlsbD0id2hpdGUiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMC41Ii8+Cjwvc3ZnPg==" style={{width:28,height:28,objectFit:"contain"}} alt="電話" />:"📋";
+  const srcIconKey2 = getSourceIcon(lead.source) || (lead.source==="HP"?"home":lead.source==="ポータルサイト"?"search":lead.source==="電話"?"phone":"document");
   const sc = getStatusColor(lead.status);
   const nad = lead.next_action_date;
   const subParts = [
@@ -2303,7 +2448,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
 
         {/* アイコン */}
         <div style={{width:36, height:36,borderRadius:9, flexShrink:0, background: open ? sc+"22" : "#f0f5f2", border:`1.5px solid ${sc}33`, display:"flex",alignItems:"center", justifyContent:"center",fontSize:17}}>
-          {srcIcon}
+          <SourceIconSVG iconKey={srcIconKey2} size={26}/>
         </div>
 
         {/* 会社名＋サブテキスト */}
@@ -2842,7 +2987,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         {actions.length === 0 && !showAF
           ? <div style={S.noAct}>まだアクションがありません</div>
           : <div style={{display:"flex", flexDirection:"column", gap:5, marginTop: showAF ? 12 : 0}}>
-              {actions.map((a,i) => (
+              {[...actions].sort((a,b) => (b.ts||0) - (a.ts||0)).map((a,i) => (
                 editingAction?.id === a.id
                   ? <ActionForm key={a.id} initial={a}
                       onSave={updated => { onEditAction(a.id, updated); setEditingAction(null); }}
@@ -2880,6 +3025,15 @@ function saveAccounts(accounts) {
     USER_COLORS[a.name] = a.color;
     IS_COLORS[a.name] = { bg: a.color, text: a.color,border: a.color + "55" };
   });
+}
+function getEffectiveAiConfig(currentUser) {
+  const global = (() => { try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; } })();
+  if (!currentUser) return global;
+  return {
+    ...global,
+    geminiKey: currentUser.geminiKey || global.geminiKey || "",
+    gmailClientId: currentUser.gmailClientId || global.gmailClientId || ""
+  };
 }
 
 loadAccounts().forEach(a => {
@@ -3158,10 +3312,20 @@ function saveGCalConfig(cfg) {
   try { localStorage.setItem("gcal_config", JSON.stringify(cfg)); } catch {}
 }
 
-function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail = ()=>{} }) {
+function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail = ()=>{}, currentUser }) {
   const [cfg, setCfg] = useState(() => loadGCalConfig());
   const [showSetup, setShowSetup] = useState(false);
   const [editCfg, setEditCfg] = useState(() => loadGCalConfig());
+  const accountCalendarIds = useMemo(() => {
+    const accounts = loadAccounts();
+    const ids = {};
+    accounts.forEach(a => { if (a.calendarId) ids[a.name] = a.calendarId; });
+    return ids;
+  }, []);
+  const mergedCalendarIds = useMemo(() => ({
+    ...(cfg.calendarIds||{}),
+    ...accountCalendarIds
+  }), [cfg, accountCalendarIds]);
 
   // 検索条件
   const [selectedMembers, setSelectedMembers] = useState(["北原"]);
@@ -3185,7 +3349,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const [error, setError]     = useState("");
   const [searched, setSearched] = useState(false);
 
-  const isConfigured = cfg.apiKey && cfg.calendarIds && Object.keys(cfg.calendarIds).length > 0;
+  const isConfigured = cfg.apiKey && Object.keys(mergedCalendarIds).length > 0;
 
   // Google Calendar freebusy APIを叩く
   const search = async () => {
@@ -3198,7 +3362,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
 
       // 対象メンバーのカレンダーIDを収集
       const items = selectedMembers
-        .map(m => cfg.calendarIds[m])
+        .map(m => mergedCalendarIds[m])
         .filter(Boolean)
         .map(id => ({ id }));
 
@@ -3221,7 +3385,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
       // 各メンバーの busy 時間帯を収集
       const busyByMember = {};
       selectedMembers.forEach(m => {
-        const calId = cfg.calendarIds[m];
+        const calId = mergedCalendarIds[m];
         if (!calId) return;
         busyByMember[m] = (data.calendars[calId]?.busy || []).map(b => ({
           start: new Date(b.start), end: new Date(b.end)
@@ -3461,7 +3625,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {members.map(m => {
                 const active = selectedMembers.includes(m);
-                const hasId = !!(cfg.calendarIds||{})[m];
+                const hasId = !!mergedCalendarIds[m];
                 return (
                   <button key={m} onClick={()=>setSelectedMembers(prev=>
                     active ? prev.filter(x=>x!==m) : [...prev,m]
@@ -3477,7 +3641,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
                 );
               })}
             </div>
-            {selectedMembers.some(m=>!(cfg.calendarIds||{})[m]) && (
+            {selectedMembers.some(m=>!mergedCalendarIds[m]) && (
               <div style={{fontSize:11,color:"#f59e0b",marginTop:4}}>⚠️ カレンダーID未設定のメンバーは除外されます</div>
             )}
           </div>
@@ -3738,8 +3902,23 @@ const CSS = `
 `;
 
 
+    class ErrorBoundary extends React.Component {
+      constructor(props){super(props);this.state={hasError:false,error:null};}
+      static getDerivedStateFromError(e){return{hasError:true,error:e};}
+      render(){
+        if(this.state.hasError){
+          return <div style={{padding:40,textAlign:"center",fontFamily:"'Noto Sans JP',sans-serif"}}>
+            <div style={{fontSize:40,marginBottom:16}}>⚠️</div>
+            <div style={{fontSize:18,fontWeight:700,color:"#dc2626",marginBottom:8}}>エラーが発生しました</div>
+            <div style={{fontSize:13,color:"#6b7280",marginBottom:24,maxWidth:400,margin:"0 auto 24px"}}>{String(this.state.error?.message||"予期しないエラーが発生しました")}</div>
+            <button onClick={()=>this.setState({hasError:false,error:null})} style={{padding:"8px 24px",borderRadius:8,background:"#059669",color:"#fff",border:"none",fontSize:14,fontWeight:700,cursor:"pointer"}}>再試行</button>
+          </div>;
+        }
+        return this.props.children;
+      }
+    }
     const root=ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App/>);
+    root.render(<ErrorBoundary><App/></ErrorBoundary>);
   </script>
 </body>
 </html>

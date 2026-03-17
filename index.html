@@ -874,7 +874,7 @@ function SourceIconSVG({ iconKey, size=28, color }) {
   </svg>;
 }
 
-function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange }) {
+function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave }) {
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "sales"));
   const [msg, setMsg] = React.useState("");
@@ -887,7 +887,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
     setTimeout(() => setProfileMsg(""), 2000);
   };
 
-  const save = (next) => { setMaster(next); saveMasterSettings(next); setMsg("保存しました ✓"); setTimeout(()=>setMsg(""),2000); };
+  const save = (next) => { setMaster(next); saveMasterSettings(next); onMasterSave?.(); setMsg("保存しました ✓"); setTimeout(()=>setMsg(""),2000); };
 
   // ポータルサイト
   const [newSite, setNewSite] = React.useState("");
@@ -1554,6 +1554,7 @@ function App() {
   const [dashFilter, setDashFilter] = useState(null);
   const [leads, setLeads] = useState([]);
   const [loaded, setLoaded] = useState(false);
+  const [masterVer, setMasterVer] = useState(0);
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       // current_user_id のみ保存し、アカウント情報は is_accounts から取得
@@ -1625,13 +1626,13 @@ function App() {
       <style>{CSS}</style>
       <Nav page={page} setPage={setPage} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} />
       <main style={S.main}>
-        {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} />}
+        {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} masterVer={masterVer} />}
         {page === "trend"     && <Trend leads={leads} />}
         {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} currentUser={currentUser} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
-        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} />}
+        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} onMasterSave={() => setMasterVer(v => v + 1)} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
       </main>
     </div>
@@ -1723,7 +1724,7 @@ function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUp
   );
 }
 
-function Dashboard({ leads, currentUser, onNavigate }) {
+function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
   // 日付を "YYYY-MM" 形式に正規化（スラッシュ・ハイフン両対応）
   const toYM = (dateStr) => {
     if (!dateStr) return "";

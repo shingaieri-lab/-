@@ -371,7 +371,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const copy=(txt)=>{ navigator.clipboard?.writeText(txt); setCopied(true); setTimeout(()=>setCopied(false),2000); };
 
   const saveGmailDraft = async () => {
-    const cfg = (() => { try { return JSON.parse(localStorage.getItem("ai_config")||"{}"); } catch { return {}; } })();
+    const cfg = getEffectiveAiConfig(currentUser);
     const clientId = cfg.gmailClientId;
     if (!clientId) { alert("設定 > APIキー設定 で Gmail Client ID を入力してください"); return; }
     setGmailSaving(true);
@@ -878,7 +878,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "sales"));
   const [msg, setMsg] = React.useState("");
-  const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"" });
+  const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
   const [profileMsg, setProfileMsg] = React.useState("");
   const saveProfile = () => {
     if (!profileForm.name.trim()) return;
@@ -1134,7 +1134,8 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
         )}
         {tab === "apikey" && (
           <div>
-            <div style={{fontSize:12,color:"#6a9a7a",marginBottom:16}}>AIアシスタント機能を使うにはGemini APIキーが必要です。</div>
+            <div style={{fontSize:12,color:"#6a9a7a",marginBottom:8}}>AIアシスタント機能を使うにはGemini APIキーが必要です。</div>
+            <div style={{fontSize:11,color:"#9ca3af",marginBottom:16,background:"#f0f5f2",borderRadius:6,padding:"8px 12px"}}>💡 各アカウントで個別に設定できます（アカウント管理タブ → API連携設定）。個別設定がある場合はそちらが優先されます。</div>
             <div style={{marginBottom:16}}>
               <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🔑 Gemini APIキー</label>
               <input type="password"
@@ -1395,6 +1396,30 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                   placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
                   style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:100,lineHeight:1.5}} />
               </div>
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid #e2f0e8"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>🔑 API連携設定</div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>Gemini APIキー</label>
+                  <input type="password" value={profileForm.geminiKey||""} onChange={e=>setProfileForm(p=>({...p,geminiKey:e.target.value}))}
+                    placeholder="AIzaSy..."
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"monospace",background:"#fff"}} />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>AIアシスタント機能に使用します。<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio</a>で取得できます。</div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>Gmail OAuth Client ID</label>
+                  <input type="text" value={profileForm.gmailClientId||""} onChange={e=>setProfileForm(p=>({...p,gmailClientId:e.target.value}))}
+                    placeholder="xxxxxxxxxx.apps.googleusercontent.com"
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"monospace",background:"#fff"}} />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>Gmail送信機能に使用します。<a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a>で取得できます。</div>
+                </div>
+                <div style={{marginBottom:12}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>GoogleカレンダーID</label>
+                  <input type="text" value={profileForm.calendarId||""} onChange={e=>setProfileForm(p=>({...p,calendarId:e.target.value}))}
+                    placeholder="例：tanaka@gmail.com"
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"monospace",background:"#fff"}} />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>商談候補日検索に使用します（自分のGoogleカレンダーID）。カレンダー設定→「カレンダーのID」で確認できます。</div>
+                </div>
+              </div>
               {profileMsg && <div style={{fontSize:12,color:"#059669",fontWeight:700,marginBottom:10}}>{profileMsg}</div>}
               <button onClick={saveProfile}
                 style={{padding:"8px 28px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -1599,7 +1624,12 @@ function App() {
   const [aiConfig, setAiConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; }
   });
-  const apiKey = aiConfig.geminiKey || "";
+  const effectiveAiConfig = useMemo(() => ({
+    ...aiConfig,
+    geminiKey: currentUser?.geminiKey || aiConfig.geminiKey || "",
+    gmailClientId: currentUser?.gmailClientId || aiConfig.gmailClientId || ""
+  }), [currentUser, aiConfig]);
+  const apiKey = effectiveAiConfig.geminiKey;
   const saveAiConfig = (cfg) => {
     setAiConfig(cfg);
     try { localStorage.setItem("ai_config", JSON.stringify(cfg)); } catch {}
@@ -1630,9 +1660,9 @@ function App() {
         {page === "trend"     && <Trend leads={leads} />}
         {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
-        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={aiConfig} currentUser={currentUser} />}
-        {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} />}
-        {page === "settings"  && <SettingsPage aiConfig={aiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} onMasterSave={() => setMasterVer(v => v + 1)} />}
+        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} />}
+        {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} currentUser={currentUser} />}
+        {page === "settings"  && <SettingsPage aiConfig={effectiveAiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} onMasterSave={() => setMasterVer(v => v + 1)} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
       </main>
     </div>
@@ -2995,6 +3025,15 @@ function saveAccounts(accounts) {
     IS_COLORS[a.name] = { bg: a.color, text: a.color,border: a.color + "55" };
   });
 }
+function getEffectiveAiConfig(currentUser) {
+  const global = (() => { try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; } })();
+  if (!currentUser) return global;
+  return {
+    ...global,
+    geminiKey: currentUser.geminiKey || global.geminiKey || "",
+    gmailClientId: currentUser.gmailClientId || global.gmailClientId || ""
+  };
+}
 
 loadAccounts().forEach(a => {
   USER_COLORS[a.name] = a.color;
@@ -3272,10 +3311,20 @@ function saveGCalConfig(cfg) {
   try { localStorage.setItem("gcal_config", JSON.stringify(cfg)); } catch {}
 }
 
-function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail = ()=>{} }) {
+function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail = ()=>{}, currentUser }) {
   const [cfg, setCfg] = useState(() => loadGCalConfig());
   const [showSetup, setShowSetup] = useState(false);
   const [editCfg, setEditCfg] = useState(() => loadGCalConfig());
+  const accountCalendarIds = useMemo(() => {
+    const accounts = loadAccounts();
+    const ids = {};
+    accounts.forEach(a => { if (a.calendarId) ids[a.name] = a.calendarId; });
+    return ids;
+  }, []);
+  const mergedCalendarIds = useMemo(() => ({
+    ...(cfg.calendarIds||{}),
+    ...accountCalendarIds
+  }), [cfg, accountCalendarIds]);
 
   // 検索条件
   const [selectedMembers, setSelectedMembers] = useState(["北原"]);
@@ -3299,7 +3348,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const [error, setError]     = useState("");
   const [searched, setSearched] = useState(false);
 
-  const isConfigured = cfg.apiKey && cfg.calendarIds && Object.keys(cfg.calendarIds).length > 0;
+  const isConfigured = cfg.apiKey && Object.keys(mergedCalendarIds).length > 0;
 
   // Google Calendar freebusy APIを叩く
   const search = async () => {
@@ -3312,7 +3361,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
 
       // 対象メンバーのカレンダーIDを収集
       const items = selectedMembers
-        .map(m => cfg.calendarIds[m])
+        .map(m => mergedCalendarIds[m])
         .filter(Boolean)
         .map(id => ({ id }));
 
@@ -3335,7 +3384,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
       // 各メンバーの busy 時間帯を収集
       const busyByMember = {};
       selectedMembers.forEach(m => {
-        const calId = cfg.calendarIds[m];
+        const calId = mergedCalendarIds[m];
         if (!calId) return;
         busyByMember[m] = (data.calendars[calId]?.busy || []).map(b => ({
           start: new Date(b.start), end: new Date(b.end)
@@ -3575,7 +3624,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
             <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
               {members.map(m => {
                 const active = selectedMembers.includes(m);
-                const hasId = !!(cfg.calendarIds||{})[m];
+                const hasId = !!mergedCalendarIds[m];
                 return (
                   <button key={m} onClick={()=>setSelectedMembers(prev=>
                     active ? prev.filter(x=>x!==m) : [...prev,m]
@@ -3591,7 +3640,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
                 );
               })}
             </div>
-            {selectedMembers.some(m=>!(cfg.calendarIds||{})[m]) && (
+            {selectedMembers.some(m=>!mergedCalendarIds[m]) && (
               <div style={{fontSize:11,color:"#f59e0b",marginTop:4}}>⚠️ カレンダーID未設定のメンバーは除外されます</div>
             )}
           </div>

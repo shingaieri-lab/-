@@ -45,7 +45,11 @@ const PORTAL_PRICE = (site, type) => {
   if (type === "一括請求") return 10000;
   return 0;
 };
-const DEFAULT_SOURCES = ["HP", "ポータルサイト", "電話"];
+const DEFAULT_SOURCES = [
+  {label:"HP", icon:"home"},
+  {label:"ポータルサイト", icon:"search"},
+  {label:"電話", icon:"phone"},
+];
 const DEFAULT_STATUSES_WITH_COLORS = [
   {label:"新規", color:"#0ea5e9"}, {label:"架電済", color:"#8b5cf6"},
   {label:"日程調整中", color:"#0d9488"}, {label:"商談確定", color:"#d97706"},
@@ -1004,9 +1008,19 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
     save({ ...master, sources: [...currentSources, {label: s, icon: newSourceIcon}] });
     setNewSource(""); setNewSourceIcon("home");
   };
-  const removeSource = (s) => {
+  const removeSource = async (s) => {
     if ((master.sources||DEFAULT_SOURCES).length <= 1) { alert("最低1つ必要です"); return; }
-    save({ ...master, sources: (master.sources||DEFAULT_SOURCES).filter(x => (typeof x === "string" ? x : x.label) !== s) });
+    const remaining = (master.sources||DEFAULT_SOURCES).filter(x => (typeof x === "string" ? x : x.label) !== s);
+    const newDefault = typeof remaining[0] === "string" ? remaining[0] : remaining[0]?.label || "";
+    const allLeads = await loadLeads();
+    const affected = allLeads.filter(l => l.source === s);
+    if (affected.length > 0) {
+      if (!window.confirm(`「${s}」を使用中のリードが${affected.length}件あります。\n削除すると流入元が「${newDefault}」に変更されます。\n\n続行しますか？`)) return;
+      const updated = allLeads.map(l => l.source === s ? {...l, source: newDefault} : l);
+      await saveLeads(updated);
+      if (onLeadsChange) onLeadsChange(updated);
+    }
+    save({ ...master, sources: remaining });
   };
   const startEditSource = (idx) => {
     setEditSourceIdx(idx);
@@ -1910,7 +1924,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
             const won = arr.filter(isWon).length;
             const pct = arr.length ? ap/arr.length : 0;
             const srcColor = getSourceColor(src, srcIdx);
-            const srcIconKey = getSourceIcon(src) || (src==="HP"?"home":src==="ポータルサイト"?"search":src==="電話"?"phone":"document");
+            const srcIconKey = getSourceIcon(src) || "document";
             return (
               <div key={src} style={{marginBottom:6,background:"#f8fbf9",borderRadius:10, padding:"7px 10px",border:`1px solid ${srcColor}22`}}>
                 {/* 1行目：名前＋数値 */}
@@ -2485,7 +2499,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
   const actions = lead.actions || [];
   const last = actions[0];
 
-  const srcIconKey2 = getSourceIcon(lead.source) || (lead.source==="HP"?"home":lead.source==="ポータルサイト"?"search":lead.source==="電話"?"phone":"document");
+  const srcIconKey2 = getSourceIcon(lead.source) || "document";
   const sc = getStatusColor(lead.status);
   const nad = lead.next_action_date;
   const subParts = [
@@ -2643,7 +2657,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
 function LeadForm({ initial, onSave, onClose }) {
   const [d, setD] = useState(() => {
     const base = {
-      company:"", contact:"", email:"", source: getSources()[0] || "HP",
+      company:"", contact:"", email:"", source: getSources()[0] || "",
       portal_site:"", portal_type:"", charge_applied:false,
       meeting_date:"", meeting_time:"", sales_member:"",
       is_member:"", mql:"非MQL",
@@ -2651,6 +2665,11 @@ function LeadForm({ initial, onSave, onClose }) {
       is_accuracy:"", memo:"",
       ...(initial||{})
     };
+    // 設定済み流入元に存在しない場合は最初の流入元に補正（廃止済みソース対策）
+    const validSources = getSources();
+    if (base.source && !validSources.includes(base.source)) {
+      base.source = validSources[0] || "";
+    }
     // 日付フィールドをYYYY-MM-DD形式に正規化（input[type=date]対応）
     base.date = normalizeDate(base.date);
     base.meeting_date = normalizeDate(base.meeting_date);

@@ -25,11 +25,21 @@
     const {useState,useEffect,useRef,useMemo,useCallback}=React;
 
 
+// --- サーバーAPI層 ---
+window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null };
+function getToken() { return localStorage.getItem('session_token') || ''; }
+async function apiPost(path, data) {
+  try {
+    await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() }, body: JSON.stringify(data) });
+  } catch(e) { console.error('API error:', path, e); }
+}
+
 async function loadLeads() {
-  try { return JSON.parse(localStorage.getItem("leads_v3") || "null") || []; } catch { return []; }
+  return window.__appData.leads || [];
 }
 async function saveLeads(leads) {
-  try { localStorage.setItem("leads_v3", JSON.stringify(leads)); } catch {}
+  window.__appData.leads = leads;
+  apiPost('/api/leads', leads);
 }
 
 const SOURCES = ["HP", "ポータルサイト", "電話"];
@@ -99,10 +109,11 @@ const DEFAULT_PORTAL_TYPES = {
   "DX親方":     [{ label:"一括請求", price:10000 }, { label:"ピンポイント請求", price:12000 }],
 };
 function loadMasterSettings() {
-  try { return JSON.parse(localStorage.getItem("is_master_settings") || "null"); } catch { return null; }
+  return window.__appData.masterSettings || null;
 }
 function saveMasterSettings(s) {
-  try { localStorage.setItem("is_master_settings", JSON.stringify(s)); } catch {}
+  window.__appData.masterSettings = s;
+  apiPost('/api/master-settings', s);
 }
 function getMaster() {
   const s = loadMasterSettings();
@@ -147,23 +158,19 @@ function getSourceColor(sourceName, fallbackIdx) {
 }
 // IS担当者はis_staffフラグがtrueのアカウントのみ
 function getISMembers() {
-  try {
-    const accounts = JSON.parse(localStorage.getItem("is_accounts") || "[]");
-    if (accounts.length > 0) {
-      const staff = accounts.filter(a => a.is_staff !== false);
-      return staff.length > 0 ? staff.map(a => a.name) : DEFAULT_IS_MEMBERS;
-    }
-  } catch {}
+  const accounts = window.__appData?.accounts || [];
+  if (accounts.length > 0) {
+    const staff = accounts.filter(a => a.is_staff !== false);
+    return staff.length > 0 ? staff.map(a => a.name) : DEFAULT_IS_MEMBERS;
+  }
   return DEFAULT_IS_MEMBERS;
 }
 const IS_COLORS = {};
 function syncISColors() {
-  try {
-    const accounts = JSON.parse(localStorage.getItem("is_accounts") || "[]");
-    accounts.forEach(a => {
-      IS_COLORS[a.name] = { bg: a.color, text: a.color,border: a.color + "55" };
-    });
-  } catch {}
+  const accounts = window.__appData?.accounts || [];
+  accounts.forEach(a => {
+    IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
+  });
 }
 syncISColors();
 
@@ -205,8 +212,8 @@ const DEFAULT_EMAIL_TEMPLATES = [
   { id:"t2", name:"商談日程調整", subject:"【ダンドリワーク】商談のご案内", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\nこの度はお時間をいただきありがとうございます。\n以下の日程にてオンライン商談をご提案させていただきます。\n\n■候補日時\n{{候補日時}}\n\nご都合はいかがでしょうか？\n何卒よろしくお願いいたします。" },
   { id:"t3", name:"ナーチャリング", subject:"【ダンドリワーク】建設業の施工管理DX事例のご紹介", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n以前お話しさせていただいた件ですが、\n最近、同様の課題をお持ちのお客様で成果が出た事例がございますので\nご参考までにお送りさせていただきます。\n\n引き続きよろしくお願いいたします。" },
 ];
-function loadTpls() { try { return JSON.parse(localStorage.getItem("email_tpls_v2")||"null") || DEFAULT_EMAIL_TEMPLATES; } catch { return DEFAULT_EMAIL_TEMPLATES; } }
-function saveTpls(t) { try { localStorage.setItem("email_tpls_v2", JSON.stringify(t)); } catch {} }
+function loadTpls() { return window.__appData.emailTpls || DEFAULT_EMAIL_TEMPLATES; }
+function saveTpls(t) { window.__appData.emailTpls = t; apiPost('/api/email-tpls', t); }
 function applyVars(body, vars) { return Object.entries(vars).reduce((s,[k,v])=>s.replaceAll("{{"+k+"}}",v||("{{"+k+"}}")),body); }
 
 const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理アプリ）のインサイドセールス専任アシスタントです。
@@ -270,8 +277,8 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
     { id:"t2", name:"商談日程調整", useSlots:true, subject:"【ダンドリワーク{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
     { id:"t3", name:"ナーチャリング", useSlots:false, subject:"【ダンドリワーク】建設業の施工管理DX事例のご紹介", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n以前お話しさせていただいた件で、成果が出た事例をご紹介します。" },
   ];
-  const loadTpls = () => { try { return JSON.parse(localStorage.getItem("email_tpls_v2")||"null") || DEFAULT_EMAIL_TEMPLATES; } catch { return DEFAULT_EMAIL_TEMPLATES; } };
-  const saveTpls = (t) => { try { localStorage.setItem("email_tpls_v2", JSON.stringify(t)); } catch {} };
+  const loadTpls = () => window.__appData.emailTpls || DEFAULT_EMAIL_TEMPLATES;
+  const saveTpls = (t) => { window.__appData.emailTpls = t; apiPost('/api/email-tpls', t); };
   const applyVars = (body, vars) => Object.entries(vars).reduce((s,[k,v])=>s.replaceAll("{{"+k+"}}",v||("{{"+k+"}}")),body);
 
   const [tpls, setTpls] = React.useState(loadTpls);
@@ -1218,16 +1225,15 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
             <div style={{marginBottom:16}}>
               <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🔑 Gemini APIキー</label>
               <input type="password"
-                defaultValue={(() => { try { return JSON.parse(localStorage.getItem("ai_config")||"{}").geminiKey||""; } catch { return ""; } })()}
+                defaultValue={(window.__appData?.aiConfig?.geminiKey)||""}
                 onBlur={e => {
-                  try {
-                    const cfg = JSON.parse(localStorage.getItem("ai_config")||"{}");
-                    cfg.geminiKey = e.target.value;
-                    localStorage.setItem("ai_config", JSON.stringify(cfg));
-                    if (onSave) onSave(cfg);
-                    setMsg("保存しました ✓");
-                    setTimeout(()=>setMsg(""),2000);
-                  } catch {}
+                  const cfg = { ...(window.__appData?.aiConfig || {}) };
+                  cfg.geminiKey = e.target.value;
+                  window.__appData.aiConfig = cfg;
+                  apiPost('/api/ai-config', cfg);
+                  if (onSave) onSave(cfg);
+                  setMsg("保存しました ✓");
+                  setTimeout(()=>setMsg(""),2000);
                 }}
                 placeholder="AIzaSy..."
                 style={{...inp, fontFamily:"monospace"}}
@@ -1267,16 +1273,15 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
             <div style={{marginTop:20,marginBottom:16}}>
               <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>📨 Gmail OAuth Client ID</label>
               <input type="text"
-                defaultValue={(() => { try { return JSON.parse(localStorage.getItem("ai_config")||"{}").gmailClientId||""; } catch { return ""; } })()}
+                defaultValue={(window.__appData?.aiConfig?.gmailClientId)||""}
                 onBlur={e => {
-                  try {
-                    const cfg = JSON.parse(localStorage.getItem("ai_config")||"{}");
-                    cfg.gmailClientId = e.target.value.trim();
-                    localStorage.setItem("ai_config", JSON.stringify(cfg));
-                    if (onSave) onSave(cfg);
-                    setMsg("保存しました ✓");
-                    setTimeout(()=>setMsg(""),2000);
-                  } catch {}
+                  const cfg = { ...(window.__appData?.aiConfig || {}) };
+                  cfg.gmailClientId = e.target.value.trim();
+                  window.__appData.aiConfig = cfg;
+                  apiPost('/api/ai-config', cfg);
+                  if (onSave) onSave(cfg);
+                  setMsg("保存しました ✓");
+                  setTimeout(()=>setMsg(""),2000);
                 }}
                 placeholder="xxxxxxxxxx.apps.googleusercontent.com"
                 style={{...inp, fontFamily:"monospace"}}
@@ -1637,34 +1642,29 @@ function App() {
   const [leads, setLeads] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [masterVer, setMasterVer] = useState(0);
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      // current_user_id のみ保存し、アカウント情報は is_accounts から取得
-      let savedId = localStorage.getItem("current_user_id");
-      // 旧形式 (current_user_v2) からの移行
-      if (!savedId) {
-        const legacy = JSON.parse(localStorage.getItem("current_user_v2") || "null");
-        if (legacy?.id) {
-          savedId = legacy.id;
-          localStorage.setItem("current_user_id", savedId);
-          localStorage.removeItem("current_user_v2");
-        }
-      }
-      if (!savedId) return null;
-      const accounts = loadAccounts();
-      const user = accounts.find(a => a.id === savedId);
-      if (user) { USER_COLORS[user.name] = user.color; return user; }
-      return null;
-    } catch { return null; }
-  });
-  const selectUser = (account) => {
+  const [currentUser, setCurrentUser] = useState(null);
+  const [aiConfig, setAiConfig] = useState({});
+  const selectUser = (account, data) => {
     setCurrentUser(account);
     USER_COLORS[account.name] = account.color;
-    try { localStorage.setItem("current_user_id", account.id); } catch {}
+    localStorage.setItem("current_user_id", account.id);
+    if (data) {
+      const l = data.leads || [];
+      const migrated = l.map(lead => lead.portal_type === "請求" ? { ...lead, portal_type: "一括請求" } : lead);
+      setLeads(migrated);
+      setAiConfig(data.aiConfig || {});
+      setMasterVer(v => v + 1);
+    }
   };
   const logout = () => {
+    const token = localStorage.getItem('session_token');
+    if (token) apiPost('/api/logout', {});
+    localStorage.removeItem('current_user_id');
+    localStorage.removeItem('session_token');
+    window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null };
     setCurrentUser(null);
-    try { localStorage.removeItem("current_user_id"); } catch {}
+    setLeads([]);
+    setAiConfig({});
   };
   const updateMyProfile = (profile) => {
     const originalId = currentUser.id;
@@ -1675,12 +1675,9 @@ function App() {
     setCurrentUser(updated);
     USER_COLORS[updated.name] = updated.color;
     IS_COLORS[updated.name] = { bg: updated.color, text: updated.color, border: updated.color + "55" };
-    try { localStorage.setItem("current_user_id", updated.id); } catch {}
+    localStorage.setItem("current_user_id", updated.id);
   };
   const [candidateSlots, setCandidateSlots] = useState([]);
-  const [aiConfig, setAiConfig] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; }
-  });
   const effectiveAiConfig = useMemo(() => ({
     ...aiConfig,
     geminiKey: currentUser?.geminiKey || aiConfig.geminiKey || "",
@@ -1689,14 +1686,47 @@ function App() {
   const apiKey = effectiveAiConfig.geminiKey;
   const saveAiConfig = (cfg) => {
     setAiConfig(cfg);
-    try { localStorage.setItem("ai_config", JSON.stringify(cfg)); } catch {}
+    window.__appData.aiConfig = cfg;
+    apiPost('/api/ai-config', cfg);
   };
 
-  useEffect(() => { loadLeads().then(l => {
-    const migrated = l.map(lead => lead.portal_type === "請求" ? { ...lead, portal_type: "一括請求" } : lead);
-    setLeads(migrated); setLoaded(true);
-    if (migrated.some((lead,i) => lead.portal_type !== l[i].portal_type)) saveLeads(migrated);
-  }); }, []);
+  useEffect(() => {
+    async function init() {
+      const token = localStorage.getItem('session_token');
+      const savedId = localStorage.getItem('current_user_id');
+      if (token && savedId) {
+        try {
+          const r = await fetch('/api/data', { headers: { 'x-session-token': token } });
+          if (r.ok) {
+            const data = await r.json();
+            window.__appData = data;
+            data.accounts.forEach(a => {
+              USER_COLORS[a.name] = a.color;
+              IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
+            });
+            const user = data.accounts.find(a => a.id === savedId);
+            if (user) {
+              setCurrentUser(user);
+              USER_COLORS[user.name] = user.color;
+            } else {
+              localStorage.removeItem('current_user_id');
+            }
+            setAiConfig(data.aiConfig || {});
+            setMasterVer(v => v + 1);
+          } else {
+            localStorage.removeItem('session_token');
+            localStorage.removeItem('current_user_id');
+          }
+        } catch {}
+      }
+      const l = await loadLeads();
+      const migrated = l.map(lead => lead.portal_type === "請求" ? { ...lead, portal_type: "一括請求" } : lead);
+      setLeads(migrated);
+      setLoaded(true);
+      if (migrated.some((lead,i) => lead.portal_type !== l[i].portal_type)) saveLeads(migrated);
+    }
+    init();
+  }, []);
 
   const mut = (next) => { setLeads(next); saveLeads(next); };
   const addLead    = (l)       => mut([l, ...leads]);
@@ -3068,24 +3098,20 @@ const DEFAULT_ACCOUNTS = [
 ];
 
 function loadAccounts() {
-  try {
-    const saved = JSON.parse(localStorage.getItem("is_accounts") || "null");
-    if (!saved || saved.length === 0) {
-      localStorage.setItem("is_accounts", JSON.stringify(DEFAULT_ACCOUNTS));
-      return DEFAULT_ACCOUNTS;
-    }
-    return saved;
-  } catch { return DEFAULT_ACCOUNTS; }
+  const saved = window.__appData?.accounts;
+  if (!saved || saved.length === 0) return DEFAULT_ACCOUNTS;
+  return saved;
 }
 function saveAccounts(accounts) {
-  try { localStorage.setItem("is_accounts", JSON.stringify(accounts)); } catch {}
+  window.__appData.accounts = accounts;
+  apiPost('/api/accounts', accounts);
   accounts.forEach(a => {
     USER_COLORS[a.name] = a.color;
-    IS_COLORS[a.name] = { bg: a.color, text: a.color,border: a.color + "55" };
+    IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
   });
 }
 function getEffectiveAiConfig(currentUser) {
-  const global = (() => { try { return JSON.parse(localStorage.getItem("ai_config") || "{}"); } catch { return {}; } })();
+  const global = window.__appData?.aiConfig || {};
   if (!currentUser) return global;
   return {
     ...global,
@@ -3094,36 +3120,42 @@ function getEffectiveAiConfig(currentUser) {
   };
 }
 
-loadAccounts().forEach(a => {
-  USER_COLORS[a.name] = a.color;
-  IS_COLORS[a.name] = { bg: a.color, text: a.color,border: a.color + "55" };
-});
-
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [userId, setUserId] = useState(""); const [password, setPassword] = useState(""); const [err, setErr] = useState(""); const [showPw, setShowPw] = useState(false);
   const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"", is_staff:false });
   const [sErr, setSErr] = useState(""); const [sOk, setSOk] = useState(false); const [showSPw, setShowSPw] = useState(false);
-  const handleSignup = () => {
+  const handleSignup = async () => {
     const { id, name, password, password2, color, email, is_staff } = sForm;
     if (!id.trim() || !name.trim() || !email.trim() || !password.trim() || !password2.trim()) { setSErr("全項目入力してください"); return; }
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
-    const accounts = loadAccounts();
-    if (accounts.some(a => a.id === id.trim())) { setSErr("このIDは既に使われています"); return; }
     const newAccount = { id: id.trim(), name: name.trim(), password, role:"member", color, email: email.trim(), is_staff };
-    saveAccounts([...accounts, newAccount]);
-    USER_COLORS[newAccount.name] = color;
-    IS_COLORS[newAccount.name] = { bg:color, text:color, border:color+"55" };
-    setSOk(true); setSErr("");
+    try {
+      const r = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newAccount) });
+      if (!r.ok) { const e = await r.json(); setSErr(e.error||"作成に失敗しました"); return; }
+      USER_COLORS[newAccount.name] = color;
+      IS_COLORS[newAccount.name] = { bg:color, text:color, border:color+"55" };
+      setSOk(true); setSErr("");
+    } catch { setSErr("サーバーに接続できません"); }
   };
-  const handleLogin = () => {
-    const accounts = loadAccounts();
-    const found = accounts.find(a => a.id === userId.trim() && a.password === password);
-    if (!found) { setErr("IDまたはパスワードが違います"); return; }
-    USER_COLORS[found.name] = found.color;
-    IS_COLORS[found.name] = { bg:found.color, text:found.color, border:found.color+"55" };
-    try { localStorage.setItem("current_user_id", found.id); } catch {}
-    onLogin(found);
+  const handleLogin = async () => {
+    try {
+      const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ id:userId.trim(), password }) });
+      if (!r.ok) { setErr("IDまたはパスワードが違います"); return; }
+      const { token, account } = await r.json();
+      localStorage.setItem('session_token', token);
+      localStorage.setItem('current_user_id', account.id);
+      const dataR = await fetch('/api/data', { headers: { 'x-session-token': token } });
+      const data = dataR.ok ? await dataR.json() : null;
+      if (data) {
+        window.__appData = data;
+        data.accounts.forEach(a => {
+          USER_COLORS[a.name] = a.color;
+          IS_COLORS[a.name] = { bg:a.color, text:a.color, border:a.color+"55" };
+        });
+      }
+      onLogin(account, data);
+    } catch { setErr("サーバーに接続できません"); }
   };
   const card = { background:"#fff", borderRadius:16, padding:"36px 32px", boxShadow:"0 8px 32px #0569691a", border:"1px solid #e2f0e8", width:360, maxWidth:"90vw" };
   const inp2 = { ...S.inp, marginBottom:0 };
@@ -3364,10 +3396,11 @@ const SALES_CALENDAR_URLS = {
 };
 
 function loadGCalConfig() {
-  try { return JSON.parse(localStorage.getItem("gcal_config") || "{}"); } catch { return {}; }
+  return window.__appData?.gcalConfig || {};
 }
 function saveGCalConfig(cfg) {
-  try { localStorage.setItem("gcal_config", JSON.stringify(cfg)); } catch {}
+  window.__appData.gcalConfig = cfg;
+  apiPost('/api/gcal-config', cfg);
 }
 
 function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail = ()=>{}, currentUser }) {

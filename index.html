@@ -263,7 +263,7 @@ function LeadCombobox({ leads, value, onChange, placeholder, inputStyle, darkMod
   );
 }
 
-function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
+function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile }) {
   const DEFAULT_EMAIL_TEMPLATES = [
     { id:"t1", name:"初回フォロー", useSlots:false, subject:"【ダンドリワーク】資料のご確認のお願い", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
     { id:"t2", name:"商談日程調整", useSlots:true, subject:"【ダンドリワーク{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
@@ -468,12 +468,12 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const inpStyle = {width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe"};
   const lblStyle = {fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3};
   return (
-    <div style={{padding:"24px 28px"}}>
+    <div className="page-pad" style={{padding:"24px 28px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
         <div style={{fontSize:17,fontWeight:900,color:"#174f35"}}>📧 メールテンプレート</div>
         <button onClick={addTpl} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>＋ テンプレート追加</button>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16}}>
+      <div className="email-grid" style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16}}>
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"12px",height:"fit-content"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#6a9a7a",marginBottom:8}}>テンプレート一覧</div>
           {tpls.map(t=>(
@@ -518,7 +518,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
               </div>
             </div>
           ) : (
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,alignItems:"start",minHeight:"calc(100vh - 180px)"}}>
+            <div className="email-main-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,alignItems:"start",minHeight:"calc(100vh - 180px)"}}>
               <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px"}}>
                 <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:10}}>差し込み変数</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
@@ -624,7 +624,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   );
 }
 
-function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, currentUser }) {
+function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, currentUser, isMobile }) {
   const apiKey = (aiConfig||{}).geminiKey||"";
   const [selLead, setSelLead] = React.useState("");
   const [memo, setMemo] = React.useState("");
@@ -693,8 +693,8 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
           {apiKey?<div style={{background:"#10b98122",border:"1px solid #10b98144",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#34d399"}}>✅ APIキー設定済み</div>:<div style={{background:"#ef444422",border:"1px solid #ef444444",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#f87171"}}>⚠️ APIキー未設定</div>}
         </div>
       </div>
-      <div style={{display:"flex",height:"calc(100vh - 77px)"}}>
-        <div style={{width:380,borderRight:"1px solid #1e293b",display:"flex",flexDirection:"column",background:"#0f172a",flexShrink:0,overflow:"auto"}}>
+      <div className="ai-layout" style={{display:"flex",height:"calc(100vh - 77px)"}}>
+        <div className="ai-left-panel" style={{width:380,borderRight:"1px solid #1e293b",display:"flex",flexDirection:"column",background:"#0f172a",flexShrink:0,overflow:"auto"}}>
           <div style={{flex:1,padding:"18px 20px",display:"flex",flexDirection:"column",gap:14}}>
             <div>
               <label style={{fontSize:11,fontWeight:700,color:"#64748b",letterSpacing:"0.06em",textTransform:"uppercase",display:"block",marginBottom:6}}>🏢 リード選択</label>
@@ -1042,7 +1042,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
   const addRow = { display:"flex", gap:8, marginBottom:12 };
 
   return (
-    <div style={{padding:"24px 28px", width:"60vw"}}>
+    <div className="settings-page" style={{padding:"24px 28px", width:"60vw", maxWidth:"100%"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
       <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "営業設定・API設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
@@ -1575,9 +1575,9 @@ function Trend({ leads }) {
     return <span style={{fontSize:11,fontWeight:700,marginLeft:6,color:d>0?"#10b981":d<0?"#ef4444":"#9ca3af"}}>{d>0?"+":""}{d}件</span>;
   };
   return (
-    <div style={{padding:"24px 28px"}}>
+    <div className="page-pad" style={{padding:"24px 28px"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:20}}>📈 月別推移レポート</div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+      <div className="two-col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
         <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8"}}>
           <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📊 反響数・商談数・MQL数</div>
           <SVGBarChart data={data} keys={["反響数","商談数","MQL数"]} colors={{"反響数":"#10b981","商談数":"#6366f1","MQL数":"#ec4899"}} height={200}/>
@@ -1627,7 +1627,18 @@ function Trend({ leads }) {
   );
 }
 
+function useIsMobile(bp=768) {
+  const [m, setM] = useState(typeof window !== 'undefined' && window.innerWidth < bp);
+  useEffect(() => {
+    const h = () => setM(window.innerWidth < bp);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, [bp]);
+  return m;
+}
+
 function App() {
+  const isMobile = useIsMobile();
   const [page, setPage] = useState("dashboard");
   const [settingsTab, setSettingsTab] = useState(null);
   const [dashFilter, setDashFilter] = useState(null);
@@ -1731,24 +1742,24 @@ function App() {
   if (!currentUser) return <LoginScreen onLogin={selectUser} />;
 
   return (
-    <div style={S.root}>
+    <div style={{...S.root, flexDirection: isMobile ? "column" : "row"}}>
       <style>{CSS}</style>
-      <Nav page={page} setPage={setPage} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} />
-      <main style={S.main}>
-        {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} masterVer={masterVer} />}
+      <Nav page={page} setPage={setPage} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} isMobile={isMobile} />
+      <main style={{...S.main, paddingBottom: isMobile ? 65 : 0}}>
+        {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); setPage("leads"); }} masterVer={masterVer} isMobile={isMobile} />}
         {page === "trend"     && <Trend leads={leads} />}
         {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
-        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} />}
+        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => setPage("leads")} goCalendar={() => setPage("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} isMobile={isMobile} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>setPage("email")} currentUser={currentUser} />}
         {page === "settings"  && <SettingsPage aiConfig={effectiveAiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} onMasterSave={() => setMasterVer(v => v + 1)} />}
-        {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} />}
+        {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} isMobile={isMobile} />}
       </main>
     </div>
   );
 }
 
-function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUpdateProfile }) {
+function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUpdateProfile, isMobile }) {
   const [tooltip, setTooltip] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const openUserMenu = () => setShowUserMenu(v => !v);
@@ -1761,6 +1772,48 @@ function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUp
     { id:"email",     icon:"📧", label:"メール" },
     { id:"settings",  icon:"⚙️", label:"設定" },
   ];
+
+  if (isMobile) {
+    return (
+      <nav style={{width:"100%",background:"#134e3a",display:"flex",flexDirection:"row",alignItems:"center",justifyContent:"space-around",position:"fixed",bottom:0,left:0,right:0,height:60,zIndex:200,borderTop:"1px solid #10b98144",flexShrink:0}}>
+        {items.map(item => (
+          <button key={item.id} onClick={()=>{ if(item.id==="settings") setSettingsTab(null); setPage(item.id); setShowUserMenu(false); }}
+            style={{flex:1,height:"100%",border:"none",cursor:"pointer",fontFamily:"inherit",background:page===item.id?"#10b98122":"transparent",borderTop:page===item.id?"2px solid #10b981":"2px solid transparent",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,padding:"6px 2px"}}>
+            <span style={{fontSize:20,lineHeight:1}}>{item.icon}</span>
+            <span style={{fontSize:8,color:page===item.id?"#6ee7b7":"#a7d9be",fontWeight:page===item.id?700:400,fontFamily:"inherit"}}>{item.label}</span>
+          </button>
+        ))}
+        <div style={{position:"relative",flex:1,height:"100%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <button onClick={openUserMenu}
+            style={{width:32,height:32,borderRadius:"50%",background:currentUser?.color||"#059669",color:"#fff",border:"2px solid #ffffff33",fontSize:12,fontWeight:800,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"inherit"}}>
+            {currentUser?.name?.[0]||"?"}
+          </button>
+          {showUserMenu && (
+            <div style={{position:"absolute",bottom:56,right:4,background:"#fff",borderRadius:12,padding:"14px 16px",minWidth:180,zIndex:300,boxShadow:"0 8px 28px #0003",border:"1px solid #d8ede1"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,paddingBottom:10,borderBottom:"1px solid #e8f5ee"}}>
+                <div style={{width:30,height:30,borderRadius:"50%",background:currentUser?.color||"#059669",color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,flexShrink:0}}>
+                  {currentUser?.name?.[0]||"?"}
+                </div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#174f35"}}>{currentUser?.name}</div>
+                  {currentUser?.role==="admin" && <div style={{fontSize:10,color:"#d97706",fontWeight:700}}>管理者</div>}
+                </div>
+              </div>
+              <button onClick={()=>{ setSettingsTab("myaccount"); setPage("settings"); setShowUserMenu(false); }}
+                style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#174f35",cursor:"pointer",fontFamily:"inherit",textAlign:"left",marginBottom:6}}>
+                ⚙️ 設定
+              </button>
+              <button onClick={()=>{ onLogout(); setShowUserMenu(false); }}
+                style={{width:"100%",fontSize:11,padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}>
+                ↩ ログアウト
+              </button>
+            </div>
+          )}
+        </div>
+      </nav>
+    );
+  }
+
   return (
     <nav style={{width:120,background:"#134e3a", display:"flex",flexDirection:"column", alignItems:"center",padding:"14px 0 12px", flexShrink:0, zIndex:10}}>
       {/* ロゴ */}
@@ -1833,7 +1886,7 @@ function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUp
   );
 }
 
-function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
+function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
   // 日付を "YYYY-MM" 形式に正規化（スラッシュ・ハイフン両対応）
   const toYM = (dateStr) => {
     if (!dateStr) return "";
@@ -1875,7 +1928,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
   ];
 
   return (
-    <div style={{padding:"14px 20px", height:"calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow:"hidden"}}>
+    <div className="dash-container" style={{padding:"14px 20px", height:"calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow:"hidden"}}>
       {/* ヘッダー */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center", flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -1889,7 +1942,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
       </div>
 
       {/* KPI グラデカード */}
-      <div style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, flexShrink:0}}>
+      <div className="kpi-grid" style={{display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, flexShrink:0}}>
         {kpiItems.map((k,i) => (
           <div key={i} onClick={()=>onNavigate&&onNavigate(k.filter)} style={{borderRadius:16, overflow:"hidden", boxShadow:"0 6px 20px "+k.color+"44", position:"relative", cursor:"pointer", transition:"transform 0.1s, box-shadow 0.1s"}} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 10px 28px "+k.color+"66"}} onMouseLeave={e=>{e.currentTarget.style.transform="";e.currentTarget.style.boxShadow="0 6px 20px "+k.color+"44"}}>
             {/* グラデ全面 */}
@@ -1916,7 +1969,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer }) {
       </div>
 
       {/* 2カラムレイアウト */}
-      <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, flex:1, minHeight:0}}>
+      <div className="two-col" style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, flex:1, minHeight:0}}>
         {/* 流入元カード */}
         <div style={{background:"#fff",borderRadius:14,padding:"12px 14px", boxShadow:"0 2px 10px #0569690a",border:"1px solid #e2f0e8", overflowY:"auto"}}>
           <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:4, display:"flex",alignItems:"center", gap:6}}>
@@ -2314,10 +2367,10 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
   const selectedLead = openId ? leads.find(l => l.id === openId) : null;
 
   return (
-    <div style={{paddingLeft:28, paddingRight:28, height:"100%", overflow:"hidden", display:"flex", flexDirection:"column"}}>
-      <div style={{flexShrink:0, background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
+    <div className="lead-list-container" style={{paddingLeft:28, paddingRight:28, height:"100%", overflow:"hidden", display:"flex", flexDirection:"column"}}>
+      <div className="page-pad" style={{flexShrink:0, background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
       <Header title="リード一覧" sub={`${leads.length}件 / 表示 ${list.length}件`}>
-        <div style={{display:"flex", gap:8}}>
+        <div className="lead-header-actions" style={{display:"flex", gap:8}}>
           <button onClick={() => {
             const headers = ["会社名","担当者名","反響日","流入元","ポータルサイト名","ポータル種別","課金対象外申請済","ステータス","IS担当","MQL判定","商談日","商談時刻","担当営業","Zoho CRM URL","HP URL","IS確度","ネクストアクション日","ネクストアクション時刻","ネクストアクションメモ"];
             const rows = leads.map(l=>[l.company,l.contact,l.date,l.source,l.portal_site||"",l.portal_type||"",l.charge_applied?"TRUE":"FALSE",l.status,l.is_member||"",l.mql||"非MQL",l.meeting_date||"",l.meeting_time||"",l.sales_member||"",l.zoho_url||"",l.hp_url||"",l.is_accuracy||"",l.next_action_date||"",l.next_action_time||"",l.next_action||""].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","));
@@ -2336,7 +2389,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
 
       {/* Filters */}
       {/* 1行目：検索・流入元・月・IS担当 */}
-      <div style={{display:"flex", gap:8, marginBottom:6, alignItems:"center"}}>
+      <div className="filter-bar" style={{display:"flex", gap:8, marginBottom:6, alignItems:"center"}}>
         <input value={fQ} onChange={e => setFQ(e.target.value)}
           placeholder="🔍 会社名・担当者" style={{...S.sel, width:220, flexShrink:0}} />
         <select value={fSource} onChange={e => { setFSrc(e.target.value); setFPortal(""); }} style={{...S.sel, flexShrink:0}}>
@@ -2359,7 +2412,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         </select>
       </div>
       {/* 2行目：並び順＋ステータス絞り込み */}
-      <div style={{display:"flex", gap:4, alignItems:"center", marginBottom:16, flexWrap:"nowrap"}}>
+      <div className="filter-bar" style={{display:"flex", gap:4, alignItems:"center", marginBottom:16, flexWrap:"nowrap"}}>
         <span style={{fontSize:11,color:"#6a9a7a",flexShrink:0}}>並び順:</span>
         {[["fixed","標準"],["date","反響日"],["nextAction","追客日"]].map(([v,label]) => (
           <button key={v} onClick={() => {
@@ -3550,7 +3603,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const inp2 = { ...S.inp, marginBottom:0 };
 
   return (
-    <div style={{...S.page, width:"60vw"}}>
+    <div className="cal-page" style={{...S.page, width:"60vw", maxWidth:"100%"}}>
       <Header title="📅 商談候補日検索" sub="Google Calendarの空き時間を自動検索します">
         <button onClick={()=>{ setEditCfg(loadGCalConfig()); setShowSetup(v=>!v); }}
           style={{...S.btnSec, fontSize:12}}>⚙️ カレンダー設定</button>
@@ -3870,7 +3923,7 @@ function Note({ label, text }) {
   );
 }
 function Row2({ children }) {
-  return <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>{children}</div>;
+  return <div className="two-col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>{children}</div>;
 }
 function Field({ label, value, onChange, type="text", placeholder }) {
   return (
@@ -3965,6 +4018,33 @@ const CSS = `
   ::-webkit-scrollbar-track { background:#f0f5f2; }
   ::-webkit-scrollbar-thumb { background:#c0dece; border-radius:3px; }
   button:hover { filter: brightness(1.05); }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+    .two-col { grid-template-columns: 1fr !important; height: auto !important; min-height: 0 !important; flex: none !important; }
+    .three-col { grid-template-columns: 1fr 1fr !important; }
+    .four-col { grid-template-columns: 1fr 1fr !important; }
+    .dash-container { height: auto !important; overflow: auto !important; min-height: calc(100vh - 125px); padding: 10px 12px !important; }
+    .page-pad { padding-left: 12px !important; padding-right: 12px !important; }
+    .filter-bar { flex-wrap: wrap !important; }
+    .filter-bar > * { flex-shrink: 1 !important; min-width: 0 !important; }
+    .email-grid { grid-template-columns: 1fr !important; }
+    .email-main-grid { grid-template-columns: 1fr !important; height: auto !important; }
+    .ai-layout { flex-direction: column !important; height: auto !important; min-height: 0 !important; }
+    .ai-left-panel { width: 100% !important; border-right: none !important; border-bottom: 1px solid #1e293b !important; max-height: none !important; }
+    .cal-page { width: 100% !important; max-width: 100% !important; }
+    .settings-page { width: 100% !important; max-width: 100% !important; }
+    .resp-stack { flex-direction: column !important; }
+    .resp-full-w { width: 100% !important; max-width: 100% !important; }
+    .lead-list-container { padding-left: 12px !important; padding-right: 12px !important; }
+    .lead-header-actions { flex-wrap: wrap !important; gap: 6px !important; }
+    .lead-header-actions button { font-size: 12px !important; padding: 7px 10px !important; }
+  }
+  @media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: 1fr 1fr !important; }
+    .two-col { grid-template-columns: 1fr !important; }
+    .filter-bar input, .filter-bar select { font-size: 12px !important; padding: 6px 8px !important; }
+  }
 `;
 
 

@@ -1847,7 +1847,10 @@ function LeadForm({ initial, onSave, onClose }) {
           {/* 必須 */}
           <Row2>
             <Field label="会社名 *" value={d.company} onChange={v=>set("company",v)} />
-            <Field label="担当者名 *" value={d.contact} onChange={v=>set("contact",v)} />
+            <div>
+              <Field label="担当者名 *" value={d.contact} onChange={v=>set("contact",v)} />
+              <div style={{fontSize:"11px",color:"#666",marginTop:"2px"}}>姓名の間は半角スペースを空けて下さい</div>
+            </div>
           </Row2>
           <Row2>
             <Field label="反響日 *" type="date" value={d.date} onChange={v=>set("date",v)} />

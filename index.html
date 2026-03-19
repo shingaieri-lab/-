@@ -1466,14 +1466,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
     onFilterConsumed && onFilterConsumed();
   }, [initialFilter]);
 
-  const LOWER_STATUSES = ["ナーチャリング","商談確定","育成対象外"];
-  const LOWER_ORDER   = { "ナーチャリング":0, "商談確定":1, "育成対象外":2 };
-  const isLower = l => LOWER_STATUSES.includes(l.status);
-
-  const getGroup = l => {
-    if (!isLower(l)) return l.next_action_date ? 1 : 0;
-    return 2 + LOWER_ORDER[l.status];
-  };
+  const STATUS_ORDER_FIXED = {"新規":0,"架電済":1,"日程調整中":2,"ナーチャリング":3,"商談確定":4,"育成対象外":5};
 
   const list = leads
     .filter(l => fStatuses.size === 0 || fStatuses.has(l.status))
@@ -1484,29 +1477,24 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
     .filter(l => !fIS || l.is_member === fIS)
     .filter(l => !fQ || [l.company, l.contact].join(" ").includes(fQ))
     .sort((a,b) => {
+      const normDate = s => { if (!s) return ""; const m=s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:s; };
       if (sort === "date") {
-        const norm = s => { if (!s) return ""; const m=s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/); return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:s; };
-        const da = norm(a.date), db = norm(b.date);
+        const da = normDate(a.date), db = normDate(b.date);
         return sortDir === "asc" ? (da > db ? 1 : -1) : (da < db ? 1 : -1);
       }
       if (sort === "nextAction") {
         const da = a.next_action_date||"9999", db = b.next_action_date||"9999";
         return sortDir === "asc" ? (da > db ? 1 : -1) : (da < db ? 1 : -1);
       }
-      const ga = getGroup(a), gb = getGroup(b);
-      if (ga !== gb) return ga - gb;
-      if (ga === 0) { const norm=s=>{if(!s)return"";const m=s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:s;};return norm(b.date)>norm(a.date)?1:-1; }
-      if (ga === 1) {
-        const da = a.next_action_date||"", db = b.next_action_date||"";
-        return da < db ? -1 : da > db ? 1 : 0;
-      }
-      if (ga === 2) {
-        const da = a.next_action_date||"", db = b.next_action_date||"";
-        if (da && db) return da < db ? -1 : da > db ? 1 : 0;
-        if (da) return -1; if (db) return 1;
-        const normD=s=>{if(!s)return"";const m=s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);return m?`${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`:s;};return normD(b.date)>normD(a.date)?1:-1;
-      }
-      return (b.date||"") > (a.date||"") ? 1 : -1;
+      // 標準: 追客日 > ステータス > 反響日
+      const da = a.next_action_date||"", db = b.next_action_date||"";
+      if (da && !db) return -1;
+      if (!da && db) return 1;
+      if (da !== db) return da < db ? -1 : 1;
+      const sa = STATUS_ORDER_FIXED[a.status]??99, sb = STATUS_ORDER_FIXED[b.status]??99;
+      if (sa !== sb) return sa - sb;
+      const ra = normDate(a.date)||"9999", rb = normDate(b.date)||"9999";
+      return ra < rb ? -1 : ra > rb ? 1 : 0;
     });
 
   return (
@@ -2814,7 +2802,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
                             color:selected?"#fff":"#059669",
                             opacity:maxed?0.4:1,
                             transition:"all 0.15s"}}>
-                          {selected ? "✓ " : ""}{slot.start}〜{slot.end}
+                          {selected ? "✓ " : ""}{slot.start}〜{slot.end}{selectedMembers.length > 1 && slot.members && slot.members.length > 0 ? `（${slot.members.join("・")}）` : ""}
                         </button>
                       );
                     })}

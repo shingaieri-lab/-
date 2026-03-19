@@ -9,10 +9,7 @@ app.use(express.static(__dirname));
 // セッション管理（メモリ内）
 const sessions = {}; // token -> accountId
 
-const DEFAULT_ACCOUNTS = [
-  { id: "shingai",   name: "新谷",  password: "1234", role: "admin",  color: "#7c3aed", email: "" },
-  { id: "kitahara",  name: "北原",  password: "1234", role: "member", color: "#0369a1", email: "" },
-];
+const DEFAULT_ACCOUNTS = [];
 
 async function readData(key) {
   try { return await kv.get(key); } catch { return null; }

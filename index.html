@@ -55,12 +55,8 @@ const PORTAL_PRICE = (site, type) => {
   if (type === "一括請求") return 10000;
   return 0;
 };
-const DEFAULT_SOURCES = ["HP", "ポータルサイト", "電話"];
-const DEFAULT_STATUSES_WITH_COLORS = [
-  {label:"新規", color:"#0ea5e9"}, {label:"架電済", color:"#8b5cf6"},
-  {label:"日程調整中", color:"#0d9488"}, {label:"商談確定", color:"#d97706"},
-  {label:"育成対象外", color:"#dc2626"}, {label:"ナーチャリング", color:"#ea580c"}
-];
+const DEFAULT_SOURCES = [];
+const DEFAULT_STATUSES_WITH_COLORS = [];
 const SOURCE_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#d97706","#ea580c","#6366f1","#ec4899"];
 const STATUS_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#0d9488","#d97706","#dc2626","#ea580c","#10b981","#f59e0b","#6366f1","#ec4899"];
 const LEAD_SOURCE_ICONS = [
@@ -100,14 +96,10 @@ const ACTION_TYPES = [
 ];
 const ACTION_RESULTS = ["取次", "不在", "不通", "折電", "送信済", "その他"];
 
-const DEFAULT_SALES_MEMBERS = ["北原", "杉田", "濱口", "山本敏", "小出"];
-const DEFAULT_IS_MEMBERS = ["新谷", "北原"];
-const DEFAULT_PORTAL_SITES = ["アスピック", "現場TECH", "DX親方"];
-const DEFAULT_PORTAL_TYPES = {
-  "アスピック":  [{ label:"一括請求", price:10000 }],
-  "現場TECH":   [{ label:"一括請求", price:10000 }, { label:"ピンポイント請求", price:12000 }],
-  "DX親方":     [{ label:"一括請求", price:10000 }, { label:"ピンポイント請求", price:12000 }],
-};
+const DEFAULT_SALES_MEMBERS = [];
+const DEFAULT_IS_MEMBERS = [];
+const DEFAULT_PORTAL_SITES = [];
+const DEFAULT_PORTAL_TYPES = {};
 function loadMasterSettings() {
   return window.__appData.masterSettings || null;
 }
@@ -1449,33 +1441,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
           </div>
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
-          <div>
-            <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
-            <div style={{marginTop:32,borderTop:"1px solid #fca5a5",paddingTop:20}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#991b1b",marginBottom:6}}>⚠️ 全データリセット</div>
-              <div style={{fontSize:11,color:"#6b7280",marginBottom:12}}>アカウント情報・ポータルサイト・API設定・営業担当・流入元・リード・メールテンプレートをすべて初期化します。この操作は取り消せません。</div>
-              <button onClick={async () => {
-                if (!window.confirm("本当に全データをリセットしますか？\n\nアカウント情報・ポータルサイト・API設定・営業設定・流入元・リード・メールテンプレートがすべて削除されます。\nこの操作は取り消せません。")) return;
-                if (!window.confirm("最終確認：全データを削除してデフォルト状態に戻しますか？")) return;
-                try {
-                  const res = await fetch('/api/reset', { method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()}, body:JSON.stringify({}) });
-                  const r = await res.json();
-                  if (r.ok) {
-                    alert("リセット完了。ページを再読み込みします。");
-                    window.__appData = {};
-                    localStorage.removeItem('session_token');
-                    window.location.reload();
-                  } else {
-                    alert("エラー: " + (r.error || "不明なエラー"));
-                  }
-                } catch(e) {
-                  alert("リセットに失敗しました: " + e.message);
-                }
-              }} style={{padding:"8px 20px",borderRadius:7,border:"none",background:"#dc2626",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                🗑️ 全データをリセット
-              </button>
-            </div>
-          </div>
+          <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
         )}
         {tab === "myaccount" && (
           <div>
@@ -3118,10 +3084,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
 const PALETTE = ["#7c3aed","#0369a1","#059669","#d97706","#dc2626","#0891b2","#db2777","#65a30d","#ea580c","#0f766e","#6d28d9","#1d4ed8","#047857","#b45309","#991b1b","#0e7490","#9d174d","#3f6212","#c2410c","#134e4a"];
 const USER_COLORS = {};  // 動的に設定
 
-const DEFAULT_ACCOUNTS = [
-  { id:"shingai",  name:"新谷",   password:"1234", role:"admin",color:"#7c3aed", email:"" },
-  { id:"kitahara",  name:"北原",   password:"1234", role:"member",color:"#0369a1", email:"" },
-];
+const DEFAULT_ACCOUNTS = [];
 
 function loadAccounts() {
   const saved = window.__appData?.accounts;

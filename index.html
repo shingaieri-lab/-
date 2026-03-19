@@ -3808,20 +3808,6 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
           )}
         </div>
       )}
-
-      {/* 予約ページリンク一覧 */}
-      <div style={S.card}>
-        <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:10}}>🔗 予約ページ（直接リンク）</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
-          {Object.entries(SALES_CALENDAR_URLS).map(([name, url])=>(
-            <a key={name} href={url} target="_blank" rel="noopener noreferrer"
-              style={{fontSize:12,padding:"7px 14px",borderRadius:8,border:"1px solid #bae6fd",
-                background:"#f0f9ff",color:"#0284c7",textDecoration:"none",fontWeight:600}}>
-              📅 {name}さん
-            </a>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }

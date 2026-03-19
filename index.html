@@ -2367,7 +2367,7 @@ function CalendarPage() {
   const [bufferBefore, setBufferBefore] = useState(30);
   const [bufferAfter,  setBufferAfter]  = useState(30);
   const [activeDays, setActiveDays] = useState([1,2,3,4,5]);
-  const [excludeTimes, setExcludeTimes] = useState([]);
+  const [excludeTimes, setExcludeTimes] = useState([{from:"12:00",to:"13:00"}]);
 
   // 結果
   const [slots, setSlots]     = useState([]);

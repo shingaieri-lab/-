@@ -2440,15 +2440,15 @@ loadAccounts().forEach(a => {
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [userId, setUserId] = useState(""); const [password, setPassword] = useState(""); const [err, setErr] = useState(""); const [showPw, setShowPw] = useState(false);
-  const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"" });
+  const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"", is_staff:false });
   const [sErr, setSErr] = useState(""); const [sOk, setSOk] = useState(false); const [showSPw, setShowSPw] = useState(false);
   const handleSignup = () => {
-    const { id, name, password, password2, color } = sForm;
-    if (!id.trim() || !name.trim() || !password.trim()) { setSErr("全項目入力してください"); return; }
+    const { id, name, password, password2, color, email, is_staff } = sForm;
+    if (!id.trim() || !name.trim() || !email.trim() || !password.trim() || !password2.trim()) { setSErr("全項目入力してください"); return; }
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
     const accounts = loadAccounts();
     if (accounts.some(a => a.id === id.trim())) { setSErr("このIDは既に使われています"); return; }
-    const newAccount = { id: id.trim(), name: name.trim(), password, role:"member", color, email: sForm.email||"" };
+    const newAccount = { id: id.trim(), name: name.trim(), password, role:"member", color, email: email.trim(), is_staff };
     saveAccounts([...accounts, newAccount]);
     USER_COLORS[newAccount.name] = color;
     IS_COLORS[newAccount.name] = { bg:color, text:color, border:color+"55" };
@@ -2474,32 +2474,48 @@ function LoginScreen({ onLogin }) {
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
             <div style={{ fontWeight:700, color:"#059669", marginBottom:16 }}>アカウントを作成しました</div>
-            <button onClick={()=>{ setMode("login"); setSOk(false); setSForm({id:"",name:"",password:"",password2:"",color:PALETTE[0]}); }} style={{ ...S.btnP, width:"100%" }}>ログインへ</button>
+            <button onClick={()=>{ setMode("login"); setSOk(false); setSForm({id:"",name:"",password:"",password2:"",color:PALETTE[0],email:"",is_staff:false}); }} style={{ ...S.btnP, width:"100%" }}>ログインへ</button>
           </div>
         ) : (
           <>
-            {[["ID（ログイン用）",sForm.id,"id"],["表示名",sForm.name,"name"],["メールアドレス",sForm.email||"","email"]].map(([lb,val,k])=>(
-              <div key={k} style={{ marginBottom:12 }}>
-                <label style={{ ...S.lbl, display:"block", marginBottom:3 }}>{lb}</label>
-                <input value={val} onChange={e=>setSForm(p=>({...p,[k]:e.target.value}))} style={inp2} />
-              </div>
-            ))}
             <div style={{ marginBottom:12 }}>
-              <label style={{ ...S.lbl, display:"block", marginBottom:3 }}>パスワード</label>
+              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>ID（ログイン用）<span style={{ color:"#ef4444" }}>*</span></label>
+              <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>メールアドレスの＠左側</div>
+              <input value={sForm.id} onChange={e=>setSForm(p=>({...p,id:e.target.value}))} style={inp2} />
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>表示名<span style={{ color:"#ef4444" }}>*</span></label>
+              <input value={sForm.name} onChange={e=>setSForm(p=>({...p,name:e.target.value}))} style={inp2} />
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>メールアドレス<span style={{ color:"#ef4444" }}>*</span></label>
+              <input value={sForm.email||""} onChange={e=>setSForm(p=>({...p,email:e.target.value}))} style={inp2} />
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>パスワード<span style={{ color:"#ef4444" }}>*</span></label>
+              <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>半角英数字</div>
               <div style={{ position:"relative" }}>
                 <input type={showSPw?"text":"password"} value={sForm.password} onChange={e=>setSForm(p=>({...p,password:e.target.value}))} style={{ ...inp2, paddingRight:36 }} />
                 <button onClick={()=>setShowSPw(v=>!v)} style={{ position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:14 }}>{showSPw?"🙈":"👁️"}</button>
               </div>
             </div>
             <div style={{ marginBottom:12 }}>
-              <label style={{ ...S.lbl, display:"block", marginBottom:3 }}>パスワード（確認）</label>
+              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>パスワード（確認）<span style={{ color:"#ef4444" }}>*</span></label>
+              <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>パスワード確認の為上記と同じ内容を入力</div>
               <input type={showSPw?"text":"password"} value={sForm.password2} onChange={e=>setSForm(p=>({...p,password2:e.target.value}))} style={inp2} />
             </div>
-            <div style={{ marginBottom:16 }}>
-              <label style={{ ...S.lbl, display:"block", marginBottom:6 }}>アイコン色</label>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ ...S.lbl, display:"block", marginBottom:6 }}>アイコン色<span style={{ color:"#ef4444" }}>*</span></label>
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {PALETTE.map(c=><button key={c} onClick={()=>setSForm(p=>({...p,color:c}))} style={{ width:24, height:24, borderRadius:"50%", background:c, border: sForm.color===c?"2px solid #174f35":"2px solid #fff", cursor:"pointer" }} />)}
               </div>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer" }}>
+                <input type="checkbox" checked={sForm.is_staff} onChange={e=>setSForm(p=>({...p,is_staff:e.target.checked}))} style={{ width:16, height:16, accentColor:"#059669", cursor:"pointer" }} />
+                <span style={{ ...S.lbl }}>IS担当者</span>
+              </label>
+              <div style={{ fontSize:11, color:"#6a9a7a", marginTop:3, marginLeft:24 }}>チェックするとリード管理でIS担当者として選択できます。チェックなしは閲覧のみ。</div>
             </div>
             {sErr && <div style={{ color:"#ef4444", fontSize:12, marginBottom:10 }}>{sErr}</div>}
             <button onClick={handleSignup} style={{ ...S.btnP, width:"100%", marginBottom:10 }}>アカウントを作成</button>

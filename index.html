@@ -1497,6 +1497,8 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
       return ra < rb ? -1 : ra > rb ? 1 : 0;
     });
 
+  const selectedLead = openId ? leads.find(l => l.id === openId) : null;
+
   return (
     <div style={{...S.page, paddingTop:0}}>
       <div style={{position:"sticky", top:0, zIndex:20,background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
@@ -1584,40 +1586,43 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         />
       )}
 
-      <div style={{display:"flex",flexDirection:"column", gap:6, marginTop:16}}>
-        {list.length === 0 && <div style={{...S.empty,padding:"32px"}}>リードがありません</div>}
-        {list.map(lead => (
-          <LeadRow key={lead.id} lead={lead} openId={openId} setOpenId={setOpenId}
-            onEdit={() => { setEditing(lead); setShowForm(true); }}
-            onDelete={() => onDelete(lead.id)}
-            onStatusChange={s => onUpdate(lead.id, { status: s })}
-            onAddAction={a => onAddAction(lead.id, a)}
-            onUpdate={p => onUpdate(lead.id, p)}
-            onEditAction={(aid, updated) => {
-              const newActions = (lead.actions||[]).map(a => a.id === aid ? { ...a, ...updated } : a);
-              const patch = { actions: newActions };
-              if (updated.nextDate) { patch.next_action_date = updated.nextDate; patch.next_action_time = updated.nextTime||""; patch.next_action = updated.next||""; }
-              onUpdate(lead.id, patch);
-            }}
-            onDeleteAction={aid => {
-              const remaining = (lead.actions||[]).filter(a => a.id !== aid);
-              const patch = { actions: remaining };
-              if (remaining.length === 0) {
-                patch.next_action = "";
-                patch.next_action_date = "";
-                patch.next_action_time = "";
-              } else {
-                const latest = remaining.find(a => a.nextDate);
-                if (!latest) {
-                  patch.next_action = "";
-                  patch.next_action_date = "";
-                  patch.next_action_time = "";
-                }
-              }
-              onUpdate(lead.id, patch);
-            }}
-          />
-        ))}
+      <div style={{display:"flex", gap:12, marginTop:16, alignItems:"flex-start"}}>
+        {/* 左側：リード一覧 */}
+        <div style={{flex:1, minWidth:0, display:"flex", flexDirection:"column", gap:6}}>
+          {list.length === 0 && <div style={{...S.empty,padding:"32px"}}>リードがありません</div>}
+          {list.map(lead => (
+            <LeadRow key={lead.id} lead={lead} openId={openId} setOpenId={setOpenId}
+              onEdit={() => { setEditing(lead); setShowForm(true); }}
+              onDelete={() => onDelete(lead.id)}
+              onStatusChange={s => onUpdate(lead.id, { status: s })}
+              onUpdate={p => onUpdate(lead.id, p)}
+            />
+          ))}
+        </div>
+
+        {/* 右パネル：アクション履歴 */}
+        {selectedLead && (
+          <div style={{width:380, flexShrink:0, background:"#fff", border:"1px solid #e2f0e8", borderRadius:12, boxShadow:"0 2px 12px #0569690a", overflow:"hidden", position:"sticky", top:0, maxHeight:"calc(100vh - 40px)", overflowY:"auto"}}>
+            <ActionHistoryPanel
+              lead={selectedLead}
+              onClose={() => setOpenId(null)}
+              onUpdate={p => onUpdate(selectedLead.id, p)}
+              onEditAction={(aid, updated) => {
+                const newActions = (selectedLead.actions||[]).map(a => a.id === aid ? { ...a, ...updated } : a);
+                const patch = { actions: newActions };
+                if (updated.nextDate) { patch.next_action_date = updated.nextDate; patch.next_action_time = updated.nextTime||""; patch.next_action = updated.next||""; }
+                onUpdate(selectedLead.id, patch);
+              }}
+              onDeleteAction={aid => {
+                const remaining = (selectedLead.actions||[]).filter(a => a.id !== aid);
+                const patch = { actions: remaining };
+                if (remaining.length === 0) { patch.next_action = ""; patch.next_action_date = ""; patch.next_action_time = ""; }
+                else { const latest = remaining.find(a => a.nextDate); if (!latest) { patch.next_action = ""; patch.next_action_date = ""; patch.next_action_time = ""; } }
+                onUpdate(selectedLead.id, patch);
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -1668,11 +1673,9 @@ function NextActionEditBtn({ nad, lead, onUpdate }) {
   );
 }
 
-function LeadRow({ lead, onEdit, onDelete, onStatusChange, onAddAction, onUpdate, onEditAction, onDeleteAction, openId, setOpenId }) {
+function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, setOpenId }) {
   const open = openId === lead.id;
-  const [showAF, setShowAF]       = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [editingAction, setEditingAction] = useState(null);
   const pc = "#10b981"; // 優先度廃止のためエメラルド固定
   const actions = lead.actions || [];
   const last = actions[0];
@@ -1807,68 +1810,6 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onAddAction, onUpdate
         </div>
       )}
 
-      {/* Expanded body */}
-      {open && (
-        <div style={{...S.leadBody, borderLeft:"4px solid #10b98144",background:"#f8fbf9", borderTop:"1px solid #e2f0e8"}}>
-          {/* Info chips */}
-          <div style={{display:"flex", gap:8,flexWrap:"wrap",marginBottom:12}}>
-            {lead.source === "ポータルサイト" && (
-              <>
-                {lead.portal_site && <Chip label={lead.portal_site} color="#8b5cf6" />}
-                {lead.portal_type && <Chip label={lead.portal_type} />}
-                <Chip label={lead.charge_applied ? "課金対象外 ✓" : "課金対象"}
-                  color={lead.charge_applied ? "#10b981" : "#f59e0b"} />
-              </>
-            )}
-            {(lead.meeting_date || lead.sales_member) && (
-              <div style={{display:"flex", gap:8, alignItems:"center",padding:"6px 12px",background:"#d1fae522",border:"1px solid #10b98144",borderRadius:7,flexWrap:"wrap"}}>
-                <span style={{fontSize:12,color:"#10b981",fontWeight:700}}>🤝 商談</span>
-                {lead.meeting_date && <span style={{fontSize:12,color:"#0ea5e9"}}>{lead.meeting_date}{lead.meeting_time ? " " + lead.meeting_time : ""}</span>}
-                {lead.sales_member && <span style={{fontSize:12,color:"#d97706",fontWeight:600}}>担当：{lead.sales_member}</span>}
-              </div>
-            )}
-          </div>
-
-          {/* Action History */}
-          <div style={S.histSection}>
-            <div style={S.histHeader}>
-              <span style={S.sectionLabel}>📋 アクション履歴（{actions.length}件）</span>
-              <button onClick={() => setShowAF(v=>!v)} style={S.btnAddAct}>
-                {showAF ? "✕ 閉じる" : "＋ 記録する"}
-              </button>
-            </div>
-
-            {showAF && (
-              <ActionForm
-                onSave={a => {
-                  const patch = { actions: [a, ...(lead.actions || [])] };
-                  if (a.nextDate) { patch.next_action_date = a.nextDate; patch.next_action_time = a.nextTime||""; patch.next_action = a.next||""; }
-                  onUpdate(patch);
-                  setShowAF(false);
-                }}
-                onClose={() => setShowAF(false)} />
-            )}
-
-            {actions.length === 0 && !showAF
-              ? <div style={S.noAct}>まだアクションがありません</div>
-              : <div style={{display:"flex",flexDirection:"column", gap:5, marginTop: showAF?12:0}}>
-                  {actions.map((a,i) => (
-                    editingAction?.id === a.id
-                      ? <ActionForm key={a.id} initial={a}
-                          onSave={updated => {
-                            onEditAction(a.id, updated);
-                            setEditingAction(null);
-                          }}
-                          onClose={() => setEditingAction(null)} />
-                      : <ActEntry key={a.id||i} a={a} onEdit={() => setEditingAction(a)} onDelete={() => onDeleteAction(a.id)} />
-                  ))}
-                </div>
-            }
-          </div>
-
-
-        </div>
-      )}
     </div>
   );
 }
@@ -2135,6 +2076,85 @@ function ActEntry({ a, onEdit, onDelete }) {
         </div>
         <p style={{margin:0,fontSize:13,color:"#174f35", lineHeight:1.6}}>{a.summary}</p>
         {(a.nextDate||a.next) && <div style={{fontSize:12,color:"#059669", marginTop:3}}>→ 次回：{a.nextDate||""}{a.nextTime ? " "+a.nextTime : ""}{a.next ? " "+a.next : ""}</div>}
+      </div>
+    </div>
+  );
+}
+
+function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAction }) {
+  const [showAF, setShowAF] = useState(false);
+  const [editingAction, setEditingAction] = useState(null);
+  const actions = lead.actions || [];
+  const sc = STATUS_COLORS[lead.status] || "#6a9a7a";
+  const nad = lead.next_action_date;
+  const overdue = isOverdue(nad);
+  const today   = isDueToday(nad);
+  const soon    = isDueSoon(nad);
+
+  return (
+    <div style={{display:"flex", flexDirection:"column"}}>
+      {/* パネルヘッダー：リード情報 */}
+      <div style={{padding:"14px 16px", borderBottom:"1px solid #e2f0e8", background:"#f0faf5", borderRadius:"12px 12px 0 0"}}>
+        <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:8}}>
+          <div style={{flex:1, minWidth:0}}>
+            <div style={{fontSize:14, fontWeight:700, color:"#174f35", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap"}}>{lead.company}</div>
+            {lead.contact && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>{lead.contact}</div>}
+          </div>
+          <button onClick={onClose} style={{background:"none", border:"none", cursor:"pointer", color:"#6a9a7a", fontSize:16, flexShrink:0, lineHeight:1, padding:0}}>✕</button>
+        </div>
+        {/* ステータス・情報チップ */}
+        <div style={{display:"flex", gap:6, flexWrap:"wrap", marginTop:8, alignItems:"center"}}>
+          <span style={{fontSize:11, fontWeight:700, color:sc, background:sc+"15", border:`1px solid ${sc}44`, borderRadius:8, padding:"2px 8px"}}>{lead.status||"新規"}</span>
+          {lead.date && <span style={{fontSize:11, color:"#6a9a7a"}}>反響日：{lead.date}</span>}
+          {lead.source === "ポータルサイト" && lead.portal_site && <span style={{fontSize:11, color:"#8b5cf6", background:"#8b5cf622", borderRadius:6, padding:"1px 7px"}}>{lead.portal_site}</span>}
+          {lead.meeting_date && <span style={{fontSize:11, color:"#10b981", fontWeight:600}}>🤝 {lead.meeting_date}</span>}
+          {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{...S.zohoLinkSmall, fontSize:10, padding:"2px 8px"}}>🔗 Zoho</a>}
+        </div>
+        {/* ネクストアクション */}
+        {(nad || lead.next_action) && (
+          <div style={{marginTop:8, padding:"5px 8px", background: overdue?"#fef2f2":today?"#ecfdf5":"#f0faf5", borderRadius:6, border:`1px solid ${overdue?"#ef444466":today?"#10b98166":"#c0dece"}`, fontSize:12}}>
+            {overdue && <span style={{fontSize:10,background:"#ef4444",color:"#fff",borderRadius:4,padding:"1px 5px",marginRight:5,fontWeight:700}}>期限切れ</span>}
+            {today   && <span style={{fontSize:10,background:"#059669",color:"#fff",borderRadius:4,padding:"1px 5px",marginRight:5,fontWeight:700}}>本日</span>}
+            {soon && !today && !overdue && <span style={{fontSize:10,background:"#f97316",color:"#fff",borderRadius:4,padding:"1px 5px",marginRight:5,fontWeight:700}}>まもなく</span>}
+            <span style={{color: overdue?"#dc2626":today?"#059669":"#059669", marginRight:4}}>→</span>
+            {nad && <span style={{fontWeight:700, color: overdue?"#dc2626":"#059669", marginRight:4}}>{nad}{lead.next_action_time ? " "+lead.next_action_time : ""}</span>}
+            {lead.next_action && <span style={{color:"#174f35"}}>{lead.next_action}</span>}
+          </div>
+        )}
+      </div>
+
+      {/* アクション履歴本体 */}
+      <div style={{padding:"12px 16px"}}>
+        <div style={S.histHeader}>
+          <span style={S.sectionLabel}>📋 アクション履歴（{actions.length}件）</span>
+          <button onClick={() => { setShowAF(v=>!v); setEditingAction(null); }} style={S.btnAddAct}>
+            {showAF ? "✕ 閉じる" : "＋ 記録する"}
+          </button>
+        </div>
+
+        {showAF && (
+          <ActionForm
+            onSave={a => {
+              const patch = { actions: [a, ...(lead.actions || [])] };
+              if (a.nextDate) { patch.next_action_date = a.nextDate; patch.next_action_time = a.nextTime||""; patch.next_action = a.next||""; }
+              onUpdate(patch);
+              setShowAF(false);
+            }}
+            onClose={() => setShowAF(false)} />
+        )}
+
+        {actions.length === 0 && !showAF
+          ? <div style={S.noAct}>まだアクションがありません</div>
+          : <div style={{display:"flex", flexDirection:"column", gap:5, marginTop: showAF ? 12 : 0}}>
+              {actions.map((a,i) => (
+                editingAction?.id === a.id
+                  ? <ActionForm key={a.id} initial={a}
+                      onSave={updated => { onEditAction(a.id, updated); setEditingAction(null); }}
+                      onClose={() => setEditingAction(null)} />
+                  : <ActEntry key={a.id||i} a={a} onEdit={() => setEditingAction(a)} onDelete={() => onDeleteAction(a.id)} />
+              ))}
+            </div>
+        }
       </div>
     </div>
   );

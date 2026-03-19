@@ -53,7 +53,7 @@ app.post('/api/signup', (req, res) => {
   if (accounts.some(a => a.id === newAccount.id)) {
     return res.status(409).json({ error: 'このIDは既に使われています' });
   }
-  accounts.push(newAccount);
+  accounts.push({ ...newAccount, role: 'admin' });
   writeData('accounts', accounts);
   res.json({ ok: true });
 });

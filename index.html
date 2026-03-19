@@ -3129,7 +3129,7 @@ function LoginScreen({ onLogin }) {
     const { id, name, password, password2, color, email, is_staff } = sForm;
     if (!id.trim() || !name.trim() || !email.trim() || !password.trim() || !password2.trim()) { setSErr("全項目入力してください"); return; }
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
-    const newAccount = { id: id.trim(), name: name.trim(), password, role:"member", color, email: email.trim(), is_staff };
+    const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), is_staff };
     try {
       const r = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newAccount) });
       if (!r.ok) { const e = await r.json(); setSErr(e.error||"作成に失敗しました"); return; }

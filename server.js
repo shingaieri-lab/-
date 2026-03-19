@@ -9,10 +9,7 @@ app.use(express.static(__dirname));
 // セッション管理（メモリ内）
 const sessions = {}; // token -> accountId
 
-const DEFAULT_ACCOUNTS = [
-  { id: "shingai",   name: "新谷",  password: "1234", role: "admin",  color: "#7c3aed", email: "" },
-  { id: "kitahara",  name: "北原",  password: "1234", role: "member", color: "#0369a1", email: "" },
-];
+const DEFAULT_ACCOUNTS = [];
 
 async function readData(key) {
   try { return await kv.get(key); } catch { return null; }
@@ -108,6 +105,26 @@ app.post('/api/gcal-config', requireAuth, async (req, res) => {
 app.post('/api/email-tpls', requireAuth, async (req, res) => {
   await writeData('email_tpls', req.body);
   res.json({ ok: true });
+});
+
+// 全データリセット（管理者のみ）
+app.post('/api/reset', requireAuth, async (req, res) => {
+  const accounts = await getAccounts();
+  const account = accounts.find(a => a.id === req.accountId);
+  if (!account || account.role !== 'admin') {
+    return res.status(403).json({ error: '管理者のみ実行できます' });
+  }
+  try {
+    await kv.del('accounts');
+    await kv.del('leads');
+    await kv.del('master_settings');
+    await kv.del('ai_config');
+    await kv.del('gcal_config');
+    await kv.del('email_tpls');
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: 'リセットに失敗しました: ' + e.message });
+  }
 });
 
 if (!process.env.VERCEL) {

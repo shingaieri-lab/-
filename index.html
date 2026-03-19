@@ -353,7 +353,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig }) {
   const [selLead, setSelLead] = React.useState("");
   const [memo, setMemo] = React.useState("");
   const [actionDate, setActionDate] = React.useState(new Date().toISOString().split("T")[0]);
-  const [actionTime, setActionTime] = React.useState(()=>{ const n=new Date(); return `${String(n.getHours()).padStart(2,"0")}:${String(n.getMinutes()).padStart(2,"0")}`; });
+  const [actionTime, setActionTime] = React.useState(()=>{ const n=new Date(); const m=Math.floor(n.getMinutes()/30)*30; return `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`; });
   const [manualType, setManualType] = React.useState("call");
   const [manualResult, setManualResult] = React.useState("取次");
   const [loading, setLoading] = React.useState(false);
@@ -437,7 +437,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig }) {
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div><label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:6}}>📅 日付</label><input type="date" value={actionDate} onChange={e=>setActionDate(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid #334155",background:"#1e293b",color:"#e2e8f0",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/></div>
-              <div><label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:6}}>🕐 時刻</label><input type="time" value={actionTime} onChange={e=>setActionTime(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid #334155",background:"#1e293b",color:"#e2e8f0",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/></div>
+              <div><label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:6}}>🕐 時刻</label><select value={actionTime} onChange={e=>setActionTime(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid #334155",background:"#1e293b",color:"#e2e8f0",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}>{Array.from({length:48},(_,i)=>{const h=String(Math.floor(i/2)).padStart(2,"0");const m=i%2===0?"00":"30";return <option key={i} value={`${h}:${m}`}>{h}:{m}</option>;})}</select></div>
             </div>
             <div>
               <label style={{fontSize:11,fontWeight:700,color:"#64748b",display:"block",marginBottom:6}}>📋 アクション種別</label>
@@ -1983,12 +1983,12 @@ function ActionForm({ onSave, onClose, initial }) {
   const [result,    setResult]    = useState(initial?.result    || "繋がった");
   const [summary,   setSummary]   = useState(initial?.summary   || "");
   const [date,      setDate]      = useState(initial?.date      || TODAY);
-  const [time,      setTime]      = useState(initial?.time      || "");
+  const [time,      setTime]      = useState(()=>{ if(initial?.time !== undefined) return initial.time; const n=new Date(); const m=Math.floor(n.getMinutes()/30)*30; return `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`; });
   const [nextDate,  setNextDate]  = useState(initial?.nextDate  || "");
   const [nextTime,  setNextTime]  = useState(initial?.nextTime  || "");
   const [nextLabel, setNextLabel] = useState(initial?.next      || "");
   const isEdit = !!initial;
-  const timeOptions = Array.from({length:28},(_,i)=>{const h=String(Math.floor(i/2)+8).padStart(2,"0");const m=i%2===0?"00":"30";return `${h}:${m}`;});
+  const timeOptions = Array.from({length:48},(_,i)=>{const h=String(Math.floor(i/2)).padStart(2,"0");const m=i%2===0?"00":"30";return `${h}:${m}`;});
 
   return (
     <div style={S.actForm}>

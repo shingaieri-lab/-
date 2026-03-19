@@ -7,8 +7,8 @@ const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-const DATA_DIR = path.join(__dirname, 'data');
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+const DATA_DIR = process.env.VERCEL ? '/tmp/data' : path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 // セッション管理（メモリ内）
 const sessions = {}; // token -> accountId
@@ -112,8 +112,12 @@ app.post('/api/email-tpls', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`IS進捗管理 サーバー起動: http://localhost:${PORT}`);
-  console.log(`データ保存先: ${DATA_DIR}`);
-});
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`IS進捗管理 サーバー起動: http://localhost:${PORT}`);
+    console.log(`データ保存先: ${DATA_DIR}`);
+  });
+}
+
+module.exports = app;

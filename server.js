@@ -6,9 +6,6 @@ const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
 
-// セッション管理（メモリ内）
-const sessions = {}; // token -> accountId
-
 const DEFAULT_ACCOUNTS = [];
 
 async function readData(key) {
@@ -23,11 +20,18 @@ async function getAccounts() {
   return (await readData('accounts')) || DEFAULT_ACCOUNTS;
 }
 
-function requireAuth(req, res, next) {
+// セッション管理（Vercel KV）: サーバーレス環境でもセッションを永続化
+async function requireAuth(req, res, next) {
   const token = req.headers['x-session-token'];
-  if (!token || !sessions[token]) return res.status(401).json({ error: 'Unauthorized' });
-  req.accountId = sessions[token];
-  next();
+  if (!token) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const accountId = await kv.get('session:' + token);
+    if (!accountId) return res.status(401).json({ error: 'Unauthorized' });
+    req.accountId = accountId;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
 }
 
 // ログイン（認証不要）
@@ -37,7 +41,7 @@ app.post('/api/login', async (req, res) => {
   const account = accounts.find(a => a.id === id && a.password === password);
   if (!account) return res.status(401).json({ error: 'IDまたはパスワードが違います' });
   const token = crypto.randomBytes(32).toString('hex');
-  sessions[token] = id;
+  await kv.set('session:' + token, id, { ex: 60 * 60 * 24 * 30 }); // 30日間有効
   res.json({ token, account });
 });
 
@@ -54,8 +58,8 @@ app.post('/api/signup', async (req, res) => {
 });
 
 // ログアウト
-app.post('/api/logout', requireAuth, (req, res) => {
-  delete sessions[req.headers['x-session-token']];
+app.post('/api/logout', requireAuth, async (req, res) => {
+  await kv.del('session:' + req.headers['x-session-token']);
   res.json({ ok: true });
 });
 

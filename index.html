@@ -113,6 +113,7 @@ function getMaster() {
     salesMembers: DEFAULT_SALES_MEMBERS,
     portalSites: DEFAULT_PORTAL_SITES,
     portalTypes: DEFAULT_PORTAL_TYPES,
+    portalSiteSource: {},
     sources: DEFAULT_SOURCES,
     statuses: DEFAULT_STATUSES_WITH_COLORS,
   };
@@ -120,6 +121,7 @@ function getMaster() {
   return {
     ...defaults,
     ...s,
+    portalSiteSource: s.portalSiteSource || {},
     sources: s.sources || DEFAULT_SOURCES,
     statuses: s.statuses || DEFAULT_STATUSES_WITH_COLORS,
   };
@@ -134,6 +136,13 @@ function getPortalPrice(site, type) {
   const found = types.find(t => t.label === type);
   return found ? found.price : 0;
 }
+function getPortalSiteSource(site) { return (getMaster().portalSiteSource || {})[site] || ""; }
+function getPortalSitesForSource(source) {
+  if (!source) return [];
+  const m = getMaster().portalSiteSource || {};
+  return getPortalSites().filter(s => m[s] === source);
+}
+function sourceHasPortal(source) { return getPortalSitesForSource(source).length > 0; }
 function getSources() { return (getMaster().sources || DEFAULT_SOURCES).map(s => typeof s === "string" ? s : s.label); }
 function getSourcesWithMeta() { return (getMaster().sources || DEFAULT_SOURCES).map(s => typeof s === "string" ? {label:s, icon:null} : s); }
 function getSourceIcon(sourceName) {
@@ -896,21 +905,24 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
     const s = newSite.trim(); if (!s) return;
     if (master.portalSites.includes(s)) { alert("既に存在します"); return; }
     const pt = { ...master.portalTypes, [s]: [{ label:"一括請求", price:10000 }] };
-    save({ ...master, portalSites: [...master.portalSites, s], portalTypes: pt });
+    const ps = { ...(master.portalSiteSource||{}), [s]: "" };
+    save({ ...master, portalSites: [...master.portalSites, s], portalTypes: pt, portalSiteSource: ps });
     setNewSite("");
   };
   const removeSite = (s) => {
     if (!window.confirm(`「${s}」を削除しますか？`)) return;
     const sites = master.portalSites.filter(x=>x!==s);
     const pt = { ...master.portalTypes }; delete pt[s];
-    save({ ...master, portalSites: sites, portalTypes: pt });
+    const ps = { ...(master.portalSiteSource||{}) }; delete ps[s];
+    save({ ...master, portalSites: sites, portalTypes: pt, portalSiteSource: ps });
   };
   const renameSite = (oldName) => {
     const newName = editSiteName.trim(); if (!newName) return;
     if (newName !== oldName && master.portalSites.includes(newName)) { alert("既に存在します"); return; }
     const sites = master.portalSites.map(s => s === oldName ? newName : s);
     const pt = {}; Object.keys(master.portalTypes).forEach(k => { pt[k === oldName ? newName : k] = master.portalTypes[k]; });
-    save({ ...master, portalSites: sites, portalTypes: pt });
+    const ps = {}; Object.keys(master.portalSiteSource||{}).forEach(k => { ps[k === oldName ? newName : k] = (master.portalSiteSource||{})[k]; });
+    save({ ...master, portalSites: sites, portalTypes: pt, portalSiteSource: ps });
     setEditSite(null); setEditSiteName("");
   };
   const moveSite = (site, dir) => {
@@ -1084,6 +1096,23 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                   )}
                 </div>
                 <div style={{padding:"12px 14px"}}>
+                  <div style={{fontSize:11,color:"#6a9a7a",marginBottom:6,fontWeight:600}}>流入元設定</div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                    <select
+                      value={(master.portalSiteSource||{})[site]||""}
+                      onChange={e=>{
+                        const ps = { ...(master.portalSiteSource||{}), [site]: e.target.value };
+                        save({ ...master, portalSiteSource: ps });
+                      }}
+                      style={{flex:1,padding:"5px 8px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",color:"#174f35"}}>
+                      <option value="">（未設定）</option>
+                      {(master.sources||[]).map(srcObj=>{
+                        const lbl = typeof srcObj==="string"?srcObj:srcObj.label;
+                        return <option key={lbl} value={lbl}>{lbl}</option>;
+                      })}
+                    </select>
+                    <span style={{fontSize:11,color:"#6a9a7a",flexShrink:0}}>に連結</span>
+                  </div>
                   <div style={{fontSize:11,color:"#6a9a7a",marginBottom:8,fontWeight:600}}>プラン・金額</div>
                   {(master.portalTypes[site]||[]).map((plan,idx)=>(
                     <div key={idx} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
@@ -1551,7 +1580,7 @@ function SVGLineChart({ data, keys, colors, height=200 }) {
 function Trend({ leads }) {
   const normYM=s=>{if(!s)return"";if(/^\d{4}-\d{2}/.test(s))return s.slice(0,7);const m=s.match(/^(\d{4})[\/-](\d{1,2})/);return m?m[1]+"-"+m[2].padStart(2,"0"):"";};
   const sources=getSources();
-  const srcColors=Object.fromEntries(sources.map((src,i)=>[src,src==="HP"?"#0ea5e9":src==="ポータルサイト"?"#8b5cf6":src==="電話"?"#f59e0b":SOURCE_COLOR_PALETTE[i%SOURCE_COLOR_PALETTE.length]]));
+  const srcColors=Object.fromEntries(sources.map((src,i)=>[src,getSourceColor(src,i)]));
   const months=[...new Set(leads.map(l=>normYM(l.date)).filter(Boolean))].sort();
   const data=months.map(m=>{
     const fl=leads.filter(l=>normYM(l.date)===m);
@@ -1913,7 +1942,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
   const isWon    = l => l.status === "商談確定";
   const rate     = (a,b) => b ? (a/b*100).toFixed(1)+"%" : "—";
 
-  const portal   = bySrc("ポータルサイト");
+  const portal   = fl.filter(l => !!l.portal_site);
   const isCharged = l => !l.charge_applied;
   const cost     = portal.filter(isCharged).reduce((s,l) => s + getPortalPrice(l.portal_site, l.portal_type), 0);
   const applied  = portal.filter(l => l.charge_applied);
@@ -1924,7 +1953,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
   const kpiItems = [
     { icon:"📥", label:"総反響数",   value:fl.length+"件",          color:"#10b981", bg:"linear-gradient(135deg,#0ecf8a,#059669)", sub:`MQL ${fl.filter(l=>l.mql==="MQL").length}件 (${rate(fl.filter(l=>l.mql==="MQL").length, fl.length)})`, filter:{ month } },
     { icon:"📅", label:"商談設定数", value:fl.filter(isAppt).length+"件",color:"#f59e0b", bg:"linear-gradient(135deg,#fbbf24,#d97706)", sub:`商談化率 ${rate(fl.filter(isAppt).length, fl.length)}`, filter:{ month, statuses:["日程調整中","商談確定"] } },
-    { icon:"📒", label:"課金見込み", value:"¥"+cost.toLocaleString(),color:"#8b5cf6", bg:"linear-gradient(135deg,#a78bfa,#7c3aed)", sub:`対象外申請済 ${applied.length}件`, filter:{ month, source:"ポータルサイト" } },
+    { icon:"📒", label:"課金見込み", value:"¥"+cost.toLocaleString(),color:"#8b5cf6", bg:"linear-gradient(135deg,#a78bfa,#7c3aed)", sub:`対象外申請済 ${applied.length}件`, filter:{ month, hasPortal: true } },
     { icon:"🔥", label:"本日追客",   value:todayActions.length+"件",color:"#0ea5e9", bg:"linear-gradient(135deg,#38bdf8,#0369a1)", sub:`期限切れ ${overdueActions.length}件`, filter:{ nextActionDate: TODAY } },
   ];
 
@@ -1986,7 +2015,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
             const won = arr.filter(isWon).length;
             const pct = arr.length ? ap/arr.length : 0;
             const srcColor = getSourceColor(src, srcIdx);
-            const srcIconKey = getSourceIcon(src) || (src==="HP"?"home":src==="ポータルサイト"?"search":src==="電話"?"phone":"document");
+            const srcIconKey = getSourceIcon(src) || "document";
             return (
               <div key={src} style={{marginBottom:6,background:"#f8fbf9",borderRadius:10, padding:"7px 10px",border:`1px solid ${srcColor}22`}}>
                 {/* 1行目：名前＋数値 */}
@@ -2321,6 +2350,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
   const [fNextAction, setFNextAction] = useState(""); // "today" | "overdue" | ""
   const [fIS, setFIS] = useState("");
   const [fQ, setFQ] = useState("");
+  const [fHasPortal, setFHasPortal] = useState(false);
   const [sort, setSort] = useState("fixed");
   const [sortDir, setSortDir] = useState("asc");
   const [openId, setOpenId] = useState(null);
@@ -2331,6 +2361,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
     if (initialFilter.source)         setFSrc(initialFilter.source);
     if (initialFilter.statuses)       setFStatuses(new Set(initialFilter.statuses));
     if (initialFilter.nextActionDate) { setFNextAction("today"); }
+    if (initialFilter.hasPortal)      { setFHasPortal(true); }
     onFilterConsumed && onFilterConsumed();
   }, [initialFilter]);
 
@@ -2341,7 +2372,8 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
     .filter(l => { if (!fMonth) return true; const s=l.date||""; let ym=s.slice(0,7); if(!/^\d{4}-\d{2}$/.test(ym)){const m=s.match(/^(\d{4})[\/-](\d{1,2})/);ym=m?m[1]+"-"+m[2].padStart(2,"0"):"";} return ym===fMonth; })
     .filter(l => !fNextAction || (fNextAction==="today" ? l.next_action_date===TODAY : l.next_action_date&&l.next_action_date<TODAY))
     .filter(l => !fSource || l.source === fSource)
-    .filter(l => !fPortal || (l.source === "ポータルサイト" && l.portal_site === fPortal))
+    .filter(l => !fHasPortal || !!l.portal_site)
+    .filter(l => !fPortal || l.portal_site === fPortal)
     .filter(l => !fIS || l.is_member === fIS)
     .filter(l => !fQ || [l.company, l.contact].join(" ").includes(fQ))
     .sort((a,b) => {
@@ -2397,10 +2429,13 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
           <option value="">全流入元</option>
           {getSources().map(s => <option key={s}>{s}</option>)}
         </select>
-        {fSource === "ポータルサイト" && (
+        {fHasPortal && (
+          <button onClick={()=>setFHasPortal(false)} style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:"#8b5cf633", color:"#7c3aed", border:"1px solid #8b5cf666", fontWeight:700}}>🏢 ポータル ✕</button>
+        )}
+        {sourceHasPortal(fSource) && (
           <select value={fPortal} onChange={e => setFPortal(e.target.value)} style={{...S.sel, flexShrink:0}}>
             <option value="">全サイト</option>
-            {getPortalSites().map(p => <option key={p}>{p}</option>)}
+            {getPortalSitesForSource(fSource).map(p => <option key={p}>{p}</option>)}
           </select>
         )}
         <select value={fMonth} onChange={e => setFMonth(e.target.value)} style={{...S.sel, flexShrink:0}}>
@@ -2561,7 +2596,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
   const actions = lead.actions || [];
   const last = actions[0];
 
-  const srcIconKey2 = getSourceIcon(lead.source) || (lead.source==="HP"?"home":lead.source==="ポータルサイト"?"search":lead.source==="電話"?"phone":"document");
+  const srcIconKey2 = getSourceIcon(lead.source) || "document";
   const sc = getStatusColor(lead.status);
   const nad = lead.next_action_date;
   const subParts = [
@@ -2612,7 +2647,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
           )}
 
           {/* 課金対象外バッジ */}
-          {lead.source === "ポータルサイト" && lead.charge_applied && (
+          {lead.portal_site && lead.charge_applied && (
             <span style={{fontSize:11,fontWeight:700,color:"#6a9a7a", background:"#f0f5f2",border:"1px solid #c0dece", borderRadius:6,padding:"2px 7px", whiteSpace:"nowrap"}}>課金対象外</span>
           )}
 
@@ -2763,14 +2798,14 @@ function LeadForm({ initial, onSave, onClose }) {
             </div>
           </Row2>
 
-          {d.source==="ポータルサイト" && (
+          {sourceHasPortal(d.source) && (
             <>
               <Row2>
                 <div>
                   <label style={S.lbl}>ポータルサイト名 *</label>
                   <select value={d.portal_site||""} onChange={e=>{set("portal_site",e.target.value);set("portal_type","");}} style={{...S.inp, borderColor: !d.portal_site ? "#ef4444" : "#c0dece"}}>
                     <option value="">選択してください</option>
-                    {getPortalSites().map(s=><option key={s}>{s}</option>)}
+                    {getPortalSitesForSource(d.source).map(s=><option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
@@ -2894,8 +2929,8 @@ function LeadForm({ initial, onSave, onClose }) {
             if (!d.source) return alert("流入元は必須です");
             if (!d.status) return alert("ステータスは必須です");
             if (!d.is_member) return alert("IS担当は必須です");
-                        if (d.source==="ポータルサイト" && !d.portal_site) return alert("ポータルサイト名は必須です");
-            if (d.source==="ポータルサイト" && d.portal_site && !d.portal_type) return alert("種別は必須です");
+                        if (sourceHasPortal(d.source) && !d.portal_site) return alert("ポータルサイト名は必須です");
+            if (sourceHasPortal(d.source) && d.portal_site && !d.portal_type) return alert("種別は必須です");
             onSave(d); }}
             style={S.btnP}>{initial?"更新する":"登録する"}</button>
         </div>
@@ -3063,7 +3098,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
           <span style={{fontSize:11, fontWeight:700, color:sc, background:sc+"15", border:`1px solid ${sc}44`, borderRadius:8, padding:"2px 8px"}}>{lead.status||"新規"}</span>
           {lead.date && <span style={{fontSize:11, color:"#6a9a7a"}}>反響日：{lead.date}</span>}
           {actions[0] && <span style={{fontSize:11, color:"#6a9a7a"}}>最終：{actions[0].date}{actions[0].time ? " "+actions[0].time : ""}</span>}
-          {lead.source && <span style={{fontSize:11, color: lead.source==="HP"?"#0ea5e9":lead.source==="ポータルサイト"?"#8b5cf6":"#f59e0b", background: lead.source==="HP"?"#e0f2fe":lead.source==="ポータルサイト"?"#f3f0ff":"#fff7ed", borderRadius:6, padding:"1px 7px", fontWeight:600}}>📥 {lead.source}{lead.source==="ポータルサイト"&&lead.portal_site?" / "+lead.portal_site:""}</span>}
+          {lead.source && (()=>{ const sc=getSourceColor(lead.source,0); return <span style={{fontSize:11, color:sc, background:sc+"1a", border:`1px solid ${sc}33`, borderRadius:6, padding:"1px 7px", fontWeight:600}}>📥 {lead.source}{lead.portal_site?" / "+lead.portal_site:""}</span>; })()}
           {lead.meeting_date && <span style={{fontSize:11, color:"#10b981", fontWeight:600}}>🤝 {lead.meeting_date}</span>}
           {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{...S.zohoLinkSmall, fontSize:10, padding:"2px 8px"}}>🔗 Zoho</a>}
         </div>
@@ -3892,11 +3927,10 @@ function KPI({ icon, label, value, unit, color, sub }) {
   );
 }
 function SrcBadge({ src, small }) {
-  const map = { HP:["#10b981","🌐"], "ポータルサイト":["#8b5cf6","🏢"], "電話":["#10b981","📞"] };
-  const [c,ic] = map[src]||["#6a9a7a","？"];
+  const c = getSourceColor(src, 0);
   return (
     <span style={{background:c+"1a",color:c,border:`1px solid ${c}44`,borderRadius:5, padding:small?"2px 7px":"3px 10px",fontSize:small?11:12,fontWeight:600,whiteSpace:"nowrap"}}>
-      {ic} {src}
+      {src}
     </span>
   );
 }

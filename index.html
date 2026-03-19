@@ -1433,7 +1433,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
           <button onClick={() => { setShowImport(v=>!v); setImportResult(null); }} style={S.btnSec}>
             📥 CSVインポート
           </button>
-          <button onClick={() => { setEditing(null); setShowForm(true); }} style={S.btnP}>＋ 新規追加</button>
+          <button onClick={() => { setEditing(null); setShowForm(true); }} style={{...S.btnP, background:"linear-gradient(135deg,#f97316,#ea580c)"}}>＋ 新規追加</button>
         </div>
       </Header>
 
@@ -1785,10 +1785,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onAddAction, onUpdate
             }
           </div>
 
-          <div style={{display:"flex", gap:8, marginTop:12}}>
-            <button onClick={onEdit} style={S.btnSec}>編集</button>
-            <button onClick={() => setConfirmDelete(true)} style={S.btnDel}>削除</button>
-          </div>
+
         </div>
       )}
     </div>

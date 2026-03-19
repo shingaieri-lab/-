@@ -1,5 +1,4 @@
-# Rules
+# 開発ルール
 
-- Always commit directly to the main branch
-- Never create pull requests
-- Never create new branches
+- 変更は必ずmainブランチに直接コミットすること
+- Pull Requestは作成しないこと

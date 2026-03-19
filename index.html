@@ -166,9 +166,9 @@ const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理
 
 function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const DEFAULT_EMAIL_TEMPLATES = [
-    { id:"t1", name:"初回フォロー", subject:"【ダンドリワーク】資料のご確認のお願い", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
-    { id:"t2", name:"商談日程調整", subject:"【ダンドリワーク{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
-    { id:"t3", name:"ナーチャリング", subject:"【ダンドリワーク】建設業の施工管理DX事例のご紹介", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n以前お話しさせていただいた件で、成果が出た事例をご紹介します。" },
+    { id:"t1", name:"初回フォロー", useSlots:false, subject:"【ダンドリワーク】資料のご確認のお願い", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
+    { id:"t2", name:"商談日程調整", useSlots:true, subject:"【ダンドリワーク{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
+    { id:"t3", name:"ナーチャリング", useSlots:false, subject:"【ダンドリワーク】建設業の施工管理DX事例のご紹介", body:"{{担当者苗字}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n以前お話しさせていただいた件で、成果が出た事例をご紹介します。" },
   ];
   const loadTpls = () => { try { return JSON.parse(localStorage.getItem("email_tpls_v2")||"null") || DEFAULT_EMAIL_TEMPLATES; } catch { return DEFAULT_EMAIL_TEMPLATES; } };
   const saveTpls = (t) => { try { localStorage.setItem("email_tpls_v2", JSON.stringify(t)); } catch {} };
@@ -177,7 +177,9 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const [tpls, setTpls] = React.useState(loadTpls);
   const [selTpl, setSelTpl] = React.useState(tpls[0]?.id||"");
   const [selLead, setSelLead] = React.useState("");
-  const [vars, setVars] = React.useState({担当者名:"",会社名:"",送信者名:"",候補日時:""});
+  const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:""});
+  const [previewSubj, setPreviewSubj] = React.useState("");
+  const [previewBody, setPreviewBody] = React.useState("");
   const [editMode, setEditMode] = React.useState(false);
   const [editTpl, setEditTpl] = React.useState(null);
   const [copied, setCopied] = React.useState(false);
@@ -185,8 +187,14 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   const tpl = tpls.find(t=>t.id===selTpl)||tpls[0];
   const lead = leads.find(l=>l.id===selLead);
 
-  // リード選択時に担当者名・会社名を自動入力
-  React.useEffect(()=>{ if(lead) setVars(v=>({...v,担当者名:lead.contact||lead.company||"",会社名:lead.company||""})); },[selLead]);
+  // リード選択時に担当者名・担当者苗字・会社名を自動入力
+  React.useEffect(()=>{
+    if(lead){
+      const contact=lead.contact||lead.company||"";
+      const surname=contact.split(/[ \u3000]/)[0]||contact;
+      setVars(v=>({...v,担当者名:contact,担当者苗字:surname,会社名:lead.company||""}));
+    }
+  },[selLead]);
 
   // ログインユーザーの名前を送信者名に自動入力
   React.useEffect(()=>{ if(currentUser?.name) setVars(v=>({...v,送信者名:currentUser.name})); },[currentUser?.name]);
@@ -223,10 +231,13 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
   },[candidateSlots]);
 
   const body=tpl?applyVars(tpl.body,vars):"", subj=tpl?applyVars(tpl.subject,vars):"";
+  const showSlots = tpl ? (tpl.useSlots !== undefined ? tpl.useSlots : tpl.body.includes("{{候補日時}}")) : false;
+  // プレビューを変数・テンプレート変更に追従
+  React.useEffect(()=>{ setPreviewSubj(subj); setPreviewBody(body); },[body,subj]);
   const copy=(txt)=>{ navigator.clipboard?.writeText(txt); setCopied(true); setTimeout(()=>setCopied(false),2000); };
   const saveEdit=()=>{ const u=tpls.map(t=>t.id===editTpl.id?editTpl:t); setTpls(u); saveTpls(u); setEditMode(false); };
   const deleteTpl=(id)=>{ if(!window.confirm("削除しますか？")) return; const u=tpls.filter(t=>t.id!==id); setTpls(u); saveTpls(u); if(selTpl===id) setSelTpl(u[0]?.id||""); };
-  const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
+  const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
   const inpStyle = {width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe"};
   const lblStyle = {fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3};
   return (
@@ -250,16 +261,24 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
         </div>
         <div>
           {editMode&&editTpl ? (
-            <div style={{background:"#fff",borderRadius:12,border:"1px solid #fde68a",padding:"16px"}}>
+            <div style={{background:"#fff",borderRadius:12,border:"1px solid #fde68a",padding:"16px",display:"flex",flexDirection:"column",minHeight:"calc(100vh - 180px)"}}>
               <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12}}>✏️ テンプレート編集</div>
               {[["テンプレート名","name"],["件名","subject"]].map(([l,k])=>(
                 <div key={k} style={{marginBottom:8}}><label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>{l}</label>
                   <input value={editTpl[k]} onChange={e=>setEditTpl(p=>({...p,[k]:e.target.value}))} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}} />
                 </div>
               ))}
-              <div style={{marginBottom:12}}><label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>本文</label>
-                <textarea value={editTpl.body} onChange={e=>setEditTpl(p=>({...p,body:e.target.value}))} rows={10} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",lineHeight:1.7}} />
+              <div style={{marginBottom:10}}>
+                <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}>
+                  <input type="checkbox" checked={!!editTpl.useSlots} onChange={e=>setEditTpl(p=>({...p,useSlots:e.target.checked}))} />
+                  <span>{'{{候補日時}}'} を使用する（日程調整テンプレート）</span>
+                </label>
               </div>
+              <div style={{flex:1,display:"flex",flexDirection:"column",marginBottom:12}}>
+                <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>本文</label>
+                <textarea value={editTpl.body} onChange={e=>setEditTpl(p=>({...p,body:e.target.value}))} style={{flex:1,width:"100%",minHeight:320,padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"none",lineHeight:1.7}} />
+              </div>
+              <div style={{fontSize:11,color:"#9ca3af",marginBottom:10}}>使用可能な変数：{"{{"+"担当者名"+"}}"}　{"{{"+"担当者苗字"+"}}"}　{"{{"+"会社名"+"}}"}　{"{{"+"送信者名"+"}}"}　{"{{"+"候補日時"+"}}"}（useSlots ON時）</div>
               <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                 <button onClick={()=>setEditMode(false)} style={{padding:"7px 16px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#6a9a7a",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>キャンセル</button>
                 <button onClick={saveEdit} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>保存</button>
@@ -277,7 +296,11 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                       {leads.map(l=><option key={l.id} value={l.id}>{l.company}（{l.contact}）</option>)}
                     </select>
                   </div>
-                  {/* 担当者名 */}
+                  {/* 担当者苗字（自動抽出） */}
+                  <div><label style={lblStyle}>{"{{"+"担当者苗字"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>苗字のみ自動</span></label>
+                    <input value={vars.担当者苗字||""} onChange={e=>setVars(v=>({...v,担当者苗字:e.target.value}))} style={inpStyle} placeholder="例：山田" />
+                  </div>
+                  {/* 担当者名（フルネーム） */}
                   <div><label style={lblStyle}>{"{{"+"担当者名"+"}}"}</label>
                     <input value={vars.担当者名||""} onChange={e=>setVars(v=>({...v,担当者名:e.target.value}))} style={inpStyle} />
                   </div>
@@ -290,50 +313,31 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [] }) {
                     <input value={vars.送信者名||""} onChange={e=>setVars(v=>({...v,送信者名:e.target.value}))} style={inpStyle} />
                   </div>
                 </div>
-                {/* 候補日時 - 候補日ツール連携 */}
+                {/* 候補日時 - テンプレートのuseSlots設定に従って表示 */}
+                {showSlots && (
                 <div>
-                  <label style={lblStyle}>{"{{"+"候補日時"+"}}"}</label>
-                  {candidateSlots.length > 0 ? (
-                    <div>
-                      <div style={{fontSize:11,color:"#0369a1",background:"#f0f9ff",border:"1px solid #bae6fd",borderRadius:7,padding:"6px 10px",marginBottom:6}}>
-                        📅 候補日ツールから選択（最大3つ）　{selectedSlotIdxs.length > 0 && <span style={{fontWeight:700,color:"#059669"}}>{selectedSlotIdxs.length}件選択中</span>}
-                      </div>
-                      <div style={{maxHeight:160,overflowY:"auto",border:"1px solid #c0dece",borderRadius:7,padding:"6px 8px",background:"#f8fffe",marginBottom:6}}>
-                        {[...new Set(candidateSlots.map(s=>s.date))].map(date=>(
-                          <div key={date} style={{marginBottom:4}}>
-                            <div style={{fontSize:10,fontWeight:700,color:"#6a9a7a",marginBottom:2}}>
-                              {date}（{["日","月","火","水","木","金","土"][new Date(date+"T00:00:00").getDay()]}）
-                            </div>
-                            <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
-                              {candidateSlots.map((slot,i)=>slot.date!==date?null:(
-                                <label key={i} style={{display:"inline-flex",alignItems:"center",gap:4,cursor:selectedSlotIdxs.length>=3&&!selectedSlotIdxs.includes(i)?"not-allowed":"pointer",opacity:selectedSlotIdxs.length>=3&&!selectedSlotIdxs.includes(i)?0.4:1}}>
-                                  <input type="checkbox" checked={selectedSlotIdxs.includes(i)} onChange={()=>toggleSlot(i)} disabled={selectedSlotIdxs.length>=3&&!selectedSlotIdxs.includes(i)} style={{cursor:"inherit"}} />
-                                  <span style={{fontSize:12,padding:"3px 8px",borderRadius:6,background:selectedSlotIdxs.includes(i)?"#10b98133":"transparent",color:selectedSlotIdxs.includes(i)?"#059669":"#374151",fontWeight:selectedSlotIdxs.includes(i)?700:400}}>
-                                    {slot.start}〜{slot.end}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{fontSize:11,color:"#9ca3af",background:"#f9fafb",border:"1px dashed #d1d5db",borderRadius:7,padding:"6px 10px",marginBottom:6}}>
-                      📅 候補日ページで日程を検索・選択するか、下に直接入力してください
-                    </div>
-                  )}
-                  <textarea value={vars.候補日時||""} onChange={e=>setVars(v=>({...v,候補日時:e.target.value}))} rows={3} placeholder={"例：2026年3月20日（金）10:00〜11:00"} style={{...inpStyle,resize:"vertical",lineHeight:1.6}} />
+                  <label style={lblStyle}>{"{{"+"候補日時"+"}}"} {candidateSlots.length > 0 && <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>📅 候補日ツールから自動入力済</span>}</label>
+                  <textarea value={vars.候補日時||""} onChange={e=>setVars(v=>({...v,候補日時:e.target.value}))} rows={4} placeholder={"例：2026年3月20日（金）10:00〜11:00"} style={{...inpStyle,resize:"vertical",lineHeight:1.6}} />
                 </div>
+                )}
               </div>
               {tpl&&(
                 <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#174f35"}}>📄 プレビュー</div>
-                    <button onClick={()=>copy(subj+"\n\n"+body)} style={{padding:"5px 14px",borderRadius:7,border:"none",background:copied?"#059669":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copied?"✅ コピー済み":"📋 全文コピー"}</button>
+                    <div style={{fontSize:12,fontWeight:700,color:"#174f35"}}>📝 メール本文（直接編集可）</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <button onClick={()=>{setPreviewSubj(subj);setPreviewBody(body);}} style={{padding:"5px 12px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#6a9a7a",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>↩ リセット</button>
+                      <button onClick={()=>copy(previewSubj+"\n\n"+previewBody)} style={{padding:"5px 14px",borderRadius:7,border:"none",background:copied?"#059669":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copied?"✅ コピー済み":"📋 全文コピー"}</button>
+                    </div>
                   </div>
-                  <div style={{background:"#f0f5f2",borderRadius:8,padding:"8px 12px",marginBottom:8,fontSize:12}}><span style={{color:"#6a9a7a",fontWeight:600}}>件名: </span><span style={{color:"#174f35"}}>{subj}</span></div>
-                  <pre style={{whiteSpace:"pre-wrap",fontSize:13,color:"#174f35",lineHeight:1.7,margin:0,fontFamily:"inherit"}}>{body}</pre>
+                  <div style={{marginBottom:8}}>
+                    <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>件名</label>
+                    <input value={previewSubj} onChange={e=>setPreviewSubj(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe",color:"#174f35"}} />
+                  </div>
+                  <div>
+                    <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>本文</label>
+                    <textarea value={previewBody} onChange={e=>setPreviewBody(e.target.value)} style={{width:"100%",minHeight:280,padding:"10px 12px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",lineHeight:1.7,color:"#174f35",background:"#f8fffe"}} />
+                  </div>
                 </div>
               )}
             </div>

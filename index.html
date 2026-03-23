@@ -686,6 +686,9 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
   const [aiGmailToken, setAiGmailToken] = React.useState(null);
   const [aiGmailSaving, setAiGmailSaving] = React.useState(false);
   const [aiGmailSaved, setAiGmailSaved] = React.useState(false);
+  const [aiCalToken, setAiCalToken] = React.useState(null);
+  const [aiCalSaving, setAiCalSaving] = React.useState(false);
+  const [aiCalSaved, setAiCalSaved] = React.useState(false);
   const lead = leads.find(l=>l.id===selLead);
 
   const addBizDays=(dateStr,days)=>{
@@ -804,6 +807,81 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
       alert('Gmail下書き保存エラー: ' + e.message);
     } finally {
       setAiGmailSaving(false);
+    }
+  };
+
+  const saveAiCalTodo = async () => {
+    const cfg = getEffectiveAiConfig(currentUser);
+    const clientId = cfg.gmailClientId;
+    if (!clientId) { alert("設定 > APIキー設定 で Gmail Client ID を入力してください"); return; }
+    if (!selLead || !lead) { alert("リードを選択してください"); return; }
+    const nextDate = result?.next_action_date_offset ? addBizDays(actionDate, result.next_action_date_offset) : "";
+    const nextTime = result?.next_action_time || "";
+    if (!nextDate) { alert("ネクストアクション日が設定されていません"); return; }
+    setAiCalSaving(true);
+    try {
+      let token = aiCalToken;
+      if (!token) {
+        if (!window.google?.accounts?.oauth2) {
+          await new Promise((res, rej) => {
+            if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://accounts.google.com/gsi/client';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+          await new Promise(r => setTimeout(r, 500));
+        }
+        token = await new Promise((res, rej) => {
+          const client = window.google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: 'https://www.googleapis.com/auth/calendar.events',
+            callback: (resp) => {
+              if (resp.error) {
+                if (resp.error === 'redirect_uri_mismatch' || resp.error === 'invalid_client') {
+                  rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" を追加してください。`));
+                } else { rej(new Error(resp.error)); }
+              } else { res(resp.access_token); }
+            },
+            error_callback: (err) => {
+              if (err.type === 'popup_blocked_by_browser') {
+                rej(new Error('ポップアップがブロックされました。ブラウザのポップアップブロックを解除してください。'));
+              } else {
+                rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" が登録されているか確認してください。`));
+              }
+            }
+          });
+          client.requestAccessToken();
+        });
+        setAiCalToken(token);
+      }
+      const startDT = nextTime ? `${nextDate}T${nextTime}:00` : `${nextDate}T10:00:00`;
+      const startDate = new Date(startDT);
+      const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+      const pad = n => String(n).padStart(2, "0");
+      const fmtDT = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+      const event = {
+        summary: lead.company || "(会社名未設定)",
+        description: lead.zoho_url || "",
+        start: { dateTime: fmtDT(startDate), timeZone: "Asia/Tokyo" },
+        end: { dateTime: fmtDT(endDate), timeZone: "Asia/Tokyo" }
+      };
+      const calRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(event)
+      });
+      if (!calRes.ok) {
+        const err = await calRes.json();
+        if ((err.error?.code===401)||(err.error?.status==='UNAUTHENTICATED')) { setAiCalToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+        throw new Error(err.error?.message || 'TODO作成に失敗しました');
+      }
+      setAiCalSaved(true);
+      setTimeout(() => setAiCalSaved(false), 3000);
+    } catch(e) {
+      alert('GoogleカレンダーTODO作成エラー: ' + e.message);
+    } finally {
+      setAiCalSaving(false);
     }
   };
 
@@ -932,6 +1010,9 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
                           <div style={{fontSize:13.5,color:"#34d399",fontWeight:600,lineHeight:1.6}}>{result.next_action_memo||"—"}</div>
                         </div>
                       </div>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"flex-end"}}>
+                      <button onClick={saveAiCalTodo} disabled={aiCalSaving||!selLead||!result?.next_action_date_offset} style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fff",border:"none",borderRadius:7,padding:"8px 20px",fontSize:12,fontWeight:700,cursor:(aiCalSaving||!selLead||!result?.next_action_date_offset)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||!result?.next_action_date_offset)?0.5:1}}>{aiCalSaving?"作成中...":aiCalSaved?"✅ TODO作成済":"📅 GoogleカレンダーにTODO作成"}</button>
                     </div>
                   </div>
                 )}
@@ -2544,6 +2625,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
                 onEdit={readOnly ? null : () => { setEditing(lead); setShowForm(true); }}
                 onDelete={readOnly ? null : () => onDelete(lead.id)}
                 readOnly={readOnly}
+                currentUser={currentUser}
                 onStatusChange={s => {
                   const patch = { status: s };
                   if (lead.status === "商談確定" && s !== "商談確定") {
@@ -2637,11 +2719,85 @@ function VoiceButton({ onResult, style }) {
     <button style={{...style, opacity:0.5}} title="音声入力（別モジュール）">🎤</button>
   );
 }
-function NextActionEditBtn({ nad, lead, onUpdate }) {
+function NextActionEditBtn({ nad, lead, onUpdate, currentUser }) {
   const [editNA, setEditNA] = useState(false);
   const [naDate, setNADate] = useState(nad||"");
   const [naTime, setNATime] = useState(lead.next_action_time||"");
   const [naMemo, setNAMemo] = useState(lead.next_action||"");
+  const [calToken, setCalToken] = useState(null);
+  const [calSaving, setCalSaving] = useState(false);
+  const [calSaved, setCalSaved] = useState(false);
+
+  const createCalTodo = async (date, time) => {
+    const clientId = currentUser?.gmailClientId;
+    if (!clientId) { alert("設定 > APIキー設定 で Gmail Client ID を入力してください"); return; }
+    if (!date) { alert("ネクストアクション日が設定されていません"); return; }
+    setCalSaving(true);
+    try {
+      let token = calToken;
+      if (!token) {
+        if (!window.google?.accounts?.oauth2) {
+          await new Promise((res, rej) => {
+            if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
+            const s = document.createElement('script');
+            s.src = 'https://accounts.google.com/gsi/client';
+            s.onload = res; s.onerror = rej;
+            document.head.appendChild(s);
+          });
+          await new Promise(r => setTimeout(r, 500));
+        }
+        token = await new Promise((res, rej) => {
+          const client = window.google.accounts.oauth2.initTokenClient({
+            client_id: clientId,
+            scope: 'https://www.googleapis.com/auth/calendar.events',
+            callback: (resp) => {
+              if (resp.error) {
+                if (resp.error === 'redirect_uri_mismatch' || resp.error === 'invalid_client') {
+                  rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" を追加してください。`));
+                } else { rej(new Error(resp.error)); }
+              } else { res(resp.access_token); }
+            },
+            error_callback: (err) => {
+              if (err.type === 'popup_blocked_by_browser') {
+                rej(new Error('ポップアップがブロックされました。ブラウザのポップアップブロックを解除してください。'));
+              } else {
+                rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" が登録されているか確認してください。`));
+              }
+            }
+          });
+          client.requestAccessToken();
+        });
+        setCalToken(token);
+      }
+      const startDT = time ? `${date}T${time}:00` : `${date}T10:00:00`;
+      const startDate = new Date(startDT);
+      const endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+      const pad = n => String(n).padStart(2, "0");
+      const fmtDT = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+      const event = {
+        summary: lead.company || "(会社名未設定)",
+        description: lead.zoho_url || "",
+        start: { dateTime: fmtDT(startDate), timeZone: "Asia/Tokyo" },
+        end: { dateTime: fmtDT(endDate), timeZone: "Asia/Tokyo" }
+      };
+      const calRes = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(event)
+      });
+      if (!calRes.ok) {
+        const err = await calRes.json();
+        if ((err.error?.code===401)||(err.error?.status==='UNAUTHENTICATED')) { setCalToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+        throw new Error(err.error?.message || 'TODO作成に失敗しました');
+      }
+      setCalSaved(true);
+      setTimeout(() => setCalSaved(false), 3000);
+    } catch(e) {
+      alert('GoogleカレンダーTODO作成エラー: ' + e.message);
+    } finally {
+      setCalSaving(false);
+    }
+  };
 
   if (editNA) return (
     <div style={{display:"flex", gap:6, alignItems:"center",flexWrap:"wrap", marginLeft:4}}>
@@ -2662,13 +2818,18 @@ function NextActionEditBtn({ nad, lead, onUpdate }) {
   return (
     <div style={{display:"flex", gap:4, marginLeft:4}}>
       <button onClick={()=>setEditNA(true)} style={{...S.btnIconSm,fontSize:11}} title="編集">✏️</button>
+      {currentUser?.gmailClientId && nad && (
+        <button onClick={()=>createCalTodo(nad, lead.next_action_time)} disabled={calSaving}
+          style={{...S.btnIconSm,fontSize:11,opacity:calSaving?0.5:1,color:calSaved?"#7c3aed":"inherit"}}
+          title="GoogleカレンダーにTODO作成">{calSaved?"✅":"📅"}</button>
+      )}
       <button onClick={()=>onUpdate({next_action:"",next_action_date:"",next_action_time:""})}
         style={{...S.btnIconSm,fontSize:11,color:"#ef444466"}} title="削除">🗑</button>
     </div>
   );
 }
 
-function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, setOpenId, readOnly }) {
+function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, setOpenId, readOnly, currentUser }) {
   const open = openId === lead.id;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const pc = "#10b981"; // 優先度廃止のためエメラルド固定
@@ -2794,7 +2955,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
                 {lead.next_action && <span style={{color:"#174f35",fontSize:12}}>{lead.next_action}</span>}
               </div>
             )}
-            {(nad || lead.next_action) && <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} />}
+            {(nad || lead.next_action) && <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} currentUser={currentUser} />}
 
           </div>
         );
@@ -3196,7 +3357,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
                 <span style={{color: overdue?"#dc2626":today?"#ea580c":"#059669"}}>→</span>
                 {nad && <span style={{fontWeight:700, color: overdue?"#dc2626":today?"#ea580c":"#059669"}}>{nad}{lead.next_action_time ? " "+lead.next_action_time : ""}</span>}
               </div>
-              {!readOnly && <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} />}
+              {!readOnly && <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} currentUser={currentUser} />}
             </div>
             {lead.next_action && (
               <div style={{color:"#174f35", marginTop:3, lineHeight:1.5, wordBreak:"break-word", whiteSpace:"pre-wrap", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden"}}>

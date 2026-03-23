@@ -283,6 +283,8 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile
   const applyVars = (body, vars) => Object.entries(vars).reduce((s,[k,v])=>s.replaceAll("{{"+k+"}}",v||("{{"+k+"}}")),body);
 
   const [tpls, setTpls] = React.useState(loadTpls);
+  const [dragIdx, setDragIdx] = React.useState(null);
+  const [overIdx, setOverIdx] = React.useState(null);
   const [selTpl, setSelTpl] = React.useState(tpls[0]?.id||"");
   const [selLead, setSelLead] = React.useState("");
   const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:"",商談月:"",商談日:"",商談曜日:"",商談時:"",商談分:"",商談担当:"",宛先メール:""});
@@ -474,6 +476,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile
   const saveEdit=()=>{ const u=tpls.map(t=>t.id===editTpl.id?editTpl:t); setTpls(u); saveTpls(u); setEditMode(false); };
   const deleteTpl=(id)=>{ if(!window.confirm("削除しますか？")) return; const u=tpls.filter(t=>t.id!==id); setTpls(u); saveTpls(u); if(selTpl===id) setSelTpl(u[0]?.id||""); };
   const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,useMeeting:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
+  const handleDrop=(toIdx)=>{ if(dragIdx===null||dragIdx===toIdx) return; const r=[...tpls]; const [moved]=r.splice(dragIdx,1); r.splice(toIdx,0,moved); setTpls(r); saveTpls(r); setDragIdx(null); setOverIdx(null); };
   const inpStyle = {width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe"};
   const lblStyle = {fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3};
   return (
@@ -485,9 +488,19 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile
       <div className="email-grid" style={{display:"grid",gridTemplateColumns:"240px 1fr",gap:16}}>
         <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"12px",height:"fit-content"}}>
           <div style={{fontSize:11,fontWeight:700,color:"#6a9a7a",marginBottom:8}}>テンプレート一覧</div>
-          {tpls.map(t=>(
-            <div key={t.id} onClick={()=>{setSelTpl(t.id);setEditMode(false);}} style={{padding:"8px 10px",borderRadius:8,cursor:"pointer",marginBottom:4,background:selTpl===t.id?"#10b98122":"transparent",border:selTpl===t.id?"1px solid #10b98144":"1px solid transparent",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:12,fontWeight:selTpl===t.id?700:400,color:"#174f35"}}>{t.name}</span>
+          {tpls.map((t,i)=>(
+            <div key={t.id}
+              draggable
+              onDragStart={()=>setDragIdx(i)}
+              onDragOver={e=>{e.preventDefault();setOverIdx(i);}}
+              onDrop={()=>handleDrop(i)}
+              onDragEnd={()=>{setDragIdx(null);setOverIdx(null);}}
+              onClick={()=>{setSelTpl(t.id);setEditMode(false);}}
+              style={{padding:"8px 10px",borderRadius:8,cursor:"pointer",marginBottom:4,background:selTpl===t.id?"#10b98122":"transparent",border:selTpl===t.id?"1px solid #10b98144":"1px solid transparent",display:"flex",justifyContent:"space-between",alignItems:"center",opacity:dragIdx===i?0.4:1,borderTop:overIdx===i&&dragIdx!==i?"2px solid #10b981":undefined}}>
+              <span style={{display:"flex",alignItems:"center",gap:4}}>
+                <span style={{cursor:"grab",color:"#aaa",fontSize:13,lineHeight:1}} onMouseDown={e=>e.stopPropagation()}>⠿</span>
+                <span style={{fontSize:12,fontWeight:selTpl===t.id?700:400,color:"#174f35"}}>{t.name}</span>
+              </span>
               <div style={{display:"flex",gap:3}}>
                 <button onClick={e=>{e.stopPropagation();setSelTpl(t.id);setEditTpl({...t});setEditMode(true);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>✏️</button>
                 <button onClick={e=>{e.stopPropagation();deleteTpl(t.id);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>🗑</button>

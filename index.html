@@ -3767,7 +3767,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   // カレンダー登録モーダル用
   const [showCalReg, setShowCalReg] = useState(false);
   const [calRegCompany, setCalRegCompany] = useState("");
-  const [calRegTitleTpl, setCalRegTitleTpl] = useState("仮WEB営1）【{{会社名}}】");
+  const [calRegTitleTpl, setCalRegTitleTpl] = useState("仮WEB営1）【{{会社名}}様】");
   const [calRegLoading, setCalRegLoading] = useState(false);
   const [calRegToken, setCalRegToken] = useState(null);
   const [calRegResults, setCalRegResults] = useState([]);
@@ -3892,7 +3892,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
   const resolvedCalTitle = calRegTitleTpl.replace(/\{\{会社名\}\}/g, calRegCompany);
 
   const openCalReg = () => {
-    setCalRegTitleTpl("仮WEB営1）【{{会社名}}】");
+    setCalRegTitleTpl("仮WEB営1）【{{会社名}}様】");
     setCalRegCompany("");
     setCalRegResults([]);
     setShowCalReg(true);

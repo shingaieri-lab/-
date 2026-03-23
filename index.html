@@ -811,17 +811,17 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
 
   return (
     <div style={{minHeight:"100vh",background:"#0f172a",fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif",color:"#e2e8f0"}}>
-      <div style={{background:"linear-gradient(135deg,#1e3a5f,#0f2744)",borderBottom:"1px solid #1e40af33",padding:"18px 28px",display:"flex",alignItems:"center",gap:14}}>
-        <div style={{width:38,height:38,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🤖</div>
-        <div>
+      <div className="ai-header" style={{background:"linear-gradient(135deg,#1e3a5f,#0f2744)",borderBottom:"1px solid #1e40af33",padding:"18px 28px",display:"flex",alignItems:"center",gap:14}}>
+        <div style={{width:38,height:38,background:"linear-gradient(135deg,#3b82f6,#1d4ed8)",borderRadius:10,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>🤖</div>
+        <div style={{minWidth:0, flex:1}}>
           <div style={{fontSize:17,fontWeight:700,color:"#fff"}}>AIアシスタント</div>
-          <div style={{fontSize:11,color:"#94a3b8",marginTop:2}}>アクション記録 → 自動解析 → 履歴登録・ネクストアクション提案</div>
+          <div className="ai-header-sub" style={{fontSize:11,color:"#94a3b8",marginTop:2}}>アクション記録 → 自動解析 → 履歴登録・ネクストアクション提案</div>
         </div>
         <div style={{marginLeft:"auto"}}>
           {apiKey?<div style={{background:"#10b98122",border:"1px solid #10b98144",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#34d399"}}>✅ APIキー設定済み</div>:<div style={{background:"#ef444422",border:"1px solid #ef444444",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#f87171"}}>⚠️ APIキー未設定</div>}
         </div>
       </div>
-      <div className="ai-layout" style={{display:"flex",height:"calc(100vh - 77px)"}}>
+      <div className="ai-layout" style={{display:"flex",height: isMobile ? "auto" : "calc(100vh - 77px)"}}>
         <div className="ai-left-panel" style={{width:380,borderRight:"1px solid #1e293b",display:"flex",flexDirection:"column",background:"#0f172a",flexShrink:0,overflow:"auto"}}>
           <div style={{flex:1,padding:"18px 20px",display:"flex",flexDirection:"column",gap:14}}>
             <div>
@@ -1179,7 +1179,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
       <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.is_staff === false ? "API設定・アカウントを管理できます。" : currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "営業設定・API設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
-      <div style={{marginBottom:0}}>
+      <div className="settings-tabs" style={{display:"flex", flexWrap:"wrap", gap:0, marginBottom:0}}>
         {currentUser?.role==="admin" && currentUser?.is_staff !== false && tabBtn("leadmgmt","📋 リード管理")}
         {currentUser?.role==="admin" && currentUser?.is_staff !== false && tabBtn("portal","🏢 ポータルサイト")}
         {currentUser?.is_staff !== false && (currentUser?.role==="admin" ? tabBtn("sales","👤 営業担当") : tabBtn("sales","👤 営業設定"))}
@@ -1645,7 +1645,7 @@ function Trend({ leads }) {
   return (
     <div className="page-pad" style={{padding:"24px 28px"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:20}}>📈 月別推移レポート</div>
-      <div className="two-col" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
+      <div className="two-col trend-charts" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
         <div style={{background:"#fff",borderRadius:14,padding:"18px 20px",border:"1px solid #e2f0e8"}}>
           <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📊 反響数・商談数・MQL数</div>
           <SVGBarChart data={data} keys={["反響数","商談数","MQL数"]} colors={{"反響数":"#10b981","商談数":"#6366f1","MQL数":"#ec4899"}} height={200}/>
@@ -1817,7 +1817,7 @@ function App() {
       <main style={{...S.main, paddingBottom: isMobile ? 65 : 0}}>
         {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); navigate("leads"); }} masterVer={masterVer} isMobile={isMobile} />}
         {page === "trend"     && <Trend leads={leads} />}
-        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} readOnly={currentUser?.is_staff === false}
+        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={currentUser?.is_staff === false}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => navigate("leads")} goCalendar={() => navigate("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} isMobile={isMobile} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={()=>navigate("email")} currentUser={currentUser} />}
@@ -1997,7 +1997,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
   ];
 
   return (
-    <div className="dash-container" style={{padding:"14px 20px", height:"calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow:"hidden"}}>
+    <div className="dash-container" style={{padding:"14px 20px", height: isMobile ? "auto" : "calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow: isMobile ? "visible" : "hidden"}}>
       {/* ヘッダー */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center", flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
@@ -2377,7 +2377,7 @@ function CSVImport({ onImport, onClose, result }) {
   );
 }
 
-function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, currentUser, readOnly }) {
+function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, currentUser, readOnly, isMobile }) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -2445,7 +2445,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
   const selectedLead = openId ? leads.find(l => l.id === openId) : null;
 
   return (
-    <div className="lead-list-container" style={{paddingLeft:28, paddingRight:28, height:"100%", overflow:"hidden", display:"flex", flexDirection:"column"}}>
+    <div className="lead-list-container" style={{paddingLeft:28, paddingRight:28, height: isMobile ? "auto" : "100%", overflow: isMobile ? "visible" : "hidden", display:"flex", flexDirection:"column", minHeight: isMobile ? "calc(100vh - 130px)" : undefined}}>
       <div className="page-pad" style={{flexShrink:0, background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
       <Header title="リード一覧" sub={`${leads.length}件 / 表示 ${list.length}件`}>
         <div className="lead-header-actions" style={{display:"flex", gap:8}}>
@@ -2493,7 +2493,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         </select>
       </div>
       {/* 2行目：並び順＋ステータス絞り込み */}
-      <div className="filter-bar" style={{display:"flex", gap:4, alignItems:"center", marginBottom:16, flexWrap:"nowrap"}}>
+      <div className="filter-bar" style={{display:"flex", gap:4, alignItems:"center", marginBottom:16, flexWrap: isMobile ? "wrap" : "nowrap"}}>
         <span style={{fontSize:11,color:"#6a9a7a",flexShrink:0}}>並び順:</span>
         {[["fixed","標準"],["date","反響日"],["nextAction","追客日"]].map(([v,label]) => (
           <button key={v} onClick={() => {
@@ -2534,9 +2534,9 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         />
       )}
 
-      <div style={{display:"flex", gap:12, marginTop:16, flex:1, minHeight:0, overflow:"hidden"}}>
+      <div style={{display:"flex", gap:12, marginTop:16, flex:1, minHeight:0, overflow: isMobile ? "visible" : "hidden"}}>
         {/* 左側：リード一覧 */}
-        <div style={{flex:"0 0 50%", width:"50%", overflowY:"auto"}}>
+        <div style={{flex: isMobile ? "none" : "0 0 50%", width: isMobile ? "100%" : "50%", overflowY:"auto"}}>
           <div style={{display:"flex", flexDirection:"column", gap:10}}>
             {list.length === 0 && <div style={{...S.empty,padding:"32px"}}>リードがありません</div>}
             {list.map(lead => (
@@ -2559,8 +2559,8 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
           </div>
         </div>
 
-        {/* 右パネル：アクション履歴 */}
-        {selectedLead && (
+        {/* デスクトップ: 右パネル（アクション履歴） */}
+        {!isMobile && selectedLead && (
           <div style={{flex:1, minWidth:0, background:"#fff", border:"1px solid #e2f0e8", borderRadius:12, boxShadow:"0 2px 12px #0569690a", overflow:"hidden", height:"100%", overflowY:"auto"}}>
             <ActionHistoryPanel
               key={selectedLead.id}
@@ -2588,6 +2588,37 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
           </div>
         )}
       </div>
+
+      {/* モバイル: アクション履歴をオーバーレイで表示 */}
+      {isMobile && selectedLead && (
+        <div style={{position:"fixed", inset:0, zIndex:500, background:"#000000bb", display:"flex", flexDirection:"column", justifyContent:"flex-end"}} onClick={() => setOpenId(null)}>
+          <div style={{background:"#fff", borderRadius:"16px 16px 0 0", maxHeight:"85vh", display:"flex", flexDirection:"column", overflowY:"auto", paddingBottom:65}} onClick={e => e.stopPropagation()}>
+            <ActionHistoryPanel
+              key={selectedLead.id}
+              lead={selectedLead}
+              onClose={() => setOpenId(null)}
+              onUpdate={p => onUpdate(selectedLead.id, p)}
+              onEdit={readOnly ? null : () => { setEditing(selectedLead); setShowForm(true); }}
+              onDelete={readOnly ? null : () => { onDelete(selectedLead.id); setOpenId(null); }}
+              currentUser={currentUser}
+              readOnly={readOnly}
+              onEditAction={(aid, updated) => {
+                const newActions = (selectedLead.actions||[]).map(a => a.id === aid ? { ...a, ...updated } : a);
+                const patch = { actions: newActions };
+                if (updated.nextDate) { patch.next_action_date = updated.nextDate; patch.next_action_time = updated.nextTime||""; patch.next_action = updated.next||""; }
+                onUpdate(selectedLead.id, patch);
+              }}
+              onDeleteAction={aid => {
+                const remaining = (selectedLead.actions||[]).filter(a => a.id !== aid);
+                const patch = { actions: remaining };
+                if (remaining.length === 0) { patch.next_action = ""; patch.next_action_date = ""; patch.next_action_time = ""; }
+                else { const latest = remaining.find(a => a.nextDate); if (!latest) { patch.next_action = ""; patch.next_action_date = ""; patch.next_action_time = ""; } }
+                onUpdate(selectedLead.id, patch);
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <LeadForm initial={editing}
@@ -4109,26 +4140,39 @@ const CSS = `
     .two-col { grid-template-columns: 1fr !important; height: auto !important; min-height: 0 !important; flex: none !important; }
     .three-col { grid-template-columns: 1fr 1fr !important; }
     .four-col { grid-template-columns: 1fr 1fr !important; }
-    .dash-container { height: auto !important; overflow: auto !important; min-height: calc(100vh - 125px); padding: 10px 12px !important; }
+    .dash-container { height: auto !important; overflow: auto !important; min-height: calc(100vh - 130px); padding: 10px 12px !important; }
     .page-pad { padding-left: 12px !important; padding-right: 12px !important; }
     .filter-bar { flex-wrap: wrap !important; }
     .filter-bar > * { flex-shrink: 1 !important; min-width: 0 !important; }
+    .filter-bar input { min-width: 140px !important; width: auto !important; }
+    .filter-bar select { min-width: 100px !important; max-width: none !important; }
     .email-grid { grid-template-columns: 1fr !important; }
     .email-main-grid { grid-template-columns: 1fr !important; height: auto !important; }
-    .ai-layout { flex-direction: column !important; height: auto !important; min-height: 0 !important; }
-    .ai-left-panel { width: 100% !important; border-right: none !important; border-bottom: 1px solid #1e293b !important; max-height: none !important; }
-    .cal-page { width: 100% !important; max-width: 100% !important; }
-    .settings-page { width: 100% !important; max-width: 100% !important; }
+    .ai-layout { flex-direction: column !important; height: auto !important; min-height: 0 !important; overflow: auto !important; }
+    .ai-left-panel { width: 100% !important; border-right: none !important; border-bottom: 1px solid #1e293b !important; max-height: none !important; overflow: visible !important; }
+    .ai-header { padding: 12px 14px !important; }
+    .ai-header-sub { display: none !important; }
+    .cal-page { width: 100% !important; max-width: 100% !important; padding: 14px 12px !important; }
+    .settings-page { width: 100% !important; max-width: 100% !important; padding: 14px 12px !important; }
+    .settings-tabs { flex-wrap: wrap !important; gap: 4px !important; }
+    .settings-tabs button { margin-right: 0 !important; font-size: 11px !important; padding: 6px 10px !important; }
     .resp-stack { flex-direction: column !important; }
     .resp-full-w { width: 100% !important; max-width: 100% !important; }
-    .lead-list-container { padding-left: 12px !important; padding-right: 12px !important; }
+    .lead-list-container { padding-left: 12px !important; padding-right: 12px !important; height: auto !important; min-height: calc(100vh - 130px); }
+    .lead-list-container .page-pad { margin-left: -12px !important; margin-right: -12px !important; }
+    .lead-list-inner { overflow: visible !important; flex: none !important; }
     .lead-header-actions { flex-wrap: wrap !important; gap: 6px !important; }
     .lead-header-actions button { font-size: 12px !important; padding: 7px 10px !important; }
+    .trend-charts { grid-template-columns: 1fr !important; }
+    .header-wrap { flex-wrap: wrap !important; gap: 8px !important; }
   }
   @media (max-width: 480px) {
     .kpi-grid { grid-template-columns: 1fr 1fr !important; }
     .two-col { grid-template-columns: 1fr !important; }
     .filter-bar input, .filter-bar select { font-size: 12px !important; padding: 6px 8px !important; }
+    .kpi-card-value { font-size: 20px !important; }
+    .lead-list-container { padding-left: 8px !important; padding-right: 8px !important; }
+    .lead-list-container .page-pad { margin-left: -8px !important; margin-right: -8px !important; }
   }
 `;
 

@@ -2825,7 +2825,7 @@ function NextActionEditBtn({ nad, lead, onUpdate, currentUser }) {
       {currentUser?.gmailClientId && nad && (
         <button onClick={()=>createCalTodo(nad, lead.next_action_time)} disabled={calSaving}
           style={{...S.btnIconSm,fontSize:11,opacity:calSaving?0.5:1,color:calSaved?"#7c3aed":"inherit"}}
-          title="GoogleカレンダーにTODO作成">{calSaved?"✅":"📅"}</button>
+          title="GoogleカレンダーにTODO作成">{calSaved?"✅":"☑️"}</button>
       )}
       <button onClick={()=>onUpdate({next_action:"",next_action_date:"",next_action_time:""})}
         style={{...S.btnIconSm,fontSize:11,color:"#ef444466"}} title="削除">🗑</button>

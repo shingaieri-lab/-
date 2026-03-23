@@ -2552,6 +2552,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
         {selectedLead && (
           <div style={{flex:1, minWidth:0, background:"#fff", border:"1px solid #e2f0e8", borderRadius:12, boxShadow:"0 2px 12px #0569690a", overflow:"hidden", height:"100%", overflowY:"auto"}}>
             <ActionHistoryPanel
+              key={selectedLead.id}
               lead={selectedLead}
               onClose={() => setOpenId(null)}
               onUpdate={p => onUpdate(selectedLead.id, p)}

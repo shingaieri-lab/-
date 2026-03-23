@@ -1008,6 +1008,8 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
   const [editSourceVal, setEditSourceVal] = React.useState("");
   const [editSourceIcon, setEditSourceIcon] = React.useState(null);
   const [showIconPicker, setShowIconPicker] = React.useState(null); // null | "new" | idx number
+  const [dragSrcIdx, setDragSrcIdx] = React.useState(null);
+  const [dragOverSrcIdx, setDragOverSrcIdx] = React.useState(null);
   const addSource = () => {
     const s = newSource.trim(); if (!s) return;
     const currentSources = master.sources || DEFAULT_SOURCES;
@@ -1273,7 +1275,22 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                   const sLabel = typeof srcObj==="string" ? srcObj : srcObj.label;
                   const sIcon  = typeof srcObj==="object" ? srcObj.icon : null;
                   return (
-                    <div key={sLabel} style={{display:"flex",alignItems:"center",gap:8,background:"#f8fbf9",border:"1px solid #e2f0e8",borderRadius:10,padding:"8px 12px"}}>
+                    <div key={sLabel}
+                      draggable={editSourceIdx!==idx}
+                      onDragStart={()=>setDragSrcIdx(idx)}
+                      onDragOver={e=>{e.preventDefault();setDragOverSrcIdx(idx);}}
+                      onDrop={()=>{
+                        if(dragSrcIdx===null||dragSrcIdx===idx){setDragOverSrcIdx(null);return;}
+                        const arr=[...(master.sources||DEFAULT_SOURCES)];
+                        const [moved]=arr.splice(dragSrcIdx,1);
+                        arr.splice(idx,0,moved);
+                        save({...master,sources:arr});
+                        setDragSrcIdx(null);setDragOverSrcIdx(null);
+                      }}
+                      onDragEnd={()=>{setDragSrcIdx(null);setDragOverSrcIdx(null);}}
+                      style={{display:"flex",alignItems:"center",gap:8,background:"#f8fbf9",borderRadius:10,padding:"8px 12px",
+                        border:dragOverSrcIdx===idx&&dragSrcIdx!==idx?"2px solid #10b981":"1px solid #e2f0e8",
+                        opacity:dragSrcIdx===idx?0.4:1,transition:"opacity 0.15s"}}>
                       {editSourceIdx===idx ? (
                         <div style={{display:"flex",alignItems:"center",gap:6,flex:1,flexWrap:"wrap"}}>
                           {/* アイコン選択 (編集中) */}
@@ -1300,6 +1317,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                         </div>
                       ) : (
                         <>
+                          <span title="ドラッグして並び替え" style={{cursor:"grab",color:"#c0dece",fontSize:18,flexShrink:0,lineHeight:1,userSelect:"none",paddingRight:2}}>⠿</span>
                           <SourceIconSVG iconKey={sIcon||"home"} size={28}/>
                           <span style={{fontSize:13,color:"#174f35",fontWeight:600,flex:1}}>{sLabel}</span>
                           <button onClick={()=>startEditSource(idx)} style={{fontSize:11,padding:"3px 10px",borderRadius:6,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit",flexShrink:0,opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>編集</button>

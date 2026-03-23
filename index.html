@@ -895,10 +895,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
                       <span style={{background:"#3b82f622",color:"#60a5fa",border:"1px solid #3b82f644",borderRadius:6,padding:"4px 14px",fontSize:13,fontWeight:700}}>{ACTION_TYPES.find(t=>t.v===result.action_type)?.icon||"📞"} {ACTION_TYPES.find(t=>t.v===result.action_type)?.label||"電話"}</span>
                       <span style={{background:"#33415522",color:"#94a3b8",border:"1px solid #33415544",borderRadius:6,padding:"4px 14px",fontSize:13,fontWeight:700}}>結果：{result.action_result||"その他"}</span>
                     </div>
-                    <div style={{background:"#1e293b",borderRadius:10,border:"1px solid #334155",overflow:"hidden"}}>
-                      <div style={{padding:"10px 16px",background:"#162032",borderBottom:"1px solid #334155",fontSize:12,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.06em"}}>アクションサマリー</div>
-                      <div style={{padding:"14px 16px",fontSize:13.5,lineHeight:1.75,color:"#cbd5e1"}}>{result.action_summary}</div>
-                    </div>
+
                     {result.followup_talk_points?.length>0&&(
                       <div style={{background:"#1e293b",borderRadius:10,border:"1px solid #334155",overflow:"hidden"}}>
                         <div style={{padding:"10px 16px",background:"#162032",borderBottom:"1px solid #334155",fontSize:12,fontWeight:700,color:"#64748b",textTransform:"uppercase",letterSpacing:"0.06em"}}>次回架電トークポイント</div>

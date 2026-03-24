@@ -4164,10 +4164,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [lockedAccounts, setLockedAccounts] = React.useState({});
   const [inviteCode, setInviteCode] = React.useState(null);
   const [inviteLoading, setInviteLoading] = React.useState(false);
-  const [resetPasswordId, setResetPasswordId] = React.useState(null); // パスワードリセット中のアカウントID
-  const [resetPasswordForm, setResetPasswordForm] = React.useState({ password: "", confirm: "" });
-  const [resetPasswordErr, setResetPasswordErr] = React.useState("");
-  const [resetPasswordLoading, setResetPasswordLoading] = React.useState(false);
 
   React.useEffect(() => {
     // ロック中アカウントを取得
@@ -4182,35 +4178,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     setLockedAccounts(prev => { const n = {...prev}; delete n[id]; return n; });
   };
 
-
-  const openResetPassword = (id) => {
-    setResetPasswordId(id);
-    setResetPasswordForm({ password: "", confirm: "" });
-    setResetPasswordErr("");
-  };
-  const closeResetPassword = () => {
-    setResetPasswordId(null);
-    setResetPasswordForm({ password: "", confirm: "" });
-    setResetPasswordErr("");
-    setResetPasswordLoading(false);
-  };
-  const handleResetPassword = async () => {
-    if (!resetPasswordForm.password) { setResetPasswordErr("新しいパスワードを入力してください"); return; }
-    if (resetPasswordForm.password !== resetPasswordForm.confirm) { setResetPasswordErr("パスワードが一致しません"); return; }
-    setResetPasswordLoading(true);
-    setResetPasswordErr("");
-    try {
-      const r = await fetch('/api/reset-password/' + resetPasswordId, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() },
-        body: JSON.stringify({ password: resetPasswordForm.password })
-      });
-      const data = await r.json();
-      if (!r.ok) { setResetPasswordErr(data.error || "エラーが発生しました"); }
-      else { closeResetPassword(); alert("パスワードを更新しました"); }
-    } catch { setResetPasswordErr("通信エラーが発生しました"); }
-    setResetPasswordLoading(false);
-  };
 
   const handleGenerateInvite = async () => {
     setInviteLoading(true);
@@ -4231,7 +4198,8 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     }
   };
   const handleSubmit = () => {
-    if (!form.id.trim() || !form.name.trim() || !form.password.trim()) { setErr("全項目入力してください"); return; }
+    if (!form.id.trim() || !form.name.trim()) { setErr("全項目入力してください"); return; }
+    if (!editingId && !form.password.trim()) { setErr("パスワードを入力してください"); return; }
     if (accounts.some(a => a.id === form.id.trim() && a.id !== editingId)) { setErr("このIDは既に使われています"); return; }
     const updated = editingId !== null
       ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)
@@ -4240,7 +4208,12 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" });
     setEditingId(null); setErr("");
   };
-  const startEdit = (a) => { setForm({ ...a, is_staff: a.is_staff !== false }); setEditingId(a.id); setErr(""); };
+  const startEdit = async (a) => {
+    setForm({ ...a, password: "", is_staff: a.is_staff !== false });
+    setEditingId(a.id); setErr("");
+    const r = await fetch('/api/account-password/' + a.id, { headers: { 'x-session-token': getToken() } });
+    if (r.ok) { const data = await r.json(); setForm(p => ({ ...p, password: data.password })); }
+  };
   const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" }); setEditingId(null); setErr(""); };
   const deleteAccount = (id) => {
     if (id === currentUser.id) { alert("自分のアカウントは削除できません"); return; }
@@ -4286,37 +4259,9 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                   {a.email && <div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>✉️ {a.email}</div>}
                 </div>
                 {lockedAccounts[a.id] && <button onClick={()=>handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#fef3c7",color:"#d97706",border:"1px solid #fcd34d",cursor:"pointer",fontFamily:"inherit"}}>🔓 解除</button>}
-                <button onClick={()=>resetPasswordId===a.id ? closeResetPassword() : openResetPassword(a.id)} title="管理者がパスワードを直接変更" style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:resetPasswordId===a.id?"#fffbeb":"#f0f5f2",color:resetPasswordId===a.id?"#b45309":"#6a9a7a",border:"1px solid "+(resetPasswordId===a.id?"#fcd34d":"#c0dece"),cursor:"pointer",fontFamily:"inherit",opacity:0.6,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.6"}>🔑</button>
                 <button onClick={()=>startEdit(a)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>✏️</button>
                 <button onClick={()=>deleteAccount(a.id)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>🗑</button>
               </div>
-              {resetPasswordId === a.id && (
-                <div style={{padding:"12px 14px",borderTop:"1px solid #fcd34d",background:"#fffbeb"}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"#92400e",marginBottom:8}}>🔑 パスワードをリセット：{a.name}</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
-                    <div>
-                      <label style={{fontSize:11,color:"#92400e",display:"block",marginBottom:3}}>新しいパスワード</label>
-                      <input type="password" value={resetPasswordForm.password} onChange={e=>setResetPasswordForm(p=>({...p,password:e.target.value}))}
-                        placeholder="8文字以上・英字+数字"
-                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #fcd34d",background:"#fff",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}} />
-                    </div>
-                    <div>
-                      <label style={{fontSize:11,color:"#92400e",display:"block",marginBottom:3}}>確認（再入力）</label>
-                      <input type="password" value={resetPasswordForm.confirm} onChange={e=>setResetPasswordForm(p=>({...p,confirm:e.target.value}))}
-                        placeholder="同じパスワードを入力"
-                        onKeyDown={e=>e.key==="Enter"&&handleResetPassword()}
-                        style={{width:"100%",padding:"6px 10px",borderRadius:6,border:"1px solid #fcd34d",background:"#fff",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}} />
-                    </div>
-                  </div>
-                  {resetPasswordErr && <div style={{fontSize:11,color:"#dc2626",marginBottom:6}}>⚠️ {resetPasswordErr}</div>}
-                  <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                    <button onClick={closeResetPassword} style={{padding:"5px 14px",borderRadius:6,border:"1px solid #fcd34d",background:"#fff",color:"#92400e",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>キャンセル</button>
-                    <button onClick={handleResetPassword} disabled={resetPasswordLoading} style={{padding:"5px 14px",borderRadius:6,border:"none",background:"linear-gradient(135deg,#f59e0b,#d97706)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:resetPasswordLoading?0.6:1}}>
-                      {resetPasswordLoading ? "更新中..." : "パスワードを更新"}
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -4325,9 +4270,9 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
             {[["ユーザーID","id","例：tanaka"],["表示名","name","例：田中"],["パスワード","password","パスワード"],["メールアドレス","email","例：tanaka@example.com"]].map(([lbl,key,ph])=>(
               <div key={key}>
-                <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>{lbl}</label>
+                <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>{lbl}{key==="password"&&editingId&&<span style={{fontWeight:400,color:"#9ca3af",marginLeft:4}}>（空欄のままにすると変更なし）</span>}</label>
                 <input value={form[key]||""} onChange={e=>{ const v=e.target.value; if(key==="email"){ const prefix=v.includes("@")?v.split("@")[0]:v; setForm(p=>({...p,email:v,id:prefix})); } else if(key!=="id"){ setForm(p=>({...p,[key]:v})); } }}
-                  placeholder={ph} type={key==="email"?"email":"text"}
+                  placeholder={key==="password"&&editingId?"新しいパスワードを入力":ph} type={key==="email"?"email":"text"}
                   readOnly={key==="id"}
                   style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",background:key==="id"?"#f0f5f2":"#fff",fontSize:12,color:key==="id"?"#6a9a7a":"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",cursor:key==="id"?"not-allowed":"text"}} />
               </div>

@@ -3447,13 +3447,13 @@ function getEffectiveAiConfig(currentUser) {
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [userId, setUserId] = useState(""); const [password, setPassword] = useState(""); const [err, setErr] = useState(""); const [showPw, setShowPw] = useState(false);
-  const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"", is_staff:false });
+  const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"", is_staff:false, inviteCode:"" });
   const [sErr, setSErr] = useState(""); const [sOk, setSOk] = useState(false); const [showSPw, setShowSPw] = useState(false);
   const handleSignup = async () => {
-    const { id, name, password, password2, color, email, is_staff } = sForm;
+    const { id, name, password, password2, color, email, is_staff, inviteCode } = sForm;
     if (!id.trim() || !name.trim() || !email.trim() || !password.trim() || !password2.trim()) { setSErr("全項目入力してください"); return; }
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
-    const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), is_staff };
+    const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), is_staff, inviteCode: inviteCode.trim() };
     try {
       const r = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newAccount) });
       if (!r.ok) { const e = await r.json(); setSErr(e.error||"作成に失敗しました"); return; }
@@ -3496,6 +3496,10 @@ function LoginScreen({ onLogin }) {
           </div>
         ) : (
           <>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>招待コード<span style={{ color:"#ef4444" }}>*</span></label>
+              <input value={sForm.inviteCode} onChange={e=>setSForm(p=>({...p,inviteCode:e.target.value}))} placeholder="管理者から受け取ったコードを入力" style={inp2} />
+            </div>
             <div style={{ marginBottom:12 }}>
               <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>表示名<span style={{ color:"#ef4444" }}>*</span></label>
               <input value={sForm.name} onChange={e=>setSForm(p=>({...p,name:e.target.value}))} style={inp2} />
@@ -3570,6 +3574,32 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" });
   const [editingId, setEditingId] = React.useState(null);
   const [err, setErr] = React.useState("");
+  const [lockedAccounts, setLockedAccounts] = React.useState({});
+  const [inviteCode, setInviteCode] = React.useState(null);
+  const [inviteLoading, setInviteLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    // ロック中アカウントを取得
+    fetch('/api/login-locks', { headers: { 'x-session-token': getToken() } })
+      .then(r => r.ok ? r.json() : {})
+      .then(setLockedAccounts)
+      .catch(() => {});
+  }, []);
+
+  const handleUnlock = async (id) => {
+    await fetch('/api/login-lock/' + id, { method:'DELETE', headers:{ 'x-session-token': getToken() } });
+    setLockedAccounts(prev => { const n = {...prev}; delete n[id]; return n; });
+  };
+
+  const handleGenerateInvite = async () => {
+    setInviteLoading(true);
+    try {
+      const r = await fetch('/api/invite', { method:'POST', headers:{ 'Content-Type':'application/json', 'x-session-token': getToken() } });
+      const data = await r.json();
+      setInviteCode(data.code);
+    } catch { alert("招待コードの発行に失敗しました"); }
+    setInviteLoading(false);
+  };
 
   const save = (updated, editedId) => {
     setAccounts(updated);
@@ -3599,9 +3629,23 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
 
   const content = (
     <>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div style={{fontSize:16,fontWeight:800,color:"#174f35"}}>👥 アカウント管理</div>
           {!inline && <button onClick={onClose} style={{background:"none",border:"none",fontSize:18,cursor:"pointer",color:"#6a9a7a"}}>✕</button>}
+        </div>
+        <div style={{marginBottom:16,padding:"12px 14px",background:"#f0faf5",borderRadius:9,border:"1px solid #c0dece"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:8}}>🔗 招待コード発行</div>
+          <div style={{fontSize:11,color:"#6a9a7a",marginBottom:8}}>コードは24時間有効・1回限り使用可能です</div>
+          <button onClick={handleGenerateInvite} disabled={inviteLoading} style={{padding:"6px 14px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",opacity:inviteLoading?0.6:1}}>
+            {inviteLoading ? "発行中..." : "招待コードを発行"}
+          </button>
+          {inviteCode && (
+            <div style={{marginTop:10,padding:"8px 12px",background:"#fff",borderRadius:7,border:"1px solid #10b981",display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontFamily:"monospace",fontSize:13,fontWeight:700,color:"#059669",letterSpacing:2}}>{inviteCode}</span>
+              <button onClick={()=>{navigator.clipboard.writeText(inviteCode); alert("コピーしました");}} style={{fontSize:11,padding:"3px 8px",borderRadius:5,border:"1px solid #c0dece",background:"#f0faf5",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit"}}>コピー</button>
+              <button onClick={()=>setInviteCode(null)} style={{fontSize:11,padding:"3px 8px",borderRadius:5,border:"none",background:"none",color:"#9ca3af",cursor:"pointer"}}>✕</button>
+            </div>
+          )}
         </div>
         <div style={{marginBottom:20}}>
           {accounts.map(a => (
@@ -3619,6 +3663,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                 </div>
                 {a.email && <div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>✉️ {a.email}</div>}
               </div>
+              {lockedAccounts[a.id] && <button onClick={()=>handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#fef3c7",color:"#d97706",border:"1px solid #fcd34d",cursor:"pointer",fontFamily:"inherit"}}>🔓 解除</button>}
               <button onClick={()=>startEdit(a)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>✏️</button>
               <button onClick={()=>deleteAccount(a.id)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>🗑</button>
             </div>

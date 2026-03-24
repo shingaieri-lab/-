@@ -4588,10 +4588,11 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
       const results = [];
       for (const slot of candidateSlots) {
         const slotMembers = slot.members?.length > 0 ? slot.members : selectedMembers;
+        const missingMembers = slotMembers.filter(m => !mergedCalendarIds[m]);
+        missingMembers.forEach(member => results.push({ slot, member, success: false, error: "カレンダーIDなし" }));
         const attendees = slotMembers
-          .map(m => mergedCalendarIds[m])
-          .filter(Boolean)
-          .map(email => ({ email }));
+          .filter(m => mergedCalendarIds[m])
+          .map(m => ({ email: mergedCalendarIds[m] }));
         try {
           const startDT = `${slot.date}T${slot.start}:00+09:00`;
           const endDT = `${slot.date}T${slot.end}:00+09:00`;

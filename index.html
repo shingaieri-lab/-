@@ -3999,13 +3999,13 @@ function LoginScreen({ onLogin }) {
     } catch { setSErr("サーバーに接続できません"); }
   };
   const handleResetWithCode = async () => {
-    if (!rForm.id.trim() || !rForm.code.trim() || !rForm.password.trim() || !rForm.confirm.trim()) { setRErr("全項目入力してください"); return; }
+    if (!rForm.id.trim() || !rForm.password.trim() || !rForm.confirm.trim()) { setRErr("全項目入力してください"); return; }
     if (rForm.password !== rForm.confirm) { setRErr("パスワードが一致しません"); return; }
     setRLoading(true); setRErr("");
     try {
-      const r = await fetch('/api/reset-password-with-code', {
+      const r = await fetch('/api/reset-password-direct', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: rForm.id.trim(), code: rForm.code.trim(), newPassword: rForm.password })
+        body: JSON.stringify({ id: rForm.id.trim(), newPassword: rForm.password })
       });
       const data = await r.json();
       if (!r.ok) { setRErr(data.error || "エラーが発生しました"); }
@@ -4038,7 +4038,7 @@ function LoginScreen({ onLogin }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#f0faf5,#e8f5ee)" }}>
       <div style={card}>
         <div style={{ fontSize:20, fontWeight:900, color:"#174f35", marginBottom:6 }}>パスワードのリセット</div>
-        <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>管理者から受け取ったリセットコードを使って、新しいパスワードを設定します</div>
+        <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>ユーザーIDと新しいパスワードを入力してください</div>
         {rOk ? (
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
@@ -4051,11 +4051,6 @@ function LoginScreen({ onLogin }) {
             <div style={{ marginBottom:12 }}>
               <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>ユーザーID</label>
               <input value={rForm.id} onChange={e=>setRForm(p=>({...p,id:e.target.value}))} placeholder="例：tanaka" style={inp2} />
-            </div>
-            <div style={{ marginBottom:12 }}>
-              <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>リセットコード</label>
-              <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>管理者から受け取った12桁のコードを入力</div>
-              <input value={rForm.code} onChange={e=>setRForm(p=>({...p,code:e.target.value}))} placeholder="例：a1b2c3d4e5f6" style={{ ...inp2, fontFamily:"monospace", letterSpacing:1 }} />
             </div>
             <div style={{ marginBottom:12 }}>
               <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>新しいパスワード</label>
@@ -4169,8 +4164,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [lockedAccounts, setLockedAccounts] = React.useState({});
   const [inviteCode, setInviteCode] = React.useState(null);
   const [inviteLoading, setInviteLoading] = React.useState(false);
-  const [resetCodeMap, setResetCodeMap] = React.useState({}); // accountId → 発行済みリセットコード
-  const [resetCodeLoading, setResetCodeLoading] = React.useState({});
   const [resetPasswordId, setResetPasswordId] = React.useState(null); // パスワードリセット中のアカウントID
   const [resetPasswordForm, setResetPasswordForm] = React.useState({ password: "", confirm: "" });
   const [resetPasswordErr, setResetPasswordErr] = React.useState("");
@@ -4189,20 +4182,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     setLockedAccounts(prev => { const n = {...prev}; delete n[id]; return n; });
   };
 
-  const handleGenerateResetCode = async (targetId) => {
-    setResetCodeLoading(prev => ({...prev, [targetId]: true}));
-    try {
-      const r = await fetch('/api/generate-reset-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() },
-        body: JSON.stringify({ targetId })
-      });
-      const data = await r.json();
-      if (!r.ok) { alert(data.error || "コードの発行に失敗しました"); }
-      else { setResetCodeMap(prev => ({...prev, [targetId]: data.code})); }
-    } catch { alert("通信エラーが発生しました"); }
-    setResetCodeLoading(prev => ({...prev, [targetId]: false}));
-  };
 
   const openResetPassword = (id) => {
     setResetPasswordId(id);
@@ -4308,7 +4287,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                 </div>
                 {lockedAccounts[a.id] && <button onClick={()=>handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#fef3c7",color:"#d97706",border:"1px solid #fcd34d",cursor:"pointer",fontFamily:"inherit"}}>🔓 解除</button>}
                 <button onClick={()=>resetPasswordId===a.id ? closeResetPassword() : openResetPassword(a.id)} title="管理者がパスワードを直接変更" style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:resetPasswordId===a.id?"#fffbeb":"#f0f5f2",color:resetPasswordId===a.id?"#b45309":"#6a9a7a",border:"1px solid "+(resetPasswordId===a.id?"#fcd34d":"#c0dece"),cursor:"pointer",fontFamily:"inherit",opacity:0.6,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.6"}>🔑</button>
-                <button onClick={()=>handleGenerateResetCode(a.id)} disabled={!!resetCodeLoading[a.id]} title="ユーザー自身がログイン画面でリセットするためのコードを発行" style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#f0fdf9",color:"#059669",border:"1px solid #6ee7b7",cursor:"pointer",fontFamily:"inherit",opacity:resetCodeLoading[a.id]?0.5:0.6,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.6"}>{resetCodeLoading[a.id]?"...":"📋"}</button>
                 <button onClick={()=>startEdit(a)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#eef8f2",color:"#059669",border:"1px solid #c0dece",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>✏️</button>
                 <button onClick={()=>deleteAccount(a.id)} style={{fontSize:12,padding:"3px 10px",borderRadius:6,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",cursor:"pointer",fontFamily:"inherit",opacity:0.3,transition:"opacity 0.15s"}} onMouseEnter={e=>e.currentTarget.style.opacity="1"} onMouseLeave={e=>e.currentTarget.style.opacity="0.3"}>🗑</button>
               </div>
@@ -4337,14 +4315,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                       {resetPasswordLoading ? "更新中..." : "パスワードを更新"}
                     </button>
                   </div>
-                </div>
-              )}
-              {resetCodeMap[a.id] && (
-                <div style={{padding:"8px 14px 10px",borderTop:"1px solid #a7f3d0",background:"#f0fdf9",display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-                  <span style={{fontSize:11,color:"#065f46"}}>📋 リセットコード（30分有効）：</span>
-                  <span style={{fontFamily:"monospace",fontSize:13,fontWeight:700,color:"#059669",letterSpacing:2}}>{resetCodeMap[a.id]}</span>
-                  <button onClick={()=>{navigator.clipboard.writeText(resetCodeMap[a.id]); alert("コピーしました");}} style={{fontSize:11,padding:"2px 8px",borderRadius:5,border:"1px solid #6ee7b7",background:"#d1fae5",color:"#065f46",cursor:"pointer",fontFamily:"inherit"}}>コピー</button>
-                  <button onClick={()=>setResetCodeMap(prev=>{const n={...prev};delete n[a.id];return n;})} style={{fontSize:11,padding:"2px 6px",borderRadius:5,border:"none",background:"none",color:"#9ca3af",cursor:"pointer"}}>✕</button>
                 </div>
               )}
             </div>

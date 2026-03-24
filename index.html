@@ -4588,26 +4588,26 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
       const results = [];
       for (const slot of candidateSlots) {
         const slotMembers = slot.members?.length > 0 ? slot.members : selectedMembers;
-        for (const member of slotMembers) {
-          const calId = mergedCalendarIds[member];
-          if (!calId) { results.push({ slot, member, success: false, error: "カレンダーIDなし" }); continue; }
-          try {
-            const startDT = `${slot.date}T${slot.start}:00+09:00`;
-            const endDT = `${slot.date}T${slot.end}:00+09:00`;
-            const resp = await fetch(
-              `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,
-              { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-                body: JSON.stringify({ summary: title, start: { dateTime: startDT, timeZone: "Asia/Tokyo" }, end: { dateTime: endDT, timeZone: "Asia/Tokyo" } }) }
-            );
-            if (!resp.ok) {
-              const err = await resp.json();
-              if (err.error?.code === 401) { setCalRegToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
-              results.push({ slot, member, success: false, error: err.error?.message || "登録失敗" });
-            } else {
-              results.push({ slot, member, success: true });
-            }
-          } catch(e) { results.push({ slot, member, success: false, error: e.message }); }
-        }
+        const attendees = slotMembers
+          .map(m => mergedCalendarIds[m])
+          .filter(Boolean)
+          .map(email => ({ email }));
+        try {
+          const startDT = `${slot.date}T${slot.start}:00+09:00`;
+          const endDT = `${slot.date}T${slot.end}:00+09:00`;
+          const resp = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none`,
+            { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ summary: title, start: { dateTime: startDT, timeZone: "Asia/Tokyo" }, end: { dateTime: endDT, timeZone: "Asia/Tokyo" }, attendees }) }
+          );
+          if (!resp.ok) {
+            const err = await resp.json();
+            if (err.error?.code === 401) { setCalRegToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+            slotMembers.forEach(member => results.push({ slot, member, success: false, error: err.error?.message || "登録失敗" }));
+          } else {
+            slotMembers.forEach(member => results.push({ slot, member, success: true }));
+          }
+        } catch(e) { slotMembers.forEach(member => results.push({ slot, member, success: false, error: e.message })); }
       }
       setCalRegResults(results);
     } catch(e) {

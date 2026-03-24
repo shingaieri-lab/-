@@ -4353,12 +4353,6 @@ function addBusinessDays(dateStr, days) {
 }
 
 // ─── Google Calendar 設定 ───────────────────────────────
-const SALES_CALENDAR_URLS = {
-  "北原": "https://calendar.app.google/EDLvaXNixyYWgpft5",
-  "杉田": "https://calendar.app.google/2kNGoR37JPnC6Kyr6",
-  "濱口": "https://calendar.app.google/uGLugQZvLvCLijC98",
-  "山本敏": "https://calendar.app.google/47fC7ig1UHmN8R7Q6",
-};
 
 function loadGCalConfig() {
   return window.__appData?.gcalConfig || {};
@@ -4673,10 +4667,6 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
                 onChange={e=>setEditCfg(p=>({...p,calendarIds:{...(p.calendarIds||{}),[m]:e.target.value}}))}
                 placeholder="例：tanaka@gmail.com"
                 style={{...inp2,flex:1}} />
-              {SALES_CALENDAR_URLS[m] && (
-                <a href={SALES_CALENDAR_URLS[m]} target="_blank" rel="noopener noreferrer"
-                  style={{fontSize:11,color:"#0284c7",whiteSpace:"nowrap",flexShrink:0}}>予約ページ↗</a>
-              )}
             </div>
           ))}
 

@@ -5,6 +5,32 @@ const bcrypt = require('bcryptjs');
 
 const BCRYPT_ROUNDS = 10; // ハッシュ化の強度（数値が大きいほど安全だが遅い）
 
+// パスワード暗号化キー
+// PASSWORD_ENC_KEY（64文字16進数）を推奨。未設定時はKVトークンから自動導出
+const ENC_KEY = process.env.PASSWORD_ENC_KEY
+  ? Buffer.from(process.env.PASSWORD_ENC_KEY, 'hex')
+  : crypto.createHash('sha256').update(process.env.KV_REST_API_TOKEN || 'internal-fallback-key').digest();
+
+// AES-256-GCMでパスワードを暗号化（管理者表示用）
+function encryptPassword(plaintext) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', ENC_KEY, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, encrypted]).toString('base64');
+}
+
+// AES-256-GCMでパスワードを復号
+function decryptPassword(encoded) {
+  const buf = Buffer.from(encoded, 'base64');
+  const iv = buf.subarray(0, 12);
+  const tag = buf.subarray(12, 28);
+  const encrypted = buf.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', ENC_KEY, iv);
+  decipher.setAuthTag(tag);
+  return decipher.update(encrypted).toString('utf8') + decipher.final('utf8');
+}
+
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(__dirname));
@@ -127,9 +153,10 @@ app.post('/api/signup', async (req, res) => {
   if (existingAccounts.some(a => a.id === newAccount.id)) {
     return res.status(409).json({ error: 'このIDは既に使われています' });
   }
-  // パスワードをハッシュ化してから保存（平文では保存しない）
+  // パスワードをハッシュ化（ログイン用）＋暗号化（管理者表示用）して保存
   const hashedPassword = await bcrypt.hash(newAccount.password, BCRYPT_ROUNDS);
-  existingAccounts.push({ ...newAccount, password: hashedPassword, role: 'admin' });
+  const encryptedPassword = encryptPassword(newAccount.password);
+  existingAccounts.push({ ...newAccount, password: hashedPassword, password_enc: encryptedPassword, role: 'admin' });
   await writeData('accounts', existingAccounts);
   res.json({ ok: true });
 });
@@ -171,6 +198,7 @@ app.post('/api/reset-password-with-code', rateLimit, async (req, res) => {
   const target = accounts.find(a => a.id === id);
   if (!target) return res.status(404).json({ error: 'アカウントが見つかりません' });
   target.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  target.password_enc = encryptPassword(newPassword);
   await writeData('accounts', accounts);
   await kv.del('resetCode:' + code); // 使用済みにする（1回限り）
   res.json({ ok: true });
@@ -186,6 +214,7 @@ app.post('/api/reset-password-direct', rateLimit, async (req, res) => {
   const target = accounts.find(a => a.id === id);
   if (!target) return res.status(404).json({ error: 'アカウントが見つかりません' });
   target.password = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+  target.password_enc = encryptPassword(newPassword);
   await writeData('accounts', accounts);
   // ログインロックもリセット
   await kv.del('loginFail:' + id);
@@ -205,8 +234,27 @@ app.post('/api/reset-password/:id', requireAuth, rateLimit, async (req, res) => 
   const target = accounts.find(a => a.id === req.params.id);
   if (!target) return res.status(404).json({ error: 'アカウントが見つかりません' });
   target.password = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  target.password_enc = encryptPassword(password);
   await writeData('accounts', accounts);
   res.json({ ok: true });
+});
+
+// パスワード表示（管理者のみ・復号して返す）
+app.get('/api/account-password/:id', requireAuth, rateLimit, async (req, res) => {
+  const accounts = await getAccounts();
+  const requester = accounts.find(a => a.id === req.accountId);
+  if (!requester || requester.role !== 'admin') {
+    return res.status(403).json({ error: '管理者のみ実行できます' });
+  }
+  const target = accounts.find(a => a.id === req.params.id);
+  if (!target) return res.status(404).json({ error: 'アカウントが見つかりません' });
+  if (!target.password_enc) return res.status(404).json({ error: 'パスワード情報がありません（次回パスワード変更時に記録されます）' });
+  try {
+    const password = decryptPassword(target.password_enc);
+    res.json({ password });
+  } catch {
+    res.status(500).json({ error: '復号に失敗しました' });
+  }
 });
 
 // ロック中アカウント一覧取得（管理者のみ）
@@ -238,7 +286,7 @@ app.delete('/api/login-lock/:id', requireAuth, rateLimit, async (req, res) => {
 // 全データ一括取得（ログイン後の初期ロード用）
 app.get('/api/data', requireAuth, rateLimit, async (req, res) => {
   res.json({
-    accounts: (await getAccounts()).map(({ password: _pw, ...a }) => a), // パスワードを除外
+    accounts: (await getAccounts()).map(({ password: _pw, password_enc: _enc, ...a }) => a), // パスワード情報を除外
     leads: (await readData('leads')) || [],
     masterSettings: await readData('master_settings'),
     aiConfig: (await readData('ai_config')) || {},
@@ -250,12 +298,27 @@ app.get('/api/data', requireAuth, rateLimit, async (req, res) => {
 // アカウント一覧保存
 app.post('/api/accounts', requireAuth, rateLimit, async (req, res) => {
   const accounts = req.body;
+  const existingAccounts = await getAccounts();
   // パスワードが平文（ハッシュ未適用）のアカウントがあれば強度チェック後にハッシュ化する
+  // パスワードが空の場合は既存のパスワードを保持する
   for (const account of accounts) {
-    if (account.password && !account.password.startsWith('$2')) {
+    if (!account.password) {
+      // パスワード未入力 → 既存のハッシュと暗号化値を保持
+      const existing = existingAccounts.find(a => a.id === account.id);
+      if (existing) {
+        account.password = existing.password;
+        account.password_enc = existing.password_enc;
+      }
+    } else if (!account.password.startsWith('$2')) {
+      // 新しい平文パスワード → ハッシュ化＋暗号化
       const pwError = validatePassword(account.password);
       if (pwError) return res.status(400).json({ error: `${account.id}: ${pwError}` });
+      account.password_enc = encryptPassword(account.password);
       account.password = await bcrypt.hash(account.password, BCRYPT_ROUNDS);
+    } else {
+      // 既にハッシュ化済み（通常は発生しないが念のため既存の暗号化値を保持）
+      const existing = existingAccounts.find(a => a.id === account.id);
+      if (existing) account.password_enc = existing.password_enc;
     }
   }
   await writeData('accounts', accounts);

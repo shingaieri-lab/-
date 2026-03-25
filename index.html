@@ -30,7 +30,12 @@ window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}
 function getToken() { return localStorage.getItem('session_token') || ''; }
 async function apiPost(path, data) {
   try {
-    await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() }, body: JSON.stringify(data) });
+    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() }, body: JSON.stringify(data) });
+    // 413: ペイロードが大きすぎる / 507: Vercel KV の容量不足
+    if (res.status === 413 || res.status === 507) {
+      console.error('API storage error:', path, res.status);
+      alert('データの保存に失敗しました。ストレージの上限に達している可能性があります。管理者にお問い合わせください。');
+    }
   } catch(e) { console.error('API error:', path, e); }
 }
 
@@ -220,10 +225,16 @@ const THIS_MONTH = TODAY.slice(0, 7);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
 // ── Gmail共通ユーティリティ ──────────────────────────────────────────────────
+// トークンオブジェクト { token, expiresAt } が有効かチェック（期限の60秒前に再取得）
+// Googleのアクセストークンは発行から60分で失効するため、55分を目安に期限切れ扱いにする
+const isTokenValid = (tokenObj) =>
+  !!(tokenObj?.token && tokenObj.expiresAt > Date.now() + 60 * 1000);
+
 // OAuthトークン（Googleの認証許可証）を取得する共通関数
-// currentToken: すでに持っているトークン（あればそのまま返す）
-const acquireGmailToken = async (clientId, currentToken) => {
-  if (currentToken) return currentToken;
+// currentTokenObj: すでに持っているトークンオブジェクト { token, expiresAt }（有効期限内ならそのまま返す）
+// 戻り値: { token: string, expiresAt: number }
+const acquireGmailToken = async (clientId, currentTokenObj) => {
+  if (isTokenValid(currentTokenObj)) return currentTokenObj;
   // Googleのスクリプトがまだ読み込まれていなければ動的に読み込む
   if (!window.google?.accounts?.oauth2) {
     await new Promise((res, rej) => {
@@ -244,7 +255,10 @@ const acquireGmailToken = async (clientId, currentToken) => {
           if (resp.error === 'redirect_uri_mismatch' || resp.error === 'invalid_client') {
             rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" を追加してください。`));
           } else { rej(new Error(resp.error)); }
-        } else { res(resp.access_token); }
+        } else {
+          // 55分後に期限切れとして扱う（Googleトークンは60分有効）
+          res({ token: resp.access_token, expiresAt: Date.now() + 55 * 60 * 1000 });
+        }
       },
       error_callback: (err) => {
         if (err.type === 'popup_blocked_by_browser') {
@@ -488,10 +502,10 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile
     if (!clientId) { alert(currentUser?.role === "admin" ? "設定 > APIキー設定 で Gmail Client ID を入力してください" : "管理者にGmail OAuth Client IDの設定を依頼してください"); return; }
     setGmailSaving(true);
     try {
-      const token = await acquireGmailToken(clientId, gmailToken);
-      setGmailToken(token);
+      const tokenObj = await acquireGmailToken(clientId, gmailToken);
+      setGmailToken(tokenObj);
       const raw = buildGmailDraftRaw(vars.宛先メール||'', previewSubj, previewBody);
-      await postGmailDraft(token, raw);
+      await postGmailDraft(tokenObj.token, raw);
       setGmailSaved(true);
       setTimeout(() => setGmailSaved(false), 3000);
       // 商談確定テンプレート（useMeeting）の場合、リード管理のステータスと商談情報を更新
@@ -716,6 +730,8 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
   const [aiCalSaving, setAiCalSaving] = React.useState(false);
   const [aiCalSaved, setAiCalSaved] = React.useState(false);
   const lead = leads.find(l=>l.id===selLead);
+  // リードが変更されたら保存状態をリセット（別リードで「保存済み」が残らないように）
+  React.useEffect(() => { setSaved(false); }, [selLead]);
 
   const addBizDays=(dateStr,days)=>{
     let d=new Date(dateStr+"T00:00:00"),c=0;
@@ -747,8 +763,10 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
       const leadSurname=leadContact.split(/[ \u3000]/)[0]||leadContact;
       let emailBody=parsed.email_body||"";
       emailBody=emailBody.replaceAll("{{担当者名}}",leadContact).replaceAll("{{担当者苗字}}",leadSurname).replaceAll("{{会社名}}",lead?.company||"").replaceAll("{{送信者名}}",senderName);
-      if(senderSig&&!emailBody.includes(senderSig)){emailBody=emailBody.trim()+"\n\n"+senderSig;}
-      setResult(parsed);setEditEmail({subject:parsed.email_subject||"",body:emailBody});setActiveTab("action");
+      // 署名重複チェック: 両端の空白・改行を除去してから比較し、前後の余白差による誤判定を防ぐ
+      const sigTrimmed=senderSig.trim();
+      if(sigTrimmed&&!emailBody.includes(sigTrimmed)){emailBody=emailBody.trim()+"\n\n"+sigTrimmed;}
+      setSaved(false);setResult(parsed);setEditEmail({subject:parsed.email_subject||"",body:emailBody});setActiveTab("action");
     }catch(e){
       if(e.message==="Failed to fetch"){setError("APIへの接続に失敗しました。ネットワーク接続を確認するか、ブラウザのCORSエラーが原因の場合はローカルサーバー経由（http://localhost）でアクセスしてください。");}
       else{setError("解析失敗: "+e.message);}
@@ -761,7 +779,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     const nextDate=result.next_action_date_offset?addBizDays(actionDate,result.next_action_date_offset):"";
     const newAct={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:result.action_type||manualType,result:result.action_result||manualResult,summary:memo,date:actionDate,time:actionTime,nextDate,nextTime:result.next_action_time||"",next:result.next_action_memo||"",talkPoints:(result.followup_talk_points||[]).slice(0,4),ts:new Date().toISOString(),recorded_by:currentUser?.name||""};
     onUpdate(lead.id,{actions:[...(lead.actions||[]),newAct],next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
-    setSaved(true);setTimeout(()=>setSaved(false),3000);
+    setSaved(true);
   };
 
   const saveAiGmailDraft = async () => {
@@ -770,10 +788,10 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     if (!clientId) { alert(currentUser?.role === "admin" ? "設定 > APIキー設定 で Gmail Client ID を入力してください" : "管理者にGmail OAuth Client IDの設定を依頼してください"); return; }
     setAiGmailSaving(true);
     try {
-      const token = await acquireGmailToken(clientId, aiGmailToken);
-      setAiGmailToken(token);
+      const tokenObj = await acquireGmailToken(clientId, aiGmailToken);
+      setAiGmailToken(tokenObj);
       const raw = buildGmailDraftRaw(lead?.email||'', editEmail.subject, editEmail.body);
-      await postGmailDraft(token, raw);
+      await postGmailDraft(tokenObj.token, raw);
       setAiGmailSaved(true);
       setTimeout(() => setAiGmailSaved(false), 3000);
     } catch(e) {
@@ -794,8 +812,9 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     if (!nextDate) { alert("ネクストアクション日が設定されていません"); return; }
     setAiCalSaving(true);
     try {
-      let token = aiCalToken;
-      if (!token) {
+      // 有効期限内のトークンがあれば再利用、期限切れなら再取得する
+      let tokenObj = aiCalToken;
+      if (!isTokenValid(tokenObj)) {
         if (!window.google?.accounts?.oauth2) {
           await new Promise((res, rej) => {
             if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
@@ -806,7 +825,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
           });
           await new Promise(r => setTimeout(r, 500));
         }
-        token = await new Promise((res, rej) => {
+        const rawToken = await new Promise((res, rej) => {
           const client = window.google.accounts.oauth2.initTokenClient({
             client_id: clientId,
             scope: 'https://www.googleapis.com/auth/tasks',
@@ -827,8 +846,10 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
           });
           client.requestAccessToken();
         });
-        setAiCalToken(token);
+        tokenObj = { token: rawToken, expiresAt: Date.now() + 55 * 60 * 1000 };
+        setAiCalToken(tokenObj);
       }
+      const token = tokenObj.token;
       const task = {
         title: lead.company || "(会社名未設定)",
         notes: lead.zoho_url || "",
@@ -930,7 +951,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
                   <button key={k} onClick={()=>setActiveTab(k)} style={{padding:"12px 16px",background:"none",border:"none",borderBottom:activeTab===k?"2px solid #10b981":"2px solid transparent",color:activeTab===k?"#059669":"#6a9a7a",fontSize:12,fontWeight:activeTab===k?700:400,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{l}</button>
                 ))}
                 <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:20}}>
-                  {!selLead?<span style={{fontSize:11,color:"#6a9a7a"}}>※リード選択で保存可</span>:saved?<span style={{fontSize:12,color:"#10b981",fontWeight:700}}>✅ 保存完了！</span>:<button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 履歴に保存</button>}
+                  {!selLead?<span style={{fontSize:11,color:"#6a9a7a"}}>※リード選択で保存可</span>:saved?<button onClick={saveToLead} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✅ 保存済（再保存）</button>:<button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 履歴に保存</button>}
                 </div>
               </div>
               <div style={{flex:1,overflow:"auto",padding:"20px 24px"}}>
@@ -2342,6 +2363,8 @@ function App() {
     if (data) {
       const l = data.leads || [];
       const migrated = l.map(lead => lead.portal_type === "請求" ? { ...lead, portal_type: "一括請求" } : lead);
+      // React 18 では非同期コールバック内の複数 setState も自動バッチ処理されるため
+      // setLeads → setAiConfig → setMasterVer の順で呼んでも中間レンダリングは発生しない
       setLeads(migrated);
       setAiConfig(data.aiConfig || {});
       setMasterVer(v => v + 1);
@@ -2371,6 +2394,9 @@ function App() {
   const [candidateSlots, setCandidateSlots] = useState([]);
   const [calendarLeadId, setCalendarLeadId] = useState("");
   const [showWizard, setShowWizard] = useState(false);
+  // APIキーの優先順位: 個人設定（currentUser.geminiKey）> 管理者設定（aiConfig.geminiKey）
+  // 個人設定が空の場合のみ管理者設定のキーが使われる
+  // ※ aiConfig は React state（saveAiConfig で更新）、window.__appData.aiConfig と常に同期している
   const effectiveAiConfig = useMemo(() => ({
     ...aiConfig,
     geminiKey: currentUser?.geminiKey || aiConfig.geminiKey || "",
@@ -2810,12 +2836,15 @@ function parseCSVLine(line) {
 }
 
 // 日付を YYYY-MM-DD に正規化
+// 対応フォーマット: "YYYY-MM-DD"（そのまま）、"YYYY/M/D" or "YYYY-M-D"（ゼロ埋め変換）
+// CSVインポート（parseCSV）・リード編集・ダッシュボード（toYM）すべてでこの関数を経由するため
+// 保存データの日付フォーマットは常に YYYY-MM-DD に統一される
 function normalizeDate(s) {
   if (!s) return "";
   s = s.trim();
   // 既に YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  // YYYY/M/D or YYYY-M-D
+  // YYYY/M/D or YYYY-M-D（月・日が1桁でもOK）
   const m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
   if (m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
   return s;
@@ -2884,10 +2913,18 @@ function CSVImport({ onImport, onClose, result }) {
       const buf = e.target.result;
       const bytes = new Uint8Array(buf);
       const isUTF8BOM = bytes[0]===0xEF && bytes[1]===0xBB && bytes[2]===0xBF;
+      // SJIS判定: リードバイト（先行バイト）の次のバイトも SJIS トレイルバイト範囲か確認する
+      // リードバイトのみで判定すると UTF-8 3バイト文字（E3〜E9）と誤判定する恐れがあるため
       let sjisScore = 0;
-      for (let i = 0; i < Math.min(bytes.length, 500); i++) {
+      for (let i = 0; i < Math.min(bytes.length - 1, 499); i++) {
         const b = bytes[i];
-        if ((b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC)) sjisScore++;
+        const isLeadByte = (b >= 0x81 && b <= 0x9F) || (b >= 0xE0 && b <= 0xFC);
+        if (isLeadByte) {
+          const next = bytes[i + 1];
+          // SJIS トレイルバイト: 0x40〜0x7E または 0x80〜0xFC（0x7F は除外）
+          const isTrailByte = (next >= 0x40 && next <= 0x7E) || (next >= 0x80 && next <= 0xFC);
+          if (isTrailByte) { sjisScore++; i++; } // トレイルバイトもスキップ
+        }
       }
       const enc = isUTF8BOM ? "UTF-8" : sjisScore > 3 ? "Shift-JIS" : "UTF-8";
       const txtReader = new FileReader();
@@ -3275,8 +3312,9 @@ function NextActionEditBtn({ nad, lead, onUpdate, currentUser }) {
     if (!date) { alert("ネクストアクション日が設定されていません"); return; }
     setCalSaving(true);
     try {
-      let token = calToken;
-      if (!token) {
+      // 有効期限内のトークンがあれば再利用、期限切れなら再取得する
+      let tokenObj = calToken;
+      if (!isTokenValid(tokenObj)) {
         if (!window.google?.accounts?.oauth2) {
           await new Promise((res, rej) => {
             if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
@@ -3287,7 +3325,7 @@ function NextActionEditBtn({ nad, lead, onUpdate, currentUser }) {
           });
           await new Promise(r => setTimeout(r, 500));
         }
-        token = await new Promise((res, rej) => {
+        const rawToken = await new Promise((res, rej) => {
           const client = window.google.accounts.oauth2.initTokenClient({
             client_id: clientId,
             scope: 'https://www.googleapis.com/auth/tasks',
@@ -3308,8 +3346,10 @@ function NextActionEditBtn({ nad, lead, onUpdate, currentUser }) {
           });
           client.requestAccessToken();
         });
-        setCalToken(token);
+        tokenObj = { token: rawToken, expiresAt: Date.now() + 55 * 60 * 1000 };
+        setCalToken(tokenObj);
       }
+      const token = tokenObj.token;
       const task = {
         title: lead.company || "(会社名未設定)",
         notes: lead.zoho_url || "",
@@ -3967,6 +4007,9 @@ function saveAccounts(accounts) {
     IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
   });
 }
+// APIキーの優先順位: 個人設定（currentUser.xxx）> 管理者設定（shared.xxx）
+// 個人設定が空の場合のみ管理者設定のキーが使われる
+// ※ window.__appData.aiConfig はログイン時・saveAiConfig 時に更新される
 function getEffectiveAiConfig(currentUser) {
   if (!currentUser) return {};
   // 共有設定（管理者が設定したもの）をフォールバックとして使用する
@@ -4007,9 +4050,14 @@ function LoginScreen({ onLogin }) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: rForm.id.trim(), newPassword: rForm.password })
       });
-      const data = await r.json();
-      if (!r.ok) { setRErr(data.error || "エラーが発生しました"); }
-      else { setROk(true); }
+      // r.ok を先にチェックし、エラー時のみ JSON を解析する
+      // （サーバーがエラー時に JSON 以外を返しても catch に落ちない）
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        setRErr(data.error || "エラーが発生しました");
+      } else {
+        setROk(true);
+      }
     } catch { setRErr("サーバーに接続できません"); }
     setRLoading(false);
   };
@@ -4170,7 +4218,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     fetch('/api/login-locks', { headers: { 'x-session-token': getToken() } })
       .then(r => r.ok ? r.json() : {})
       .then(setLockedAccounts)
-      .catch(() => {});
+      .catch(err => console.error('ロック情報取得失敗:', err));
   }, []);
 
   const handleUnlock = async (id) => {
@@ -4544,10 +4592,13 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
     if (candidateSlots.length === 0) return;
     setCalRegLoading(true); setCalRegResults([]);
     try {
-      let token = calRegToken;
-      if (!token) {
+      // 有効期限内のトークンがあれば再利用、期限切れなら再取得する
+      let tokenObj = calRegToken;
+      if (!isTokenValid(tokenObj)) {
         if (!window.google?.accounts?.oauth2) {
           await new Promise((res, rej) => {
+            // 既にスクリプトがDOMにあれば重複追加しない
+            if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
             const s = document.createElement('script');
             s.src = 'https://accounts.google.com/gsi/client';
             s.onload = res; s.onerror = rej;
@@ -4555,7 +4606,7 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
           });
           await new Promise(r => setTimeout(r, 500));
         }
-        token = await new Promise((res, rej) => {
+        const rawToken = await new Promise((res, rej) => {
           const client = window.google.accounts.oauth2.initTokenClient({
             client_id: clientId,
             scope: 'https://www.googleapis.com/auth/calendar.events',
@@ -4576,8 +4627,10 @@ function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail =
           });
           client.requestAccessToken();
         });
-        setCalRegToken(token);
+        tokenObj = { token: rawToken, expiresAt: Date.now() + 55 * 60 * 1000 };
+        setCalRegToken(tokenObj);
       }
+      const token = tokenObj.token;
       const title = resolvedCalTitle;
       const results = [];
       for (const slot of candidateSlots) {

@@ -375,7 +375,9 @@ app.post('/api/reset', requireAuth, rateLimit, async (req, res) => {
   }
 });
 
-if (!process.env.VERCEL) {
+// Vercel 環境ではサーバーを起動しない（サーバーレス関数として動作するため）
+// ステージング環境など Vercel 以外でも強制起動したい場合は RUN_SERVER=1 を設定する
+if (!process.env.VERCEL || process.env.RUN_SERVER) {
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {
     console.log(`IS進捗管理 サーバー起動: http://localhost:${PORT}`);

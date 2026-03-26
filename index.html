@@ -1066,9 +1066,10 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
                       </div>
                     </div>
                     {result.next_action_memo&&<div style={{background:"#fff",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#059669",fontWeight:600,lineHeight:1.6}}>{result.next_action_memo}</div>}
-                    <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
-                      <button onClick={saveAiCalTodo} disabled={aiCalSaving||!selLead||!result?.next_action_date_offset} style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"#7c3aed22",color:aiCalSaved?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:(aiCalSaving||!selLead||!result?.next_action_date_offset)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||!result?.next_action_date_offset)?0.5:1}}>{aiCalSaving?"作成中...":aiCalSaved?"✅ タスク作成済":"☑️ GoogleタスクTODO"}</button>
-                      {saved&&(isCallNext||isScheduleNext)&&<button onClick={navAction} style={{background:natAccent,color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{navLabel}</button>}
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",paddingTop:4}}>
+                      <button onClick={saveAiCalTodo} disabled={aiCalSaving||!selLead||!result?.next_action_date_offset} style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"#7c3aed22",color:aiCalSaved?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:7,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:(aiCalSaving||!selLead||!result?.next_action_date_offset)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||!result?.next_action_date_offset)?0.5:1}}>{aiCalSaving?"作成中...":aiCalSaved?"✅ タスク作成済":"☑️ GoogleタスクTODO"}</button>
+                      {isScheduleNext&&<button onClick={goCalendar} style={{background:"#0891b2",color:"#fff",border:"none",borderRadius:7,padding:"7px 18px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📅 候補日を探す（カレンダーへ）</button>}
+                      {saved&&isCallNext&&<button onClick={()=>goLeads(selLead)} style={{background:natAccent,color:"#fff",border:"none",borderRadius:7,padding:"7px 18px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>📞 リード詳細へ</button>}
                     </div>
                   </div>
                 </div>
@@ -1088,11 +1089,11 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
                   </div>
                 )}
 
-                {/* ④ フォローメール（メール送信・候補日提案時のみ） */}
-                {(isEmailNext||isScheduleNext)&&(
+                {/* ④ フォローメール（メール送信時のみ） */}
+                {isEmailNext&&(
                   <div style={{background:"#fff",borderRadius:10,border:"1px solid #bfdbfe",overflow:"hidden"}}>
                     <div style={{padding:"10px 16px",background:"#eff6ff",borderBottom:"1px solid #bfdbfe",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-                      <span style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>✉️ {isScheduleNext?"候補日メール（送信後に候補日ページで確定）":"フォローメール"}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>✉️ フォローメール</span>
                       <div style={{display:"flex",gap:8}}>
                         <button onClick={saveAiGmailDraft} disabled={aiGmailSaving} style={{background:aiGmailSaved?"#2563eb":aiGmailSaving?"#1e40af66":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:aiGmailSaving?"not-allowed":"pointer",fontFamily:"inherit",opacity:aiGmailSaving?0.7:1}}>{aiGmailSaving?"保存中...":aiGmailSaved?"✅ 下書き保存済":"📨 Gmailに下書き保存"}</button>
                         <button onClick={()=>{navigator.clipboard?.writeText(`件名: ${editEmail.subject}\n\n${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),2000);}} style={{background:copiedEmail?"#dbeafe":"#f0f5f2",color:copiedEmail?"#2563eb":"#6a9a7a",border:"1px solid #bfdbfe",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copiedEmail?"✓ コピー済":"📋 コピー"}</button>

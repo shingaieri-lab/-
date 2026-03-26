@@ -754,6 +754,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
   const [result, setResult] = React.useState(()=>{ const ss=loadSS(); return ss.result||null; });
   const [error, setError] = React.useState("");
   const [saved, setSaved] = React.useState(false);
+  const [savedActId, setSavedActId] = React.useState(null);
   const [activeTab, setActiveTab] = React.useState("action");
   const [editEmail, setEditEmail] = React.useState(()=>{ const ss=loadSS(); return ss.editEmail||{ subject:"", body:"" }; });
   const [copiedEmail, setCopiedEmail] = React.useState(false);
@@ -773,7 +774,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     } catch(_) {}
   }, [selLead, memo, actionDate, actionTime, manualType, manualResult, result, editEmail]);
   // リードが変更されたら保存状態をリセット（別リードで「保存済み」が残らないように）
-  React.useEffect(() => { setSaved(false); }, [selLead]);
+  React.useEffect(() => { setSaved(false); setSavedActId(null); }, [selLead]);
   const resetAiPage = () => {
     const today = new Date().toISOString().split("T")[0];
     const n = new Date(); const m = Math.floor(n.getMinutes()/30)*30;
@@ -844,8 +845,15 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
   const saveToLead=()=>{
     if(!result||!selLead) return;
     const nextDate=result.next_action_date_offset?addBizDays(actionDate,result.next_action_date_offset):"";
-    const newAct={id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),type:result.action_type||manualType,result:result.action_result||manualResult,summary:memo,date:actionDate,time:actionTime,nextDate,nextTime:result.next_action_time||"",next:result.next_action_memo||"",talkPoints:(result.followup_talk_points||[]).slice(0,4),ts:new Date().toISOString(),recorded_by:currentUser?.name||""};
-    onUpdate(lead.id,{actions:[...(lead.actions||[]),newAct],next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
+    if(savedActId){
+      const updatedActs=(lead.actions||[]).map(a=>a.id===savedActId?{...a,type:result.action_type||manualType,result:result.action_result||manualResult,summary:memo,date:actionDate,time:actionTime,nextDate,nextTime:result.next_action_time||"",next:result.next_action_memo||"",talkPoints:(result.followup_talk_points||[]).slice(0,4),ts:new Date().toISOString(),recorded_by:currentUser?.name||""}:a);
+      onUpdate(lead.id,{actions:updatedActs,next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
+    } else {
+      const newActId=Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+      const newAct={id:newActId,type:result.action_type||manualType,result:result.action_result||manualResult,summary:memo,date:actionDate,time:actionTime,nextDate,nextTime:result.next_action_time||"",next:result.next_action_memo||"",talkPoints:(result.followup_talk_points||[]).slice(0,4),ts:new Date().toISOString(),recorded_by:currentUser?.name||""};
+      onUpdate(lead.id,{actions:[...(lead.actions||[]),newAct],next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
+      setSavedActId(newActId);
+    }
     setSaved(true);
   };
 
@@ -1042,8 +1050,25 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
             <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
               {/* ヘッダー：保存ボタン */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:"1px solid #e2f0e8",background:"#fff",flexShrink:0}}>
-                <span style={{fontSize:13,fontWeight:700,color:"#059669"}}>🤖 AI解析結果</span>
-                {!selLead?<span style={{fontSize:11,color:"#6a9a7a"}}>※リード選択で保存可</span>:saved?<button onClick={saveToLead} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✅ 保存済（再保存）</button>:<button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 履歴に保存</button>}
+                <div>
+                  <span style={{fontSize:13,fontWeight:700,color:"#059669"}}>🤖 AI解析結果</span>
+                  <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>解析結果をリードの活動履歴に保存できます</div>
+                </div>
+                {!selLead
+                  ? <div style={{textAlign:"right"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"#d1d5db"}}>💾 活動履歴に保存</div>
+                      <div style={{fontSize:10,color:"#d1d5db",marginTop:2}}>← まずリードを選択してください</div>
+                    </div>
+                  : saved
+                    ? <div style={{textAlign:"right"}}>
+                        <button onClick={saveToLead} style={{background:"#f0fdf4",color:"#059669",border:"1.5px solid #6ee7b7",borderRadius:8,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✅ 保存済み（再保存する）</button>
+                        <div style={{fontSize:10,color:"#6a9a7a",marginTop:2}}>活動履歴に記録されました</div>
+                      </div>
+                    : <div style={{textAlign:"right"}}>
+                        <button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 アクション履歴に保存</button>
+                        <div style={{fontSize:10,color:"#6a9a7a",marginTop:2}}>この解析結果をリードに紐づけます</div>
+                      </div>
+                }
               </div>
 
               {/* 本体：スクロール可能 */}

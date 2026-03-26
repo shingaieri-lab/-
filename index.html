@@ -753,11 +753,22 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
       const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:AI_SYSTEM_PROMPT}]},contents:[{role:"user",parts:[{text:ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo}]}],generationConfig:{maxOutputTokens:2048,responseMimeType:"application/json"}})});
       const data=await res.json();
       if(data.error) throw new Error(data.error.message||data.error.status);
+      if(!data.candidates||!data.candidates[0]||!data.candidates[0].content){
+        const reason=data.candidates?.[0]?.finishReason||data.promptFeedback?.blockReason||"不明";
+        throw new Error(`AIレスポンスが空です（終了理由: ${reason}）`);
+      }
       const text=(data.candidates[0].content.parts||[]).map(i=>i.text||"").join("");
+      if(!text.trim()){
+        const reason=data.candidates[0].finishReason||"不明";
+        throw new Error(`AIが空のレスポンスを返しました（終了理由: ${reason}）`);
+      }
       const cleaned=text.replace(/```json\s*/g,"").replace(/```\s*/g,"").trim();
-      const jsonMatch=cleaned.match(/\{[\s\S]*\}/);
-      if(!jsonMatch) throw new Error("レスポンスからJSONを抽出できませんでした");
-      const parsed=JSON.parse(jsonMatch[0]);
+      let parsed;
+      try{parsed=JSON.parse(cleaned);}catch(_){
+        const jsonMatch=cleaned.match(/\{[\s\S]*\}/);
+        if(!jsonMatch) throw new Error("レスポンスからJSONを抽出できませんでした。AIの返答: "+cleaned.slice(0,200));
+        parsed=JSON.parse(jsonMatch[0]);
+      }
       // AI生成後：リード選択・ログイン情報から会社名・担当者名・署名・送信者名を自動反映
       const leadContact=lead?.contact||lead?.company||"";
       const leadSurname=leadContact.split(/[ \u3000]/)[0]||leadContact;

@@ -742,18 +742,20 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile
 
 function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, currentUser, isMobile }) {
   const apiKey = (aiConfig||{}).geminiKey||"";
-  const [selLead, setSelLead] = React.useState("");
-  const [memo, setMemo] = React.useState("");
-  const [actionDate, setActionDate] = React.useState(new Date().toISOString().split("T")[0]);
-  const [actionTime, setActionTime] = React.useState(()=>{ const n=new Date(); const m=Math.floor(n.getMinutes()/30)*30; return `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`; });
-  const [manualType, setManualType] = React.useState("call");
-  const [manualResult, setManualResult] = React.useState("取次");
+  const SS_KEY = "ai_page_state";
+  const loadSS = () => { try { return JSON.parse(sessionStorage.getItem(SS_KEY)||"{}"); } catch(_){ return {}; } };
+  const [selLead, setSelLead] = React.useState(()=>loadSS().selLead||"");
+  const [memo, setMemo] = React.useState(()=>loadSS().memo||"");
+  const [actionDate, setActionDate] = React.useState(()=>loadSS().actionDate||new Date().toISOString().split("T")[0]);
+  const [actionTime, setActionTime] = React.useState(()=>{ const ss=loadSS(); if(ss.actionTime) return ss.actionTime; const n=new Date(); const m=Math.floor(n.getMinutes()/30)*30; return `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`; });
+  const [manualType, setManualType] = React.useState(()=>loadSS().manualType||"call");
+  const [manualResult, setManualResult] = React.useState(()=>loadSS().manualResult||"取次");
   const [loading, setLoading] = React.useState(false);
-  const [result, setResult] = React.useState(null);
+  const [result, setResult] = React.useState(()=>{ const ss=loadSS(); return ss.result||null; });
   const [error, setError] = React.useState("");
   const [saved, setSaved] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("action");
-  const [editEmail, setEditEmail] = React.useState({ subject:"", body:"" });
+  const [editEmail, setEditEmail] = React.useState(()=>{ const ss=loadSS(); return ss.editEmail||{ subject:"", body:"" }; });
   const [copiedEmail, setCopiedEmail] = React.useState(false);
   const [copiedZoho, setCopiedZoho] = React.useState(false);
   const [aiGmailToken, setAiGmailToken] = React.useState(null);
@@ -763,8 +765,24 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
   const [aiCalSaving, setAiCalSaving] = React.useState(false);
   const [aiCalSaved, setAiCalSaved] = React.useState(false);
   const lead = leads.find(l=>l.id===selLead);
+  // 状態変化をsessionStorageに保存してページ遷移後も復元できるようにする
+  React.useEffect(() => {
+    try {
+      const ss = loadSS();
+      sessionStorage.setItem(SS_KEY, JSON.stringify({...ss, selLead, memo, actionDate, actionTime, manualType, manualResult, result, editEmail}));
+    } catch(_) {}
+  }, [selLead, memo, actionDate, actionTime, manualType, manualResult, result, editEmail]);
   // リードが変更されたら保存状態をリセット（別リードで「保存済み」が残らないように）
   React.useEffect(() => { setSaved(false); }, [selLead]);
+  const resetAiPage = () => {
+    const today = new Date().toISOString().split("T")[0];
+    const n = new Date(); const m = Math.floor(n.getMinutes()/30)*30;
+    const nowTime = `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+    setSelLead(""); setMemo(""); setActionDate(today); setActionTime(nowTime);
+    setManualType("call"); setManualResult("取次"); setResult(null);
+    setError(""); setSaved(false); setEditEmail({ subject:"", body:"" });
+    sessionStorage.removeItem(SS_KEY);
+  };
 
   const addBizDays=(dateStr,days)=>{
     let d=new Date(dateStr+"T00:00:00"),c=0;
@@ -952,7 +970,10 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
         <div className="ai-left-panel" style={{width:380,borderRight:"1px solid #c0dece",display:"flex",flexDirection:"column",background:"#f0f5f2",flexShrink:0,overflow:"auto"}}>
           <div style={{flex:1,padding:"18px 20px",display:"flex",flexDirection:"column",gap:14}}>
             <div>
-              <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",letterSpacing:"0.06em",textTransform:"uppercase",display:"block",marginBottom:6}}>🏢 リード選択</label>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",letterSpacing:"0.06em",textTransform:"uppercase"}}>🏢 リード選択</label>
+                <button onClick={resetAiPage} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"1px solid #c0dece",background:"#fff",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit",fontWeight:600,lineHeight:1}}>🔄 リセット</button>
+              </div>
               <LeadCombobox leads={leads} value={selLead} onChange={id=>{setSelLead(id);setResult(null);setSaved(false);}} placeholder="会社名・担当者名で検索" inputStyle={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid #c0dece",background:"#fff",color:"#174f35",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}} darkMode={false} />
               {lead&&(lead.actions||[]).length>0&&(
                 <div style={{marginTop:8,background:"#fff",borderRadius:8,padding:"10px 12px",border:"1px solid #c0dece"}}>

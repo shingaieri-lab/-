@@ -316,10 +316,15 @@ const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理
 
 ユーザーが電話メモ・アクション記録を入力すると、以下のJSON形式のみで出力してください。
 
-{"action_summary":"架電内容サマリー（2〜3文）","action_type":"call または email または sms または other","action_result":"取次 または 不在 または 不通 または 折電 または 送信済 または その他","next_action_date_offset":5,"next_action_time":"10:00","next_action_memo":"次回アクションメモ","next_action_type":"call または email または sms または other","followup_talk_points":["ポイント1","ポイント2"],"email_subject":"フォローメール件名","email_body":"フォローメール本文","interest_level":"高 または 中 または 低","memo_for_zoho":"Zoho用詳細サマリー（3〜5文）"}
+{"action_summary":"架電内容サマリー（2〜3文）","action_type":"call または email または sms または other","action_result":"取次 または 不在 または 不通 または 折電 または 送信済 または その他","next_action_date_offset":5,"next_action_time":"10:00","next_action_memo":"次回アクションメモ","next_action_type":"call または email または sms または schedule または other","followup_talk_points":["ポイント1","ポイント2"],"email_subject":"フォローメール件名","email_body":"フォローメール本文","interest_level":"高 または 中 または 低","memo_for_zoho":"Zoho用詳細サマリー（3〜5文）"}
 
 【next_action_typeの決定ルール】
 過去のアクション履歴を必ず参照した上で、次回アクションに最適な手段を判断してください。
+
+- schedule：
+  - 商談・打ち合わせの日程調整が必要で、候補日を提案するタイミング
+  - 「日程を調整したい」「いつが都合いいか」「商談の予定を入れたい」等の発言があった場合
+  - 興味度「高」で具体的な商談ステップに進める状況
 
 - email：
   - 今回の通話で資料送付を依頼された（→ 送付後フォロー電話が次なので今はemail）
@@ -838,6 +843,17 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
       await postGmailDraft(tokenObj.token, raw);
       setAiGmailSaved(true);
       setTimeout(() => setAiGmailSaved(false), 3000);
+      // メール送信後の追客をネクストアクションとして自動設定（AIの分析結果を使用）
+      if (selLead && lead && result) {
+        const followUpDate = result.next_action_date_offset ? addBizDays(actionDate, result.next_action_date_offset) : "";
+        if (followUpDate) {
+          onUpdate(lead.id, {
+            next_action_date: followUpDate,
+            next_action_time: result.next_action_time || "",
+            next_action: result.next_action_memo || "メール送信後の追客",
+          });
+        }
+      }
     } catch(e) {
       if (e.isUnauthenticated) setAiGmailToken(null);
       alert('Gmail下書き保存エラー: ' + e.message);
@@ -988,113 +1004,112 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
               <style>{`@keyframes spin{to{transform:rotate(360deg);}}`}</style>
             </div>
           )}
-          {result&&(
+          {result&&(()=>{
+            const nat=result.next_action_type;
+            const isEmailNext=nat==="email";
+            const isScheduleNext=nat==="schedule";
+            const isCallNext=nat==="call"||nat==="sms";
+            const natIcon=isEmailNext?"✉️":isScheduleNext?"📅":isCallNext?"📞":"📋";
+            const natLabel=isEmailNext?"メール送信":isScheduleNext?"候補日提案":nat==="call"?"架電":nat==="sms"?"SMS送信":"その他";
+            const natAccent=isEmailNext?"#2563eb":isScheduleNext?"#0891b2":isCallNext?"#059669":"#7c3aed";
+            const natBg=isEmailNext?"#eff6ff":isScheduleNext?"#ecfeff":isCallNext?"#f0fdf4":"#faf5ff";
+            const natBorder=isEmailNext?"#bfdbfe":isScheduleNext?"#a5f3fc":isCallNext?"#bbf7d0":"#e9d5ff";
+            const iLvColor={"高":"#10b981","中":"#f59e0b","低":"#ef4444"};
+            const navAction=isScheduleNext?goCalendar:()=>goLeads(selLead);
+            const navLabel=isScheduleNext?"📅 候補日を探す（カレンダーへ）":isCallNext?"📞 リード詳細へ":"📋 リード詳細を確認";
+            return(
             <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
-              <div style={{display:"flex",borderBottom:"1px solid #e2f0e8",background:"#fff",flexShrink:0}}>
-                {[["action","📋 記録"],["next","📅 ネクスト"],["email","✉️ メール"],["zoho","📝 Zoho"]].map(([k,l])=>(
-                  <button key={k} onClick={()=>setActiveTab(k)} style={{padding:"12px 16px",background:"none",border:"none",borderBottom:activeTab===k?"2px solid #10b981":"2px solid transparent",color:activeTab===k?"#059669":"#6a9a7a",fontSize:12,fontWeight:activeTab===k?700:400,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>{l}</button>
-                ))}
-                <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:20}}>
-                  {!selLead?<span style={{fontSize:11,color:"#6a9a7a"}}>※リード選択で保存可</span>:saved?<button onClick={saveToLead} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✅ 保存済（再保存）</button>:<button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 履歴に保存</button>}
-                </div>
+              {/* ヘッダー：保存ボタン */}
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:"1px solid #e2f0e8",background:"#fff",flexShrink:0}}>
+                <span style={{fontSize:13,fontWeight:700,color:"#059669"}}>🤖 AI解析結果</span>
+                {!selLead?<span style={{fontSize:11,color:"#6a9a7a"}}>※リード選択で保存可</span>:saved?<button onClick={saveToLead} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✅ 保存済（再保存）</button>:<button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"7px 18px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 履歴に保存</button>}
               </div>
-              {saved&&result&&(()=>{
-                const nat=result.next_action_type;
-                const isEmail=nat==="email";
-                const isCall=nat==="call"||nat==="sms";
-                const icon=isEmail?"✉️":isCall?"📞":"📋";
-                const label=isEmail?"メール下書きを確認する":isCall?"リード詳細へ（架電トークポイント登録済み）":nat==="other"?"リード詳細を確認":"リード詳細を確認";
-                const handleClick=isEmail?()=>setActiveTab("email"):goLeads;
-                const accent=isEmail?"#2563eb":isCall?"#059669":"#7c3aed";
-                return(
-                  <div style={{background:`${accent}11`,borderLeft:`3px solid ${accent}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:12,flexShrink:0,flexWrap:"wrap"}}>
-                    <div style={{flex:1,minWidth:0}}>
-                      <span style={{fontSize:11,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:"0.05em"}}>AIの提案・次のアクション</span>
-                      <div style={{fontSize:13,color:"#374151",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{icon} {result.next_action_memo||"—"}</div>
-                    </div>
-                    <button onClick={handleClick} style={{background:accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{icon} {label}</button>
-                  </div>
-                );
-              })()}
-              <div style={{flex:1,overflow:"auto",padding:"20px 24px"}}>
-                {activeTab==="action"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                    <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-                      <span style={{background:(iLvColor[result.interest_level]||"#64748b")+"22",color:iLvColor[result.interest_level]||"#64748b",border:`1px solid ${iLvColor[result.interest_level]||"#64748b"}44`,borderRadius:6,padding:"4px 14px",fontSize:13,fontWeight:700}}>興味度：{result.interest_level||"不明"}</span>
-                      <span style={{background:"#dbeafe",color:"#2563eb",border:"1px solid #bfdbfe",borderRadius:6,padding:"4px 14px",fontSize:13,fontWeight:700}}>{ACTION_TYPES.find(t=>t.v===result.action_type)?.icon||"📞"} {ACTION_TYPES.find(t=>t.v===result.action_type)?.label||"電話"}</span>
-                      <span style={{background:"#f0f5f2",color:"#6a9a7a",border:"1px solid #c0dece",borderRadius:6,padding:"4px 14px",fontSize:13,fontWeight:700}}>結果：{result.action_result||"その他"}</span>
-                    </div>
 
-                    {result.followup_talk_points?.length>0&&(
-                      <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
-                        <div style={{padding:"10px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:12,fontWeight:700,color:"#6a9a7a",textTransform:"uppercase",letterSpacing:"0.06em"}}>次回架電トークポイント</div>
-                        <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:8}}>
-                          {result.followup_talk_points.map((p,i)=>(
-                            <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",background:"#f8fffe",borderRadius:7,padding:"9px 12px"}}>
-                              <span style={{background:"#3b82f6",color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</span>
-                              <span style={{fontSize:13.5,color:"#374151",lineHeight:1.6}}>{p}</span>
-                            </div>
-                          ))}
-                        </div>
+              {/* 本体：スクロール可能 */}
+              <div style={{flex:1,overflow:"auto",padding:"16px 20px",display:"flex",flexDirection:"column",gap:14}}>
+
+                {/* ① 今回のアクションサマリー */}
+                <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
+                  <div style={{padding:"8px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:11,fontWeight:700,color:"#6a9a7a",letterSpacing:"0.05em"}}>今回のアクション</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",borderBottom:"1px solid #f0f5f2"}}>
+                    <div style={{padding:"12px 14px",borderRight:"1px solid #f0f5f2"}}>
+                      <div style={{fontSize:10,color:"#6a9a7a",marginBottom:4}}>手段</div>
+                      <div style={{fontSize:15,fontWeight:700,color:"#374151"}}>{ACTION_TYPES.find(t=>t.v===result.action_type)?.icon||"📞"} {ACTION_TYPES.find(t=>t.v===result.action_type)?.label||"電話"}</div>
+                    </div>
+                    <div style={{padding:"12px 14px",borderRight:"1px solid #f0f5f2"}}>
+                      <div style={{fontSize:10,color:"#6a9a7a",marginBottom:4}}>結果</div>
+                      <div style={{fontSize:15,fontWeight:700,color:"#374151"}}>{result.action_result||"その他"}</div>
+                    </div>
+                    <div style={{padding:"12px 14px"}}>
+                      <div style={{fontSize:10,color:"#6a9a7a",marginBottom:4}}>顧客の温度感</div>
+                      <div style={{fontSize:15,fontWeight:700,color:iLvColor[result.interest_level]||"#64748b"}}>{result.interest_level||"—"}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ② AIが提案するネクストアクション */}
+                <div style={{background:natBg,borderRadius:10,border:`1.5px solid ${natBorder}`,overflow:"hidden"}}>
+                  <div style={{padding:"10px 16px",borderBottom:`1px solid ${natBorder}`,display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{background:natAccent,color:"#fff",borderRadius:20,padding:"3px 14px",fontSize:12,fontWeight:700}}>{natIcon} {natLabel}</span>
+                    <span style={{fontSize:12,color:natAccent,fontWeight:700}}>← AIが推奨するネクストアクション</span>
+                  </div>
+                  <div style={{padding:"14px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                      <div style={{background:"#fff",borderRadius:8,padding:"10px 16px",flex:1,minWidth:100}}>
+                        <div style={{fontSize:11,color:"#6a9a7a",marginBottom:3}}>実施タイミング</div>
+                        <div style={{fontSize:17,fontWeight:700,color:natAccent}}>{result.next_action_date_offset?`${result.next_action_date_offset}営業日後`:"—"}</div>
+                        {result.next_action_date_offset&&<div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>{addBizDays(actionDate,result.next_action_date_offset)}</div>}
                       </div>
-                    )}
-                  </div>
-                )}
-                {activeTab==="next"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
-                      <div style={{padding:"10px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:12,fontWeight:700,color:"#6a9a7a",textTransform:"uppercase",letterSpacing:"0.06em"}}>推奨ネクストアクション</div>
-                      <div style={{padding:"18px 16px",display:"flex",flexDirection:"column",gap:14}}>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                          <div style={{background:"#f0f5f2",borderRadius:8,padding:"12px 16px"}}>
-                            <div style={{fontSize:11,color:"#6a9a7a",marginBottom:4}}>推奨タイミング</div>
-                            <div style={{fontSize:20,fontWeight:700,color:"#2563eb"}}>{result.next_action_date_offset?`${result.next_action_date_offset}営業日後`:"—"}</div>
-                            {result.next_action_date_offset&&<div style={{fontSize:12,color:"#6a9a7a",marginTop:4}}>→ {addBizDays(actionDate,result.next_action_date_offset)}</div>}
-                          </div>
-                          <div style={{background:"#f0f5f2",borderRadius:8,padding:"12px 16px"}}>
-                            <div style={{fontSize:11,color:"#6a9a7a",marginBottom:4}}>推奨時間帯</div>
-                            <div style={{fontSize:20,fontWeight:700,color:"#7c3aed"}}>{result.next_action_time||"—"}</div>
-                          </div>
-                        </div>
-                        <div style={{background:"#f0f5f2",borderRadius:8,padding:"12px 16px"}}>
-                          <div style={{fontSize:11,color:"#6a9a7a",marginBottom:6}}>次回アクションメモ</div>
-                          <div style={{fontSize:13.5,color:"#059669",fontWeight:600,lineHeight:1.6}}>{result.next_action_memo||"—"}</div>
-                        </div>
+                      <div style={{background:"#fff",borderRadius:8,padding:"10px 16px",flex:1,minWidth:80}}>
+                        <div style={{fontSize:11,color:"#6a9a7a",marginBottom:3}}>推奨時間</div>
+                        <div style={{fontSize:17,fontWeight:700,color:"#7c3aed"}}>{result.next_action_time||"—"}</div>
                       </div>
                     </div>
-                    <div style={{display:"flex",justifyContent:"flex-end"}}>
-                      <button onClick={saveAiCalTodo} disabled={aiCalSaving||!selLead||!result?.next_action_date_offset} style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"linear-gradient(135deg,#7c3aed,#6d28d9)",color:"#fff",border:"none",borderRadius:7,padding:"8px 20px",fontSize:12,fontWeight:700,cursor:(aiCalSaving||!selLead||!result?.next_action_date_offset)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||!result?.next_action_date_offset)?0.5:1}}>{aiCalSaving?"作成中...":aiCalSaved?"✅ タスク作成済":"✅ GoogleタスクにTODO作成"}</button>
+                    {result.next_action_memo&&<div style={{background:"#fff",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#059669",fontWeight:600,lineHeight:1.6}}>{result.next_action_memo}</div>}
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                      <button onClick={saveAiCalTodo} disabled={aiCalSaving||!selLead||!result?.next_action_date_offset} style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"#7c3aed22",color:aiCalSaved?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:(aiCalSaving||!selLead||!result?.next_action_date_offset)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||!result?.next_action_date_offset)?0.5:1}}>{aiCalSaving?"作成中...":aiCalSaved?"✅ タスク作成済":"☑️ GoogleタスクTODO"}</button>
+                      {saved&&(isCallNext||isScheduleNext)&&<button onClick={navAction} style={{background:natAccent,color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{navLabel}</button>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ③ 次回架電トークポイント（架電・SMS時のみ） */}
+                {isCallNext&&result.followup_talk_points?.length>0&&(
+                  <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
+                    <div style={{padding:"10px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:12,fontWeight:700,color:"#6a9a7a"}}>次回架電トークポイント</div>
+                    <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:8}}>
+                      {result.followup_talk_points.map((p,i)=>(
+                        <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",background:"#f8fffe",borderRadius:7,padding:"9px 12px"}}>
+                          <span style={{background:"#3b82f6",color:"#fff",borderRadius:4,padding:"1px 7px",fontSize:11,fontWeight:700,flexShrink:0,marginTop:1}}>{i+1}</span>
+                          <span style={{fontSize:13,color:"#374151",lineHeight:1.6}}>{p}</span>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}
-                {activeTab==="email"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                    <div style={{display:"flex",justifyContent:"flex-end",gap:8,flexWrap:"wrap"}}>
-                      <button onClick={saveAiGmailDraft} disabled={aiGmailSaving} style={{background:aiGmailSaved?"#2563eb":aiGmailSaving?"#1e40af66":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",border:"none",borderRadius:7,padding:"7px 18px",fontSize:12,fontWeight:700,cursor:aiGmailSaving?"not-allowed":"pointer",fontFamily:"inherit",opacity:aiGmailSaving?0.7:1}}>{aiGmailSaving?"保存中...":aiGmailSaved?"✅ 下書き保存済":"📨 Gmailに下書き保存"}</button>
-                      <button onClick={()=>{navigator.clipboard?.writeText(`件名: ${editEmail.subject}\n\n${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),2000);}} style={{background:copiedEmail?"#d1fae5":"#f0f5f2",color:copiedEmail?"#10b981":"#6a9a7a",border:`1px solid ${copiedEmail?"#a7f3d0":"#c0dece"}`,borderRadius:7,padding:"7px 18px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copiedEmail?"✓ コピー済":"📋 全文コピー"}</button>
+
+                {/* ④ フォローメール（メール送信・候補日提案時のみ） */}
+                {(isEmailNext||isScheduleNext)&&(
+                  <div style={{background:"#fff",borderRadius:10,border:"1px solid #bfdbfe",overflow:"hidden"}}>
+                    <div style={{padding:"10px 16px",background:"#eff6ff",borderBottom:"1px solid #bfdbfe",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+                      <span style={{fontSize:12,fontWeight:700,color:"#2563eb"}}>✉️ {isScheduleNext?"候補日メール（送信後に候補日ページで確定）":"フォローメール"}</span>
+                      <div style={{display:"flex",gap:8}}>
+                        <button onClick={saveAiGmailDraft} disabled={aiGmailSaving} style={{background:aiGmailSaved?"#2563eb":aiGmailSaving?"#1e40af66":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:aiGmailSaving?"not-allowed":"pointer",fontFamily:"inherit",opacity:aiGmailSaving?0.7:1}}>{aiGmailSaving?"保存中...":aiGmailSaved?"✅ 下書き保存済":"📨 Gmailに下書き保存"}</button>
+                        <button onClick={()=>{navigator.clipboard?.writeText(`件名: ${editEmail.subject}\n\n${editEmail.body}`);setCopiedEmail(true);setTimeout(()=>setCopiedEmail(false),2000);}} style={{background:copiedEmail?"#dbeafe":"#f0f5f2",color:copiedEmail?"#2563eb":"#6a9a7a",border:"1px solid #bfdbfe",borderRadius:7,padding:"6px 14px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copiedEmail?"✓ コピー済":"📋 コピー"}</button>
+                      </div>
                     </div>
-                    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
-                      <div style={{padding:"10px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:12,fontWeight:700,color:"#6a9a7a",textTransform:"uppercase"}}>件名</div>
-                      <div style={{padding:"12px 16px"}}><input value={editEmail.subject} onChange={e=>setEditEmail(p=>({...p,subject:e.target.value}))} style={{width:"100%",background:"#f8fffe",border:"1px solid #c0dece",borderRadius:7,padding:"8px 12px",color:"#174f35",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/></div>
-                    </div>
-                    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
-                      <div style={{padding:"10px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:12,fontWeight:700,color:"#6a9a7a",textTransform:"uppercase"}}>本文（直接編集可）</div>
-                      <div style={{padding:"14px 16px"}}><textarea value={editEmail.body} onChange={e=>setEditEmail(p=>({...p,body:e.target.value}))} rows={14} style={{width:"100%",background:"#f8fffe",border:"1px solid #c0dece",borderRadius:8,padding:"12px 14px",color:"#174f35",fontSize:13,lineHeight:1.8,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
-                    </div>
-                  </div>
-                )}
-                {activeTab==="zoho"&&(
-                  <div style={{display:"flex",flexDirection:"column",gap:16}}>
-                    <div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={()=>{navigator.clipboard?.writeText(result?.memo_for_zoho||"");setCopiedZoho(true);setTimeout(()=>setCopiedZoho(false),2000);}} style={{background:copiedZoho?"#d1fae5":"#f0f5f2",color:copiedZoho?"#10b981":"#6a9a7a",border:`1px solid ${copiedZoho?"#a7f3d0":"#c0dece"}`,borderRadius:7,padding:"7px 18px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copiedZoho?"✓ コピー済":"📋 コピー"}</button></div>
-                    <div style={{background:"#fff",borderRadius:10,border:"1px solid #e2f0e8",overflow:"hidden"}}>
-                      <div style={{padding:"10px 16px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8",fontSize:12,fontWeight:700,color:"#6a9a7a",textTransform:"uppercase"}}>Zoho入力用メモ</div>
-                      <div style={{padding:"14px 16px"}}><pre style={{whiteSpace:"pre-wrap",fontSize:13.5,color:"#374151",lineHeight:1.8,margin:0,fontFamily:"inherit"}}>{result.memo_for_zoho||"—"}</pre></div>
+                    <div style={{padding:"12px 16px",display:"flex",flexDirection:"column",gap:10}}>
+                      <div><div style={{fontSize:11,color:"#6a9a7a",marginBottom:4}}>件名</div><input value={editEmail.subject} onChange={e=>setEditEmail(p=>({...p,subject:e.target.value}))} style={{width:"100%",background:"#f8faff",border:"1px solid #c0dece",borderRadius:7,padding:"8px 12px",color:"#174f35",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}/></div>
+                      <div><div style={{fontSize:11,color:"#6a9a7a",marginBottom:4}}>本文（直接編集可）</div><textarea value={editEmail.body} onChange={e=>setEditEmail(p=>({...p,body:e.target.value}))} rows={12} style={{width:"100%",background:"#f8faff",border:"1px solid #c0dece",borderRadius:8,padding:"12px 14px",color:"#174f35",fontSize:13,lineHeight:1.8,fontFamily:"inherit",outline:"none",resize:"vertical",boxSizing:"border-box"}}/></div>
                     </div>
                   </div>
                 )}
+
+
               </div>
             </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -2455,6 +2470,7 @@ function App() {
   };
   const [candidateSlots, setCandidateSlots] = useState([]);
   const [calendarLeadId, setCalendarLeadId] = useState("");
+  const [aiOpenLeadId, setAiOpenLeadId] = useState(null);
   const [showWizard, setShowWizard] = useState(false);
   // APIキーの優先順位: 個人設定（currentUser.geminiKey）> 管理者設定（aiConfig.geminiKey）
   // 個人設定が空の場合のみ管理者設定のキーが使われる
@@ -2527,9 +2543,9 @@ function App() {
       <main style={{...S.main, paddingBottom: isMobile ? 65 : 0}}>
         {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); navigate("leads"); }} masterVer={masterVer} isMobile={isMobile} />}
         {page === "trend"     && <Trend leads={leads} />}
-        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={currentUser?.is_staff === false}
+        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} initialOpenId={aiOpenLeadId} onOpenIdConsumed={()=>setAiOpenLeadId(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={currentUser?.is_staff === false}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
-        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={() => navigate("leads")} goCalendar={() => navigate("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} isMobile={isMobile} />}
+        {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={(leadId) => { setAiOpenLeadId(leadId||null); navigate("leads"); }} goCalendar={() => navigate("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} isMobile={isMobile} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={(leadId)=>{ setCalendarLeadId(leadId); navigate("email"); }} currentUser={currentUser} leads={leads} />}
         {page === "settings"  && <SettingsPage aiConfig={effectiveAiConfig} onSave={saveAiConfig} currentUser={currentUser} onUpdateProfile={updateMyProfile} initialTab={settingsTab} onLeadsChange={setLeads} onMasterSave={() => setMasterVer(v => v + 1)} onOpenWizard={() => setShowWizard(true)} />}
         {page === "email"     && <EmailPage leads={leads} onUpdate={updateLead} currentUser={currentUser} candidateSlots={candidateSlots} initialLeadId={calendarLeadId} isMobile={isMobile} />}
@@ -3098,7 +3114,7 @@ function CSVImport({ onImport, onClose, result }) {
   );
 }
 
-function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, currentUser, readOnly, isMobile }) {
+function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile }) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -3124,6 +3140,12 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
     if (initialFilter.hasPortal)      { setFHasPortal(true); }
     onFilterConsumed && onFilterConsumed();
   }, [initialFilter]);
+
+  useEffect(() => {
+    if (!initialOpenId) return;
+    setOpenId(initialOpenId);
+    onOpenIdConsumed && onOpenIdConsumed();
+  }, [initialOpenId]);
 
   const STATUS_ORDER_FIXED = Object.fromEntries(getStatuses().map((s,i) => [s, i]));
 

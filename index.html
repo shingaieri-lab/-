@@ -4049,7 +4049,7 @@ function LoginScreen({ onLogin }) {
     const { id, name, password, password2, color, email, is_staff, inviteCode } = sForm;
     if (!id.trim() || !name.trim() || !email.trim() || !password.trim() || !password2.trim()) { setSErr("全項目入力してください"); return; }
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
-    const newAccount = { id: id.trim(), name: name.trim(), password, role:"member", color, email: email.trim(), is_staff, inviteCode: inviteCode.trim() };
+    const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), is_staff, inviteCode: inviteCode.trim() };
     try {
       const r = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newAccount) });
       if (!r.ok) { const e = await r.json(); setSErr(e.error||"作成に失敗しました"); return; }
@@ -4138,7 +4138,7 @@ function LoginScreen({ onLogin }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#f0faf5,#e8f5ee)" }}>
       <div style={card}>
         <div style={{ fontSize:20, fontWeight:900, color:"#174f35", marginBottom:6 }}>新規アカウント作成</div>
-        <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>作成後はメンバー権限で利用できます</div>
+        <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>招待コードを受け取った管理者のみ作成できます</div>
         {sOk ? (
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>✅</div>

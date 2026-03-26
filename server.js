@@ -156,9 +156,7 @@ app.post('/api/signup', async (req, res) => {
   // パスワードをハッシュ化（ログイン用）＋暗号化（管理者表示用）して保存
   const hashedPassword = await bcrypt.hash(newAccount.password, BCRYPT_ROUNDS);
   const encryptedPassword = encryptPassword(newAccount.password);
-  // 最初のアカウントのみ管理者、2件目以降はメンバーとして作成
-  const role = existingAccounts.length === 0 ? 'admin' : 'member';
-  existingAccounts.push({ ...newAccount, password: hashedPassword, password_enc: encryptedPassword, role });
+  existingAccounts.push({ ...newAccount, password: hashedPassword, password_enc: encryptedPassword, role: 'admin' });
   await writeData('accounts', existingAccounts);
   res.json({ ok: true });
 });

@@ -316,7 +316,29 @@ const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理
 
 ユーザーが電話メモ・アクション記録を入力すると、以下のJSON形式のみで出力してください。
 
-{"action_summary":"架電内容サマリー（2〜3文）","action_type":"call または email または sms または other","action_result":"取次 または 不在 または 不通 または 折電 または 送信済 または その他","next_action_date_offset":5,"next_action_time":"10:00","next_action_memo":"次回アクションメモ","followup_talk_points":["ポイント1","ポイント2"],"email_subject":"フォローメール件名","email_body":"フォローメール本文","interest_level":"高 または 中 または 低","memo_for_zoho":"Zoho用詳細サマリー（3〜5文）"}
+{"action_summary":"架電内容サマリー（2〜3文）","action_type":"call または email または sms または other","action_result":"取次 または 不在 または 不通 または 折電 または 送信済 または その他","next_action_date_offset":5,"next_action_time":"10:00","next_action_memo":"次回アクションメモ","next_action_type":"call または email または sms または other","followup_talk_points":["ポイント1","ポイント2"],"email_subject":"フォローメール件名","email_body":"フォローメール本文","interest_level":"高 または 中 または 低","memo_for_zoho":"Zoho用詳細サマリー（3〜5文）"}
+
+【next_action_typeの決定ルール】
+過去のアクション履歴を必ず参照した上で、次回アクションに最適な手段を判断してください。
+
+- email：
+  - 今回の通話で資料送付を依頼された（→ 送付後フォロー電話が次なので今はemail）
+  - 過去に資料・メールを送っており、次は別手段（call）が自然な流れの場合は除く
+  - 電話が繋がりにくい状況が続いており、メールでアプローチする方が有効
+  - 検討中でまず情報提供が先決
+
+- call：
+  - 過去にメール・資料送付済みで、次はリアクション確認の電話が適切
+  - 折電待ち・担当者から折り返し連絡が来る予定
+  - 興味度「高」で前向きな反応があり、直接会話で次のステップを決めたい
+  - 不在・不通が続いているが見込みがあり、引き続き電話アプローチが必要
+  - 急ぎの確認や意思決定を求める場面
+
+- sms：
+  - 電話に出ない・メールも反応が薄い・短い日程リマインドで十分
+
+- other：
+  - 訪問・商談・展示会対応など電話・メール以外が適切
 
 【next_action_date_offsetの決定ルール】
 メモ内容・過去のアクション履歴・顧客の反応を読み取り、最適な営業日数（整数）を判断してください。
@@ -753,7 +775,12 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     const senderSig=currentUser?.signature||"";
     const ctx=lead?`\n【リード】会社名:${lead.company} / 担当者名:${lead.contact} / ステータス:${lead.status}`:"";
     const recentActions=(lead?.actions||[]).filter(a=>a&&typeof a==="object").sort((a,b)=>(String(b.ts||"")).localeCompare(String(a.ts||""))).slice(0,5);
-    const actHistory=recentActions.length>0?"\n\n【過去のアクション履歴（直近5件）】\n"+recentActions.map((a,i)=>`${i+1}. ${a.date||""}${a.time?" "+a.time:""} [${a.type||""}] ${a.result||""} — ${String(a.summary||"").slice(0,80)}`).join("\n"):"";
+    const actHistory=recentActions.length>0?"\n\n【過去のアクション履歴（直近5件）】\n"+recentActions.map((a,i)=>{
+      const base=`${i+1}. ${a.date||""}${a.time?" "+a.time:""} [${a.type||""}] ${a.result||""} — ${String(a.summary||"").slice(0,100)}`;
+      const nextPart=a.next?` ／ 設定済み次アクション:${String(a.next).slice(0,60)}`:"";
+      const talkPart=(a.talkPoints&&a.talkPoints.length>0)?` ／ トークポイント:${a.talkPoints.slice(0,2).join("・")}`:"";
+      return base+nextPart+talkPart;
+    }).join("\n"):"";
     const userCtx=`\n\n【送信者情報】名前:${senderName}`+(senderSig?`\n署名:\n${senderSig}`:"");
     try{
       const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:AI_SYSTEM_PROMPT}]},contents:[{role:"user",parts:[{text:ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo}]}],generationConfig:{maxOutputTokens:2048,responseMimeType:"application/json"}})});
@@ -971,6 +998,24 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
                   {!selLead?<span style={{fontSize:11,color:"#6a9a7a"}}>※リード選択で保存可</span>:saved?<button onClick={saveToLead} style={{background:"#059669",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>✅ 保存済（再保存）</button>:<button onClick={saveToLead} style={{background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",border:"none",borderRadius:8,padding:"8px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>💾 履歴に保存</button>}
                 </div>
               </div>
+              {saved&&result&&(()=>{
+                const nat=result.next_action_type;
+                const isEmail=nat==="email";
+                const isCall=nat==="call"||nat==="sms";
+                const icon=isEmail?"✉️":isCall?"📞":"📋";
+                const label=isEmail?"メール下書きを確認する":isCall?"リード詳細へ（架電トークポイント登録済み）":nat==="other"?"リード詳細を確認":"リード詳細を確認";
+                const handleClick=isEmail?()=>setActiveTab("email"):goLeads;
+                const accent=isEmail?"#2563eb":isCall?"#059669":"#7c3aed";
+                return(
+                  <div style={{background:`${accent}11`,borderLeft:`3px solid ${accent}`,padding:"10px 16px",display:"flex",alignItems:"center",gap:12,flexShrink:0,flexWrap:"wrap"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <span style={{fontSize:11,fontWeight:700,color:accent,textTransform:"uppercase",letterSpacing:"0.05em"}}>AIの提案・次のアクション</span>
+                      <div style={{fontSize:13,color:"#374151",marginTop:2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{icon} {result.next_action_memo||"—"}</div>
+                    </div>
+                    <button onClick={handleClick} style={{background:accent,color:"#fff",border:"none",borderRadius:7,padding:"7px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>{icon} {label}</button>
+                  </div>
+                );
+              })()}
               <div style={{flex:1,overflow:"auto",padding:"20px 24px"}}>
                 {activeTab==="action"&&(
                   <div style={{display:"flex",flexDirection:"column",gap:16}}>

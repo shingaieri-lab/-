@@ -35,7 +35,13 @@ async function apiPost(path, data) {
     if (res.status === 413 || res.status === 507) {
       console.error('API storage error:', path, res.status);
       alert('データの保存に失敗しました。ストレージの上限に達している可能性があります。管理者にお問い合わせください。');
+    } else if (!res.ok) {
+      // バリデーションエラー等はユーザーに表示する
+      const errData = await res.json().catch(() => ({}));
+      console.error('API error:', path, res.status, errData);
+      alert('保存に失敗しました: ' + (errData.error || `エラーコード ${res.status}`));
     }
+    return res;
   } catch(e) { console.error('API error:', path, e); }
 }
 
@@ -4132,7 +4138,7 @@ function LoginScreen({ onLogin }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#f0faf5,#e8f5ee)" }}>
       <div style={card}>
         <div style={{ fontSize:20, fontWeight:900, color:"#174f35", marginBottom:6 }}>新規アカウント作成</div>
-        <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>作成後はメンバー権限で利用できます</div>
+        <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>招待コードを受け取った管理者のみ作成できます</div>
         {sOk ? (
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
@@ -4155,7 +4161,7 @@ function LoginScreen({ onLogin }) {
             </div>
             <div style={{ marginBottom:12 }}>
               <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>パスワード<span style={{ color:"#ef4444" }}>*</span></label>
-              <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>半角英数字</div>
+              <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>8文字以上・英字と数字を含む</div>
               <div style={{ position:"relative" }}>
                 <input type={showSPw?"text":"password"} value={sForm.password} onChange={e=>setSForm(p=>({...p,password:e.target.value}))} style={{ ...inp2, paddingRight:36 }} />
                 <button onClick={()=>setShowSPw(v=>!v)} style={{ position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",fontSize:14 }}>{showSPw?"🙈":"👁️"}</button>
@@ -4259,6 +4265,12 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const handleSubmit = () => {
     if (!form.id.trim() || !form.name.trim()) { setErr("全項目入力してください"); return; }
     if (!editingId && !form.password.trim()) { setErr("パスワードを入力してください"); return; }
+    // パスワードが入力されている場合は強度チェック（8文字以上・英字・数字を含む）
+    if (form.password.trim()) {
+      if (form.password.length < 8) { setErr("パスワードは8文字以上で入力してください"); return; }
+      if (!/[a-zA-Z]/.test(form.password)) { setErr("パスワードに英字を含めてください"); return; }
+      if (!/[0-9]/.test(form.password)) { setErr("パスワードに数字を含めてください"); return; }
+    }
     if (accounts.some(a => a.id === form.id.trim() && a.id !== editingId)) { setErr("このIDは既に使われています"); return; }
     const updated = editingId !== null
       ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)

@@ -1228,7 +1228,7 @@ function SourceIconSVG({ iconKey, size=28, color }) {
 
 function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave, onOpenWizard }) {
   const [master, setMaster] = React.useState(() => getMaster());
-  const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "sales"));
+  const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "apikey"));
   const [msg, setMsg] = React.useState("");
   const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
   const [profileMsg, setProfileMsg] = React.useState("");
@@ -1409,12 +1409,12 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
   return (
     <div className="settings-page" style={{padding:"24px 28px", width:"60vw", maxWidth:"100%"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
-      <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "営業設定・API設定・アカウントを管理できます。"}</div>
+      <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "API設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
       <div className="settings-tabs" style={{display:"flex", flexWrap:"wrap", gap:0, marginBottom:0}}>
         {currentUser?.role==="admin" && tabBtn("leadmgmt","📋 リード管理")}
         {currentUser?.role==="admin" && tabBtn("portal","🏢 ポータルサイト")}
-        {currentUser?.role==="admin" ? tabBtn("sales","👤 営業担当") : tabBtn("sales","👤 営業設定")}
+        {currentUser?.role==="admin" && tabBtn("sales","👤 営業担当")}
         {tabBtn("apikey","🔑 API設定")}
         {currentUser?.role==="admin" && tabBtn("accounts","👥 アカウント管理（管理者）")}
         {tabBtn("myaccount","👤 アカウント管理")}

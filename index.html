@@ -184,12 +184,10 @@ function getSourceColor(sourceName, fallbackIdx) {
   if (sourceName === "電話") return "#f59e0b";
   return SOURCE_COLOR_PALETTE[(fallbackIdx + 3) % SOURCE_COLOR_PALETTE.length];
 }
-// IS担当者はis_staffフラグがtrueのアカウントのみ
 function getISMembers() {
   const accounts = window.__appData?.accounts || [];
   if (accounts.length > 0) {
-    const staff = accounts.filter(a => a.is_staff !== false);
-    return staff.length > 0 ? staff.map(a => a.name) : DEFAULT_IS_MEMBERS;
+    return accounts.length > 0 ? accounts.map(a => a.name) : DEFAULT_IS_MEMBERS;
   }
   return DEFAULT_IS_MEMBERS;
 }
@@ -1230,7 +1228,7 @@ function SourceIconSVG({ iconKey, size=28, color }) {
 
 function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave, onOpenWizard }) {
   const [master, setMaster] = React.useState(() => getMaster());
-  const [tab, setTab] = React.useState(initialTab || (currentUser?.is_staff === false ? "apikey" : currentUser?.role === "admin" ? "leadmgmt" : "sales"));
+  const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "apikey"));
   const [msg, setMsg] = React.useState("");
   const [profileForm, setProfileForm] = React.useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
   const [profileMsg, setProfileMsg] = React.useState("");
@@ -1411,14 +1409,14 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
   return (
     <div className="settings-page" style={{padding:"24px 28px", width:"60vw", maxWidth:"100%"}}>
       <div style={{fontSize:17,fontWeight:900,color:"#174f35",marginBottom:4}}>⚙️ 設定</div>
-      <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.is_staff === false ? "API設定・アカウントを管理できます。" : currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "営業設定・API設定・アカウントを管理できます。"}</div>
+      <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "API設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
       <div className="settings-tabs" style={{display:"flex", flexWrap:"wrap", gap:0, marginBottom:0}}>
-        {currentUser?.role==="admin" && currentUser?.is_staff !== false && tabBtn("leadmgmt","📋 リード管理")}
-        {currentUser?.role==="admin" && currentUser?.is_staff !== false && tabBtn("portal","🏢 ポータルサイト")}
-        {currentUser?.is_staff !== false && (currentUser?.role==="admin" ? tabBtn("sales","👤 営業担当") : tabBtn("sales","👤 営業設定"))}
+        {currentUser?.role==="admin" && tabBtn("leadmgmt","📋 リード管理")}
+        {currentUser?.role==="admin" && tabBtn("portal","🏢 ポータルサイト")}
+        {currentUser?.role==="admin" && tabBtn("sales","👤 営業担当")}
         {tabBtn("apikey","🔑 API設定")}
-        {currentUser?.role==="admin" && currentUser?.is_staff !== false && tabBtn("accounts","👥 アカウント管理（管理者）")}
+        {currentUser?.role==="admin" && tabBtn("accounts","👥 アカウント管理（管理者）")}
         {tabBtn("myaccount","👤 アカウント管理")}
       </div>
       <div style={{background:"#fff",borderRadius:"0 8px 8px 8px",border:"1px solid #d8ede1",padding:"20px"}}>
@@ -2625,7 +2623,7 @@ function App() {
       <main style={{...S.main, paddingBottom: isMobile ? 65 : 0}}>
         {page === "dashboard" && <Dashboard leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); navigate("leads"); }} masterVer={masterVer} isMobile={isMobile} />}
         {page === "trend"     && <Trend leads={leads} />}
-        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} initialOpenId={aiOpenLeadId} onOpenIdConsumed={()=>setAiOpenLeadId(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={currentUser?.is_staff === false}
+        {page === "leads"     && <LeadList leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} initialOpenId={aiOpenLeadId} onOpenIdConsumed={()=>setAiOpenLeadId(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={false}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={(leadId) => { setAiOpenLeadId(leadId||null); navigate("leads"); }} goCalendar={() => navigate("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} isMobile={isMobile} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} onGoEmail={(leadId)=>{ setCalendarLeadId(leadId); navigate("email"); }} currentUser={currentUser} leads={leads} />}
@@ -4187,15 +4185,15 @@ function getEffectiveAiConfig(currentUser) {
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [userId, setUserId] = useState(""); const [password, setPassword] = useState(""); const [err, setErr] = useState(""); const [showPw, setShowPw] = useState(false);
-  const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"", is_staff:false, inviteCode:"" });
+  const [sForm, setSForm] = useState({ id:"", name:"", password:"", password2:"",color:PALETTE[0], email:"", inviteCode:"" });
   const [sErr, setSErr] = useState(""); const [sOk, setSOk] = useState(false); const [showSPw, setShowSPw] = useState(false);
   const [rForm, setRForm] = useState({ id:"", code:"", password:"", confirm:"" });
   const [rErr, setRErr] = useState(""); const [rOk, setROk] = useState(false); const [rLoading, setRLoading] = useState(false);
   const handleSignup = async () => {
-    const { id, name, password, password2, color, email, is_staff, inviteCode } = sForm;
+    const { id, name, password, password2, color, email, inviteCode } = sForm;
     if (!id.trim() || !name.trim() || !email.trim() || !password.trim() || !password2.trim()) { setSErr("全項目入力してください"); return; }
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
-    const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), is_staff, inviteCode: inviteCode.trim() };
+    const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), inviteCode: inviteCode.trim() };
     try {
       const r = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newAccount) });
       if (!r.ok) { const e = await r.json(); setSErr(e.error||"作成に失敗しました"); return; }
@@ -4289,7 +4287,7 @@ function LoginScreen({ onLogin }) {
           <div style={{ textAlign:"center" }}>
             <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
             <div style={{ fontWeight:700, color:"#059669", marginBottom:16 }}>アカウントを作成しました</div>
-            <button onClick={()=>{ setMode("login"); setSOk(false); setSForm({id:"",name:"",password:"",password2:"",color:PALETTE[0],email:"",is_staff:false}); }} style={{ ...S.btnP, width:"100%" }}>ログインへ</button>
+            <button onClick={()=>{ setMode("login"); setSOk(false); setSForm({id:"",name:"",password:"",password2:"",color:PALETTE[0],email:""}); }} style={{ ...S.btnP, width:"100%" }}>ログインへ</button>
           </div>
         ) : (
           <>
@@ -4323,13 +4321,6 @@ function LoginScreen({ onLogin }) {
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 {PALETTE.map(c=><button key={c} onClick={()=>setSForm(p=>({...p,color:c}))} style={{ width:24, height:24, borderRadius:"50%", background:c, border: sForm.color===c?"2px solid #174f35":"2px solid #fff", cursor:"pointer" }} />)}
               </div>
-            </div>
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer" }}>
-                <input type="checkbox" checked={sForm.is_staff} onChange={e=>setSForm(p=>({...p,is_staff:e.target.checked}))} style={{ width:16, height:16, accentColor:"#059669", cursor:"pointer" }} />
-                <span style={{ ...S.lbl }}>IS担当者</span>
-              </label>
-              <div style={{ fontSize:11, color:"#6a9a7a", marginTop:3, marginLeft:24 }}>チェックするとリード管理でIS担当者として選択できます。チェックなしは閲覧のみ。</div>
             </div>
             {sErr && <div style={{ color:"#ef4444", fontSize:12, marginBottom:10 }}>{sErr}</div>}
             <button onClick={handleSignup} style={{ ...S.btnP, width:"100%", marginBottom:10 }}>アカウントを作成</button>
@@ -4369,7 +4360,7 @@ function LoginScreen({ onLogin }) {
 
 function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [accounts, setAccounts] = React.useState(loadAccounts);
-  const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" });
+  const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"" });
   const [editingId, setEditingId] = React.useState(null);
   const [err, setErr] = React.useState("");
   const [lockedAccounts, setLockedAccounts] = React.useState({});
@@ -4422,16 +4413,16 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
       ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)
       : [...accounts, { ...form, id: form.id.trim() }];
     save(updated, editingId);
-    setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" });
+    setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"" });
     setEditingId(null); setErr("");
   };
   const startEdit = async (a) => {
-    setForm({ ...a, password: "", is_staff: a.is_staff !== false });
+    setForm({ ...a, password: "" });
     setEditingId(a.id); setErr("");
     const r = await fetch('/api/account-password/' + a.id, { headers: { 'x-session-token': getToken() } });
     if (r.ok) { const data = await r.json(); setForm(p => ({ ...p, password: data.password })); }
   };
-  const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", is_staff:true, signature:"" }); setEditingId(null); setErr(""); };
+  const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"" }); setEditingId(null); setErr(""); };
   const deleteAccount = (id) => {
     if (id === currentUser.id) { alert("自分のアカウントは削除できません"); return; }
     if (!window.confirm("削除しますか？")) return;
@@ -4468,10 +4459,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                     {a.name}
                     <span style={{fontSize:10,color:"#6a9a7a"}}>@{a.id}</span>
                     {a.role==="admin" && <span style={{fontSize:10,background:"#f3f4f6",color:"#6b7280",borderRadius:4,padding:"1px 6px",fontWeight:700}}>管理者</span>}
-                    {a.is_staff !== false
-                      ? <span style={{fontSize:10,background:"#dbeafe",color:"#2563eb",borderRadius:4,padding:"1px 6px",fontWeight:700}}>IS担当</span>
-                      : <span style={{fontSize:10,background:"#f3f4f6",color:"#9ca3af",borderRadius:4,padding:"1px 6px"}}>閲覧のみ</span>
-                    }
                   </div>
                   {a.email && <div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>✉️ {a.email}</div>}
                 </div>
@@ -4508,17 +4495,6 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
             <textarea value={form.signature||""} onChange={e=>setForm(p=>({...p,signature:e.target.value}))}
               placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
               style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",background:"#fff",fontSize:12,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",minHeight:72,lineHeight:1.5}} />
-          </div>
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:8,cursor:"pointer",userSelect:"none"}}>
-              <input type="checkbox" checked={form.is_staff !== false}
-                onChange={e=>setForm(p=>({...p,is_staff:e.target.checked}))}
-                style={{width:15,height:15,accentColor:"#2563eb",cursor:"pointer"}} />
-              <span style={{fontWeight:600,color:"#174f35"}}>IS担当者として登録する</span>
-            </label>
-            <div style={{fontSize:11,color:"#9ca3af",marginTop:3,paddingLeft:23}}>
-              ON → リード管理のIS担当選択肢に追加　/　OFF → ツール閲覧のみ
-            </div>
           </div>
           <div style={{marginBottom:12}}>
             <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:5}}>アイコン色</label>

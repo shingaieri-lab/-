@@ -377,6 +377,12 @@ const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理
 - 興味度「低」・繁忙期 → 10〜22営業日後
 - 過去履歴がある場合は架電間隔のパターンも参考にすること
 
+【next_action_timeの制約】
+- 必ず営業時間内（09:00〜18:00）で設定すること
+- 12:00〜13:00（昼休み）は除外すること
+- 09:00〜11:30 または 13:00〜17:30 の範囲で30分単位で設定すること
+- 土日祝は next_action_date_offset で除外済みのため、時間のみこの制約に従うこと
+
 【フォローメールの生成ルール】
 - email_bodyの書き出しは「{会社名}\n{担当者名} 様」（【リード】の会社名・担当者名を使用、なければ「ご担当者」）
 - 本文中には「ダンドリワークの{送信者名}でございます」（【送信者情報】の名前を使用）
@@ -807,6 +813,17 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     return d.toISOString().split("T")[0];
   };
 
+  // AIが提案する時間を営業時間（9〜18時、12〜13時除外）に補正する
+  const clampToBusinessTime=(timeStr)=>{
+    if(!timeStr) return "10:00";
+    const [h,m]=timeStr.split(":").map(Number);
+    const mins=(isNaN(h)?10:h)*60+(isNaN(m)?0:m);
+    if(mins<9*60) return "09:00";
+    if(mins>=18*60) return "17:00";
+    if(mins>=12*60&&mins<13*60) return "13:00";
+    return timeStr;
+  };
+
   const analyze=async()=>{
     if(!memo.trim()) return;
     if(!apiKey){setError("APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。");return;}
@@ -842,6 +859,8 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
         if(!jsonMatch) throw new Error("レスポンスからJSONを抽出できませんでした。AIの返答: "+cleaned.slice(0,200));
         parsed=JSON.parse(jsonMatch[0]);
       }
+      // next_action_timeを営業時間（9〜18時、12〜13時除外）に補正
+      if(parsed.next_action_time) parsed.next_action_time=clampToBusinessTime(parsed.next_action_time);
       // AI生成後：リード選択・ログイン情報から会社名・担当者名・署名・送信者名を自動反映
       const leadContact=lead?.contact||lead?.company||"";
       const leadSurname=leadContact.split(/[ \u3000]/)[0]||leadContact;

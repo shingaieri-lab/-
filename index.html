@@ -187,7 +187,8 @@ function getSourceColor(sourceName, fallbackIdx) {
 function getISMembers() {
   const accounts = window.__appData?.accounts || [];
   if (accounts.length > 0) {
-    return accounts.length > 0 ? accounts.map(a => a.name) : DEFAULT_IS_MEMBERS;
+    const isStaffAccounts = accounts.filter(a => a.isStaff).map(a => a.name);
+    return isStaffAccounts.length > 0 ? isStaffAccounts : accounts.map(a => a.name);
   }
   return DEFAULT_IS_MEMBERS;
 }
@@ -4360,7 +4361,7 @@ function LoginScreen({ onLogin }) {
 
 function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [accounts, setAccounts] = React.useState(loadAccounts);
-  const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"" });
+  const [form, setForm] = React.useState({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"", isStaff:false });
   const [editingId, setEditingId] = React.useState(null);
   const [err, setErr] = React.useState("");
   const [lockedAccounts, setLockedAccounts] = React.useState({});
@@ -4413,7 +4414,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
       ? accounts.map(a => a.id === editingId ? { ...form, id: form.id.trim() } : a)
       : [...accounts, { ...form, id: form.id.trim() }];
     save(updated, editingId);
-    setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"" });
+    setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"", isStaff:false });
     setEditingId(null); setErr("");
   };
   const startEdit = async (a) => {
@@ -4422,7 +4423,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     const r = await fetch('/api/account-password/' + a.id, { headers: { 'x-session-token': getToken() } });
     if (r.ok) { const data = await r.json(); setForm(p => ({ ...p, password: data.password })); }
   };
-  const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"" }); setEditingId(null); setErr(""); };
+  const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"", isStaff:false }); setEditingId(null); setErr(""); };
   const deleteAccount = (id) => {
     if (id === currentUser.id) { alert("自分のアカウントは削除できません"); return; }
     if (!window.confirm("削除しますか？")) return;
@@ -4459,6 +4460,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                     {a.name}
                     <span style={{fontSize:10,color:"#6a9a7a"}}>@{a.id}</span>
                     {a.role==="admin" && <span style={{fontSize:10,background:"#f3f4f6",color:"#6b7280",borderRadius:4,padding:"1px 6px",fontWeight:700}}>管理者</span>}
+                    {a.isStaff && <span style={{fontSize:10,background:"#dcfce7",color:"#15803d",borderRadius:4,padding:"1px 6px",fontWeight:700}}>IS担当</span>}
                   </div>
                   {a.email && <div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>✉️ {a.email}</div>}
                 </div>
@@ -4488,6 +4490,13 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
                 <option value="member">メンバー</option>
                 <option value="admin">管理者</option>
               </select>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8,paddingTop:18}}>
+              <input type="checkbox" id="isStaffCheck" checked={!!form.isStaff} onChange={e=>setForm(p=>({...p,isStaff:e.target.checked}))}
+                style={{width:16,height:16,accentColor:"#10b981",cursor:"pointer"}} />
+              <label htmlFor="isStaffCheck" style={{fontSize:12,color:"#174f35",cursor:"pointer",userSelect:"none"}}>
+                IS担当の選択肢に表示する
+              </label>
             </div>
           </div>
           <div style={{marginBottom:10}}>

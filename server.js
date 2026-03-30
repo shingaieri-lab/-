@@ -547,6 +547,7 @@ app.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) => {
       hp_url: zl.Website || '',
       status: statusMap[zl.Lead_Status] || zl.Lead_Status || '',
       zoho_lead_id: zl.id,
+      zoho_lead_type: zl.Lead_Type || '',
       zoho_synced_at: new Date().toISOString(),
     };
     res.json({ lead });
@@ -663,9 +664,13 @@ app.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) => {
     const probability = probMap[lead.is_accuracy] || 20;
     const closingDate = lead.meeting_date || new Date().toISOString().slice(0, 10);
 
+    const dealName = lead.zoho_lead_type
+      ? `${lead.company} ${lead.zoho_lead_type}`
+      : `${lead.company} 商談`;
+
     const dealRes = await zohoApi('POST', '/Deals', {
       data: [{
-        Deal_Name: `${lead.company} 商談`,
+        Deal_Name: dealName,
         Account_Name: { id: accountId },
         Contact_Name: { id: contactId },
         Stage: '提案中',
@@ -711,6 +716,7 @@ app.post('/api/zoho/webhook', async (req, res) => {
           hp_url: zl.Website || '',
           status: statusMap[zl.Lead_Status] || zl.Lead_Status || '',
           zoho_lead_id: zohoId,
+          zoho_lead_type: zl.Lead_Type || '',
           zoho_synced_at: new Date().toISOString(),
         };
 

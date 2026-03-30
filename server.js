@@ -630,7 +630,20 @@ app.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) => {
 // 商談確定時: Zohoに取引先・取引先責任者・商談を一括作成
 app.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) => {
   const { lead } = req.body;
-  if (!lead?.company) return res.status(400).json({ error: 'リード情報が不足しています' });
+  if (!lead?.company || !lead?.id) return res.status(400).json({ error: 'リード情報が不足しています' });
+
+  // ① KVストアのリードを取得して二重作成チェック
+  const leads = (await readData('leads')) || [];
+  const storedLead = leads.find(l => l.id === lead.id);
+  if (storedLead?.zoho_deal_id) {
+    // すでにZoho商談が存在する → ブロックして既存IDを返す
+    return res.status(409).json({
+      error: 'この商談はすでにZohoに作成済みです',
+      zoho_deal_id: storedLead.zoho_deal_id,
+      zoho_account_id: storedLead.zoho_account_id,
+      zoho_contact_id: storedLead.zoho_contact_id,
+    });
+  }
 
   try {
     // 1. 取引先（Account）作成
@@ -679,7 +692,30 @@ app.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) => {
     }
     const dealId = dealRes.data[0].details?.id;
 
-    res.json({ ok: true, accountId, contactId, dealId });
+    // ② Zoho作成成功後、KVストアに即時書き込む（フロントエンドの保存失敗に依存しない）
+    let kvSaveFailed = false;
+    if (storedLead) {
+      try {
+        storedLead.zoho_deal_id = dealId;
+        storedLead.zoho_account_id = accountId;
+        storedLead.zoho_contact_id = contactId;
+        await writeData('leads', leads);
+      } catch {
+        // KV書き込み失敗：Zoho作成は成功しているのでエラーにしない。warnフラグで通知
+        kvSaveFailed = true;
+      }
+    } else {
+      // KVにリードが見つからない場合（通常は起きない）
+      kvSaveFailed = true;
+    }
+
+    res.json({
+      ok: true,
+      accountId,
+      contactId,
+      dealId,
+      ...(kvSaveFailed && { warn: 'kv_save_failed' }),
+    });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

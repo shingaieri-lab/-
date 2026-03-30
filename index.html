@@ -4316,7 +4316,15 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
       if (res.ok && data.ok) {
         // 作成されたIDをリードに保存
         onUpdate({ zoho_account_id: data.accountId, zoho_contact_id: data.contactId, zoho_deal_id: data.dealId });
-        setZohoMsg('✅ Zohoに取引先・取引先責任者・商談を作成しました');
+        if (data.warn === 'kv_save_failed') {
+          setZohoMsg('✅ Zohoへの作成は完了しました。ページを再読み込みして「Zoho商談済」になっているか確認してください。');
+        } else {
+          setZohoMsg('✅ Zohoに取引先・取引先責任者・商談を作成しました');
+        }
+      } else if (res.status === 409) {
+        // すでに作成済み → IDを反映して画面を「作成済み」状態に更新
+        onUpdate({ zoho_account_id: data.zoho_account_id, zoho_contact_id: data.zoho_contact_id, zoho_deal_id: data.zoho_deal_id });
+        setZohoMsg('ℹ️ この商談はすでにZohoに作成済みです');
       } else {
         setZohoMsg('❌ 作成失敗: ' + (data.error || '不明なエラー'));
       }

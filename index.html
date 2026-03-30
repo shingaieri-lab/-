@@ -3987,7 +3987,7 @@ function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, openId, set
 function LeadForm({ initial, onSave, onClose }) {
   const [d, setD] = useState(() => {
     const base = {
-      company:"", contact:"", email:"", source:getSources()[0]||"",
+      company:"", contact:"", email:"", address:"", source:getSources()[0]||"",
       portal_site:"", portal_type:"", charge_applied:false,
       meeting_date:"", meeting_time:"", sales_member:"",
       is_member:"", mql:"非MQL",
@@ -4023,6 +4023,9 @@ function LeadForm({ initial, onSave, onClose }) {
           </Row2>
           <div style={{marginBottom:10}}>
             <Field label="メールアドレス" type="email" value={d.email||""} onChange={v=>set("email",v)} placeholder="例：yamada@example.com" />
+          </div>
+          <div style={{marginBottom:10}}>
+            <Field label="住所" value={d.address||""} onChange={v=>set("address",v)} placeholder="例：東京都渋谷区〇〇1-2-3" />
           </div>
           <Row2>
             <Field label="反響日 *" type="date" value={d.date} onChange={v=>set("date",v)} />
@@ -4413,6 +4416,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         <div style={{display:"flex", gap:6, flexWrap:"wrap", marginTop:8, alignItems:"center"}}>
           <span style={{fontSize:11, fontWeight:700, color:sc, background:sc+"15", border:`1px solid ${sc}44`, borderRadius:8, padding:"2px 8px"}}>{lead.status||"新規"}</span>
           {lead.date && <span style={{fontSize:11, color:"#6a9a7a"}}>反響日：{lead.date}</span>}
+          {lead.address && <span style={{fontSize:11, color:"#6a9a7a"}}>📍 {lead.address}</span>}
           {actions[0] && <span style={{fontSize:11, color:"#6a9a7a"}}>最終：{actions[0].date}{actions[0].time ? " "+actions[0].time : ""}</span>}
           {lead.source && (()=>{ const sc=getSourceColor(lead.source,0); return <span style={{fontSize:11, color:sc, background:sc+"1a", border:`1px solid ${sc}33`, borderRadius:6, padding:"1px 7px", fontWeight:600}}>📥 {lead.source}{lead.portal_site?" / "+lead.portal_site:""}</span>; })()}
           {lead.meeting_date && <span style={{fontSize:11, color:"#10b981", fontWeight:600}}>🤝 {lead.meeting_date}</span>}

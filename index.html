@@ -42,7 +42,7 @@ const TrashIcon = ({size=13,color="currentColor"}) => (
 
 
 // --- サーバーAPI層 ---
-window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null };
+window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null, zohoConfig: null, zohoAuthenticated: false };
 function getToken() { return localStorage.getItem('session_token') || ''; }
 async function apiPost(path, data) {
   try {
@@ -1227,6 +1227,250 @@ function SourceIconSVG({ iconKey, size=28, color }) {
   </svg>;
 }
 
+// ── Zoho CRM 設定コンポーネント ──────────────────────────────────────
+function ZohoCrmSettings() {
+  const stored = window.__appData?.zohoConfig || {};
+  const [cfg, setCfg] = React.useState({
+    clientId: stored.clientId || '',
+    clientSecret: '',   // セキュリティのためサーバーから返さないので空
+    dataCenter: stored.dataCenter || 'jp',
+    redirectUri: stored.redirectUri || (window.location.origin + '/api/zoho/callback'),
+    isFieldApiName: stored.isFieldApiName || 'Main_IS_Member',
+    statusMap: stored.statusMap || {},        // Zoho → 本ツール
+    reverseStatusMap: stored.reverseStatusMap || {}, // 本ツール → Zoho
+    isMemberMap: stored.isMemberMap || {},
+  });
+  const [authenticated, setAuthenticated] = React.useState(window.__appData?.zohoAuthenticated || false);
+  const [msg, setMsg] = React.useState('');
+  const [err, setErr] = React.useState('');
+  const [newStatusZoho, setNewStatusZoho] = React.useState('');
+  const [newStatusLocal, setNewStatusLocal] = React.useState('');
+  const [newReverseLocal, setNewReverseLocal] = React.useState('');
+  const [newReverseZoho, setNewReverseZoho] = React.useState('');
+  const [newMemberZoho, setNewMemberZoho] = React.useState('');
+  const [newMemberLocal, setNewMemberLocal] = React.useState('');
+
+  const inp = { width:'100%', padding:'7px 10px', borderRadius:7, border:'1px solid #c0dece', fontSize:12, outline:'none', boxSizing:'border-box', fontFamily:'inherit', background:'#fff', color:'#174f35' };
+  const lbl = { fontSize:11, fontWeight:700, color:'#6a9a7a', display:'block', marginBottom:4, marginTop:12 };
+  const btnP = { padding:'7px 18px', borderRadius:7, border:'none', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' };
+  const btnS = { padding:'7px 14px', borderRadius:7, border:'1px solid #c0dece', background:'#fff', color:'#6a9a7a', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' };
+
+  const showMsg = (m) => { setMsg(m); setErr(''); setTimeout(() => setMsg(''), 3000); };
+  const showErr = (m) => { setErr(m); setMsg(''); };
+
+  // 設定を保存（Client Secretが入力されている場合のみ更新）
+  const save = async () => {
+    if (!cfg.clientId.trim()) { showErr('Client IDを入力してください'); return; }
+    if (!cfg.clientSecret.trim()) { showErr('Client Secretを入力してください（初回のみ必要）'); return; }
+    const res = await fetch('/api/zoho-config', {
+      method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()},
+      body: JSON.stringify(cfg),
+    });
+    if (res.ok) {
+      window.__appData.zohoConfig = { ...cfg, clientSecret: undefined };
+      showMsg('設定を保存しました ✓');
+    } else {
+      const d = await res.json().catch(() => ({}));
+      showErr('保存失敗: ' + (d.error || res.status));
+    }
+  };
+
+  // Zoho OAuth認証を別ウィンドウで開始
+  const startAuth = () => {
+    const w = window.open('/api/zoho/auth', 'zoho_auth', 'width=600,height=700');
+    const handler = (e) => {
+      if (e.data === 'zoho_auth_success') {
+        window.removeEventListener('message', handler);
+        setAuthenticated(true);
+        window.__appData.zohoAuthenticated = true;
+        showMsg('Zoho認証が完了しました ✓');
+        if (w && !w.closed) w.close();
+      }
+    };
+    window.addEventListener('message', handler);
+  };
+
+  // ステータスマッピング追加
+  const addStatusMap = () => {
+    if (!newStatusZoho.trim() || !newStatusLocal.trim()) return;
+    const next = { ...cfg.statusMap, [newStatusZoho.trim()]: newStatusLocal.trim() };
+    setCfg(c => ({ ...c, statusMap: next }));
+    setNewStatusZoho(''); setNewStatusLocal('');
+  };
+  const removeStatusMap = (k) => {
+    const next = { ...cfg.statusMap }; delete next[k];
+    setCfg(c => ({ ...c, statusMap: next }));
+  };
+
+  // 逆ステータスマッピング操作（本ツール → Zoho）
+  const addReverseMap = () => {
+    if (!newReverseLocal.trim() || !newReverseZoho.trim()) return;
+    setCfg(c => ({ ...c, reverseStatusMap: { ...c.reverseStatusMap, [newReverseLocal.trim()]: newReverseZoho.trim() } }));
+    setNewReverseLocal(''); setNewReverseZoho('');
+  };
+  const removeReverseMap = (k) => {
+    const next = { ...cfg.reverseStatusMap }; delete next[k];
+    setCfg(c => ({ ...c, reverseStatusMap: next }));
+  };
+
+  // IS担当マッピング操作
+  const addMemberMap = () => {
+    if (!newMemberZoho.trim() || !newMemberLocal.trim()) return;
+    const next = { ...cfg.isMemberMap, [newMemberZoho.trim()]: newMemberLocal.trim() };
+    setCfg(c => ({ ...c, isMemberMap: next }));
+    setNewMemberZoho(''); setNewMemberLocal('');
+  };
+  const removeMemberMap = (k) => {
+    const next = { ...cfg.isMemberMap }; delete next[k];
+    setCfg(c => ({ ...c, isMemberMap: next }));
+  };
+
+  return (
+    <div style={{maxWidth:600}}>
+      <div style={{fontSize:14,fontWeight:700,color:'#174f35',marginBottom:4}}>🔗 Zoho CRM 連携設定</div>
+      <div style={{fontSize:11,color:'#6a9a7a',marginBottom:16}}>Zoho CRMとのAPI連携に必要な情報を設定します。設定後「保存」→「Zoho認証」の順に実行してください。</div>
+
+      {msg && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #6ee7b7',borderRadius:8,padding:'8px 14px',marginBottom:12,fontSize:12,fontWeight:700}}>{msg}</div>}
+      {err && <div style={{background:'#fef2f2',color:'#dc2626',border:'1px solid #fca5a5',borderRadius:8,padding:'8px 14px',marginBottom:12,fontSize:12,fontWeight:700}}>{err}</div>}
+
+      {/* 認証状態 */}
+      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,padding:'10px 14px',background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8}}>
+        <span style={{fontSize:13,fontWeight:700,color: authenticated ? '#059669' : '#d97706'}}>
+          {authenticated ? '✅ Zoho認証済み' : '⚠️ 未認証'}
+        </span>
+        <button onClick={startAuth} style={{...btnP, padding:'5px 14px', fontSize:11}}>
+          {authenticated ? '再認証' : 'Zoho認証を開始'}
+        </button>
+      </div>
+
+      {/* 基本設定 */}
+      <div style={{background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8,padding:'14px',marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#174f35',marginBottom:8}}>基本設定</div>
+        <label style={lbl}>データセンター</label>
+        <select value={cfg.dataCenter} onChange={e=>setCfg(c=>({...c,dataCenter:e.target.value}))} style={{...inp,width:'auto'}}>
+          <option value="jp">日本（zoho.jp）</option>
+          <option value="com">グローバル（zoho.com）</option>
+        </select>
+        <label style={lbl}>Client ID</label>
+        <input value={cfg.clientId} onChange={e=>setCfg(c=>({...c,clientId:e.target.value}))} placeholder="Zoho API ConsoleのClient ID" style={inp} />
+        <label style={lbl}>Client Secret <span style={{color:'#dc2626'}}>*</span><span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>（変更する場合のみ入力）</span></label>
+        <input type="password" value={cfg.clientSecret} onChange={e=>setCfg(c=>({...c,clientSecret:e.target.value}))} placeholder="Zoho API ConsoleのClient Secret" style={inp} />
+        <label style={lbl}>Redirect URI</label>
+        <input value={cfg.redirectUri} onChange={e=>setCfg(c=>({...c,redirectUri:e.target.value}))} style={inp} />
+        <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Zoho API ConsoleのRedirect URIに上記と同じ値を登録してください</div>
+      </div>
+
+      {/* フィールドマッピング */}
+      <div style={{background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8,padding:'14px',marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#174f35',marginBottom:8}}>フィールドマッピング</div>
+        <label style={lbl}>「メインIS担当」フィールドのAPI名</label>
+        <input value={cfg.isFieldApiName} onChange={e=>setCfg(c=>({...c,isFieldApiName:e.target.value}))} placeholder="例: Main_IS_Member" style={inp} />
+        <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Zoho管理画面 → カスタマイズ → リード → フィールド で確認できます</div>
+      </div>
+
+      {/* IS担当マッピング */}
+      <div style={{background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8,padding:'14px',marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#174f35',marginBottom:4}}>IS担当マッピング</div>
+        <div style={{fontSize:11,color:'#6a9a7a',marginBottom:10}}>ZohoのメインIS担当フィールドの値と、本ツールのメンバー名を対応付けます<br/>（例：Zoho側が「yamada_t」→ 本ツールの「山田太郎」）</div>
+        {Object.entries(cfg.isMemberMap).length > 0 && (
+          <div style={{marginBottom:10}}>
+            {Object.entries(cfg.isMemberMap).map(([zohoVal, localMember]) => (
+              <div key={zohoVal} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6,fontSize:12}}>
+                <span style={{flex:1,padding:'4px 8px',background:'#fff',border:'1px solid #e2f0e8',borderRadius:5,color:'#6a9a7a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Zoho: {zohoVal}</span>
+                <span style={{color:'#9ca3af',flexShrink:0}}>→</span>
+                <span style={{flex:1,padding:'4px 8px',background:'#fff',border:'1px solid #e2f0e8',borderRadius:5,color:'#174f35',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>本ツール: {localMember}</span>
+                <button onClick={()=>removeMemberMap(zohoVal)} style={{...btnS,padding:'3px 8px',color:'#ef4444',borderColor:'#fca5a5',fontSize:11,flexShrink:0}}>削除</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+          <input value={newMemberZoho} onChange={e=>setNewMemberZoho(e.target.value)} placeholder="Zohoの値（例: yamada_t）" style={{...inp,flex:1,minWidth:130}} onKeyDown={e=>e.key==='Enter'&&addMemberMap()} />
+          <span style={{color:'#9ca3af',fontSize:14,flexShrink:0}}>→</span>
+          <select value={newMemberLocal} onChange={e=>setNewMemberLocal(e.target.value)} style={{...inp,flex:1,minWidth:130}}>
+            <option value="">本ツールのメンバー選択</option>
+            {getSalesMembers().map(m=><option key={m} value={m}>{m}</option>)}
+          </select>
+          <button onClick={addMemberMap} style={{...btnP,padding:'7px 12px',fontSize:11,flexShrink:0}}>追加</button>
+        </div>
+        <div style={{fontSize:10,color:'#9ca3af',marginTop:6}}>※ マッピングが未設定の場合、Zohoの値をそのまま使用します</div>
+      </div>
+
+      {/* ステータスマッピング（双方向） */}
+      <div style={{background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8,padding:'14px',marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#174f35',marginBottom:4}}>ステータスマッピング（双方向）</div>
+        <div style={{fontSize:11,color:'#6a9a7a',marginBottom:12}}>取込時と更新時でそれぞれ変換ルールを設定します。同じ名称の場合は設定不要です。</div>
+
+        {/* Zoho → 本ツール（取込時） */}
+        <div style={{marginBottom:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#6a9a7a',marginBottom:6}}>📥 Zoho → 本ツール（リード取込・Webhook受信時）</div>
+          {Object.entries(cfg.statusMap).length > 0 && (
+            <div style={{marginBottom:8}}>
+              {Object.entries(cfg.statusMap).map(([zohoSt, localSt]) => (
+                <div key={zohoSt} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5,fontSize:12}}>
+                  <span style={{flex:1,padding:'3px 8px',background:'#fff',border:'1px solid #e2f0e8',borderRadius:5,color:'#6a9a7a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Zoho: {zohoSt}</span>
+                  <span style={{color:'#9ca3af',flexShrink:0}}>→</span>
+                  <span style={{flex:1,padding:'3px 8px',background:'#fff',border:'1px solid #e2f0e8',borderRadius:5,color:'#174f35',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>本ツール: {localSt}</span>
+                  <button onClick={()=>removeStatusMap(zohoSt)} style={{...btnS,padding:'2px 8px',color:'#ef4444',borderColor:'#fca5a5',fontSize:11,flexShrink:0}}>削除</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+            <input value={newStatusZoho} onChange={e=>setNewStatusZoho(e.target.value)} placeholder="Zohoのステータス名" style={{...inp,flex:1,minWidth:110}} onKeyDown={e=>e.key==='Enter'&&addStatusMap()} />
+            <span style={{color:'#9ca3af',fontSize:13,flexShrink:0}}>→</span>
+            <select value={newStatusLocal} onChange={e=>setNewStatusLocal(e.target.value)} style={{...inp,flex:1,minWidth:110}}>
+              <option value="">本ツールのステータス選択</option>
+              {getStatuses().map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <button onClick={addStatusMap} style={{...btnP,padding:'6px 10px',fontSize:11,flexShrink:0}}>追加</button>
+          </div>
+        </div>
+
+        <div style={{borderTop:'1px solid #e2f0e8',paddingTop:12}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#6a9a7a',marginBottom:6}}>📤 本ツール → Zoho（ステータス変更時に自動反映）</div>
+          {Object.entries(cfg.reverseStatusMap).length > 0 && (
+            <div style={{marginBottom:8}}>
+              {Object.entries(cfg.reverseStatusMap).map(([localSt, zohoSt]) => (
+                <div key={localSt} style={{display:'flex',alignItems:'center',gap:6,marginBottom:5,fontSize:12}}>
+                  <span style={{flex:1,padding:'3px 8px',background:'#fff',border:'1px solid #e2f0e8',borderRadius:5,color:'#174f35',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>本ツール: {localSt}</span>
+                  <span style={{color:'#9ca3af',flexShrink:0}}>→</span>
+                  <span style={{flex:1,padding:'3px 8px',background:'#fff',border:'1px solid #e2f0e8',borderRadius:5,color:'#6a9a7a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>Zoho: {zohoSt}</span>
+                  <button onClick={()=>removeReverseMap(localSt)} style={{...btnS,padding:'2px 8px',color:'#ef4444',borderColor:'#fca5a5',fontSize:11,flexShrink:0}}>削除</button>
+                </div>
+              ))}
+            </div>
+          )}
+          <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+            <select value={newReverseLocal} onChange={e=>setNewReverseLocal(e.target.value)} style={{...inp,flex:1,minWidth:110}}>
+              <option value="">本ツールのステータス選択</option>
+              {getStatuses().map(s=><option key={s} value={s}>{s}</option>)}
+            </select>
+            <span style={{color:'#9ca3af',fontSize:13,flexShrink:0}}>→</span>
+            <input value={newReverseZoho} onChange={e=>setNewReverseZoho(e.target.value)} placeholder="Zohoのステータス名" style={{...inp,flex:1,minWidth:110}} onKeyDown={e=>e.key==='Enter'&&addReverseMap()} />
+            <button onClick={addReverseMap} style={{...btnP,padding:'6px 10px',fontSize:11,flexShrink:0}}>追加</button>
+          </div>
+          <div style={{fontSize:10,color:'#9ca3af',marginTop:6}}>※ マッピング未設定のステータスはそのままZohoに送信します</div>
+        </div>
+      </div>
+
+      <div style={{display:'flex',gap:8}}>
+        <button onClick={save} style={btnP}>設定を保存</button>
+      </div>
+
+      {/* Webhook情報 */}
+      <div style={{marginTop:16,padding:'12px 14px',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#92400e',marginBottom:6}}>📌 Zoho Webhook設定（オプション）</div>
+        <div style={{fontSize:11,color:'#92400e',lineHeight:1.7}}>
+          ZohoからリアルタイムでリードをPushする場合、<br/>
+          Zoho CRM → 設定 → ワークフロー → Webhook に以下のURLを登録してください：<br/>
+          <code style={{background:'#fef9c3',padding:'2px 6px',borderRadius:4,fontFamily:'monospace',fontSize:11}}>{window.location.origin}/api/zoho/webhook</code>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave, onOpenWizard }) {
   const [master, setMaster] = React.useState(() => getMaster());
   const [tab, setTab] = React.useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "apikey"));
@@ -1417,6 +1661,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
         {currentUser?.role==="admin" && tabBtn("portal","🏢 ポータルサイト")}
         {currentUser?.role==="admin" && tabBtn("sales","👤 営業担当")}
         {tabBtn("apikey","🔑 API設定")}
+        {currentUser?.role==="admin" && tabBtn("zoho","🔗 Zoho CRM連携")}
         {currentUser?.role==="admin" && tabBtn("accounts","👥 アカウント管理（管理者）")}
         {tabBtn("myaccount","👤 アカウント管理")}
       </div>
@@ -1869,6 +2114,9 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
               </div>
             </div>
           </div>
+        )}
+        {tab === "zoho" && currentUser?.role==="admin" && (
+          <ZohoCrmSettings />
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
           <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
@@ -2533,7 +2781,7 @@ function App() {
     if (token) apiPost('/api/logout', {});
     localStorage.removeItem('current_user_id');
     localStorage.removeItem('session_token');
-    window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null };
+    window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null, zohoConfig: null, zohoAuthenticated: false };
     setCurrentUser(null);
     setLeads([]);
     setAiConfig({});
@@ -3377,6 +3625,14 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
                     patch.sales_member = "";
                   }
                   onUpdate(lead.id, patch);
+                  // Zoho連携済みリードはステータス変更をZohoにも反映（fire-and-forget）
+                  if (lead.zoho_lead_id && window.__appData?.zohoAuthenticated) {
+                    fetch('/api/zoho/update-lead-status', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() },
+                      body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, localStatus: s }),
+                    }).catch(() => {});
+                  }
                 }}
                 onUpdate={p => onUpdate(lead.id, p)}
               />
@@ -4003,7 +4259,7 @@ function ActionForm({ onSave, onClose, initial }) {
   );
 }
 
-function ActEntry({ a, onEdit, onDelete, readOnly }) {
+function ActEntry({ a, onEdit, onDelete, onPushZoho, readOnly, zohoPushing }) {
   const t = at(a.type);
   return (
     <div style={{...S.actEntry, borderLeft:`3px solid ${t.color}`}}>
@@ -4017,6 +4273,12 @@ function ActEntry({ a, onEdit, onDelete, readOnly }) {
             const uc = USER_COLORS[a.recorded_by]||"#059669";
             return <span style={{fontSize:10,color:uc,fontWeight:600}}>記録者：{a.recorded_by}</span>;
           })()}
+          {!readOnly && onPushZoho && (
+            <button onClick={onPushZoho} disabled={zohoPushing} title="Zohoに同期"
+              style={{...S.btnEditAct, background: zohoPushing?"#f0f9ff":"#e0f2fe", border:"1px solid #7dd3fc", color:"#0284c7", fontSize:10, padding:"1px 6px", borderRadius:4, cursor: zohoPushing?"default":"pointer"}}>
+              {zohoPushing ? "同期中" : "🔗"}
+            </button>
+          )}
           {!readOnly && <button onClick={onEdit} style={S.btnEditAct} title="編集"><PencilIcon color="#059669"/></button>}
           {!readOnly && <button onClick={onDelete} style={{...S.btnEditAct,background:"#fef2f2",border:"1px solid #fca5a5"}} title="削除"><TrashIcon color="#ef4444"/></button>}
         </div>
@@ -4033,7 +4295,62 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
   const [editingAction, setEditingAction] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [dealCopied, setDealCopied] = useState(false);
+  const [zohoCreating, setZohoCreating] = useState(false);
+  const [zohoMsg, setZohoMsg] = useState('');
+  const [zohoPushingId, setZohoPushingId] = useState(null);
   const actions = lead.actions || [];
+
+  const zohoAuthenticated = window.__appData?.zohoAuthenticated || false;
+
+  // 商談確定時: Zohoに取引先・取引先責任者・商談を作成
+  const createZohoDeal = async () => {
+    if (!zohoAuthenticated) { alert('Zoho認証が必要です。設定 → Zoho CRM連携 から認証してください。'); return; }
+    if (!window.confirm(`「${lead.company}」の取引先・取引先責任者・商談をZohoに作成しますか？`)) return;
+    setZohoCreating(true); setZohoMsg('');
+    try {
+      const res = await fetch('/api/zoho/create-deal', {
+        method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()},
+        body: JSON.stringify({ lead }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        // 作成されたIDをリードに保存
+        onUpdate({ zoho_account_id: data.accountId, zoho_contact_id: data.contactId, zoho_deal_id: data.dealId });
+        setZohoMsg('✅ Zohoに取引先・取引先責任者・商談を作成しました');
+      } else {
+        setZohoMsg('❌ 作成失敗: ' + (data.error || '不明なエラー'));
+      }
+    } catch (e) {
+      setZohoMsg('❌ 通信エラー: ' + e.message);
+    } finally {
+      setZohoCreating(false);
+      setTimeout(() => setZohoMsg(''), 5000);
+    }
+  };
+
+  // アクション履歴1件をZohoにNoteとして同期
+  const pushActionToZoho = async (action) => {
+    if (!zohoAuthenticated) { alert('Zoho認証が必要です。設定 → Zoho CRM連携 から認証してください。'); return; }
+    if (!lead.zoho_lead_id) { alert('このリードはZohoと連携されていません。\nZohoリードIDが設定されていないため同期できません。'); return; }
+    setZohoPushingId(action.id);
+    try {
+      const res = await fetch('/api/zoho/push-action', {
+        method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()},
+        body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, action }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        setZohoMsg('✅ アクション履歴をZohoに同期しました');
+      } else {
+        setZohoMsg('❌ 同期失敗: ' + (data.error || '不明なエラー'));
+      }
+    } catch (e) {
+      setZohoMsg('❌ 通信エラー: ' + e.message);
+    } finally {
+      setZohoPushingId(null);
+      setTimeout(() => setZohoMsg(''), 4000);
+    }
+  };
   const copyDealInfo = () => {
     const meetingDateTime = [lead.meeting_date, lead.meeting_time].filter(Boolean).join(' ');
     const text = `商談担当：${lead.sales_member ? lead.sales_member+'さん' : ''}\n商談日時：${meetingDateTime}\n会社名：${lead.company||''}\nHP：${lead.hp_url||''}\nzoho：${lead.zoho_url||''}\nIS確度：${lead.is_accuracy||''}`;
@@ -4061,7 +4378,17 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
               </div>
             )}
           </div>
-          <div style={{display:"flex", alignItems:"center", gap:4, flexShrink:0}}>
+          <div style={{display:"flex", alignItems:"center", gap:4, flexShrink:0, flexWrap:"wrap"}}>
+            {/* 商談確定時のみZoho商談作成ボタンを表示 */}
+            {!readOnly && lead.status === "商談確定" && zohoAuthenticated && !lead.zoho_deal_id && (
+              <button onClick={createZohoDeal} disabled={zohoCreating}
+                style={{background: zohoCreating?"#9ca3af":"linear-gradient(135deg,#0ea5e9,#0284c7)", border:"none", borderRadius:6, cursor: zohoCreating?"default":"pointer", color:"#fff", fontSize:11, padding:"3px 9px", fontWeight:700, lineHeight:1.4}}>
+                {zohoCreating ? "作成中..." : "🔗 Zoho商談作成"}
+              </button>
+            )}
+            {!readOnly && lead.status === "商談確定" && lead.zoho_deal_id && (
+              <span style={{fontSize:11,color:"#0ea5e9",fontWeight:700,padding:"3px 8px",background:"#e0f2fe",border:"1px solid #7dd3fc",borderRadius:6}}>✅ Zoho商談済</span>
+            )}
             <button onClick={copyDealInfo} style={{background: dealCopied?"#10b981":"none", border:`1px solid ${dealCopied?"#10b981":"#10b98166"}`, borderRadius:6, cursor:"pointer", color: dealCopied?"#fff":"#059669", fontSize:12, padding:"2px 8px", lineHeight:1.4, fontWeight:600, transition:"all 0.2s"}}>{dealCopied ? "✅ コピー済み" : "📋 商談共有用"}</button>
             {!readOnly && <button onClick={onEdit} style={{background:"#f0fdf4", border:"1px solid #86efac", borderRadius:6, cursor:"pointer", color:"#059669", fontSize:12, padding:"3px 7px", display:"flex", alignItems:"center"}} title="編集"><PencilIcon color="#059669"/></button>}
             {!readOnly && (confirmDelete
@@ -4105,6 +4432,13 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
         )}
       </div>
 
+      {/* Zoho操作メッセージ */}
+      {zohoMsg && (
+        <div style={{padding:"6px 16px", background: zohoMsg.startsWith('✅') ? "#d1fae5" : "#fef2f2", borderBottom:"1px solid #e2f0e8", fontSize:12, fontWeight:700, color: zohoMsg.startsWith('✅') ? "#059669" : "#dc2626"}}>
+          {zohoMsg}
+        </div>
+      )}
+
       {/* メモ */}
       {lead.memo && (
         <div style={{padding:"8px 16px", borderBottom:"1px solid #bae6fd", background:"#e0f2fe", display:"flex", alignItems:"flex-start", gap:6}}>
@@ -4142,7 +4476,9 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
                   ? <ActionForm key={a.id} initial={a}
                       onSave={updated => { onEditAction(a.id, updated); setEditingAction(null); }}
                       onClose={() => setEditingAction(null)} />
-                  : <ActEntry key={a.id||i} a={a} onEdit={() => setEditingAction(a)} onDelete={() => onDeleteAction(a.id)} readOnly={readOnly} />
+                  : <ActEntry key={a.id||i} a={a} onEdit={() => setEditingAction(a)} onDelete={() => onDeleteAction(a.id)} readOnly={readOnly}
+                      onPushZoho={lead.zoho_lead_id && zohoAuthenticated ? () => pushActionToZoho(a) : null}
+                      zohoPushing={zohoPushingId === a.id} />
               ))}
             </div>
         }

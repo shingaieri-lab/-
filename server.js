@@ -664,13 +664,9 @@ app.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) => {
     const probability = probMap[lead.is_accuracy] || 20;
     const closingDate = lead.meeting_date || new Date().toISOString().slice(0, 10);
 
-    const dealName = lead.zoho_lead_type
-      ? `${lead.company} ${lead.zoho_lead_type}`
-      : `${lead.company} 商談`;
-
     const dealRes = await zohoApi('POST', '/Deals', {
       data: [{
-        Deal_Name: dealName,
+        Deal_Name: lead.zoho_lead_type,
         Account_Name: { id: accountId },
         Contact_Name: { id: contactId },
         Stage: '提案中',

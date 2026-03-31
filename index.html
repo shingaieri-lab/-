@@ -2306,9 +2306,9 @@ function Trend({ leads }) {
                   <td style={{padding:"8px 12px",textAlign:"center",color:src.color,fontWeight:700}}>{cnt}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#15803d",fontWeight:700}}>{validCnt}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b",fontWeight:700}}>{deals}</td>
-                  <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{validCnt?Math.round(deals/validCnt*100):0}%</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{validCnt?(deals/validCnt*100).toFixed(1):0}%</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6",fontWeight:700}}>{mql}</td>
-                  <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?Math.round(mql/cnt*100):0}%</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?(mql/cnt*100).toFixed(1):0}%</td>
                 </tr>;
               });
               const totalRow=<tr key={`${mi}-total`} style={{borderBottom:"2px solid #e2f0e8",background:isLatest?"#d1fae5":"#f0f5f2"}}>
@@ -2316,9 +2316,9 @@ function Trend({ leads }) {
                 <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35"}}>{totalCnt}</td>
                 <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#15803d"}}>{totalValid}</td>
                 <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#f59e0b"}}>{totalDeals}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#d97706"}}>{totalValid?Math.round(totalDeals/totalValid*100):0}%</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#d97706"}}>{totalValid?(totalDeals/totalValid*100).toFixed(1):0}%</td>
                 <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#8b5cf6"}}>{totalMql}</td>
-                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#7c3aed"}}>{totalCnt?Math.round(totalMql/totalCnt*100):0}%</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#7c3aed"}}>{totalCnt?(totalMql/totalCnt*100).toFixed(1):0}%</td>
               </tr>;
               return [...srcRows, totalRow];
             })}

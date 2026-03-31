@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IS進捗管理 - ダンドリワーク TEST</title>
+  <title>IS進捗管理</title>
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -327,7 +327,7 @@ const postGmailDraft = async (token, raw) => {
 const at = (v) => ACTION_TYPES.find(a => a.v === v) || ACTION_TYPES[0];
 
 
-const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理アプリ）のインサイドセールス専任アシスタントです。
+const AI_SYSTEM_PROMPT = `あなたはIS進捗管理のインサイドセールス専任アシスタントです。
 
 ユーザーが電話メモ・アクション記録を入力すると、以下のJSON形式のみで出力してください。
 
@@ -384,7 +384,7 @@ const AI_SYSTEM_PROMPT = `あなたはダンドリワーク（建築施工管理
 
 【フォローメールの生成ルール】
 - email_bodyの書き出しは「{会社名}\n{担当者名} 様」（【リード】の会社名・担当者名を使用、なければ「ご担当者」）
-- 本文中には「ダンドリワークの{送信者名}でございます」（【送信者情報】の名前を使用）
+- 本文中には「IS進捗管理の{送信者名}でございます」（【送信者情報】の名前を使用）
 - 【送信者情報】に署名が含まれる場合、メール本文末尾に必ずそのまま追加すること
 
 必ずJSONのみ返してください。`;
@@ -438,9 +438,9 @@ function LeadCombobox({ leads, value, onChange, placeholder, inputStyle, darkMod
 
 function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile, initialLeadId = "" }) {
   const DEFAULT_EMAIL_TEMPLATES = [
-    { id:"t1", name:"初回フォロー", useSlots:false, subject:"【ダンドリワーク】資料のご確認のお願い", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
-    { id:"t2", name:"商談日程調整", useSlots:true, subject:"【ダンドリワーク{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
-    { id:"t3", name:"ナーチャリング", useSlots:false, subject:"【ダンドリワーク】建設業の施工管理DX事例のご紹介", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n以前お話しさせていただいた件で、成果が出た事例をご紹介します。" },
+    { id:"t1", name:"初回フォロー", useSlots:false, subject:"【IS進捗管理】資料のご確認のお願い", body:"{{担当者名}} 様\n\nお世話になっております。\nIS進捗管理の{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
+    { id:"t2", name:"商談日程調整", useSlots:true, subject:"【IS進捗管理{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者名}} 様\n\nお世話になっております。\nIS進捗管理の{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
+    { id:"t3", name:"ナーチャリング", useSlots:false, subject:"【IS進捗管理】建設業の施工管理DX事例のご紹介", body:"{{担当者名}} 様\n\nお世話になっております。\nIS進捗管理の{{送信者名}}でございます。\n\n以前お話しさせていただいた件で、成果が出た事例をご紹介します。" },
   ];
   const loadTpls = () => window.__appData.emailTpls || DEFAULT_EMAIL_TEMPLATES;
   const saveTpls = (t) => { window.__appData.emailTpls = t; apiPost('/api/email-tpls', t); };
@@ -2157,7 +2157,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
               <div style={{marginBottom:16}}>
                 <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>✍️ メール署名</label>
                 <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
-                  placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
+                  placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
                   style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:100,lineHeight:1.5}} />
               </div>
               {profileMsg && <div style={{fontSize:12,color:"#059669",fontWeight:700,marginBottom:10}}>{profileMsg}</div>}
@@ -3387,7 +3387,7 @@ function CSVImport({ onImport, onClose, result }) {
             const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
-            a.href = url; a.download = "dandori_import_template.csv"; a.click();
+            a.href = url; a.download = "is_import_template.csv"; a.click();
             URL.revokeObjectURL(url);
           }}
             style={{fontSize:11,padding:"5px 12px",borderRadius:7,border:"1px solid #10b98155", background:"#ecfdf5",color:"#059669",cursor:"pointer",fontFamily:"inherit",fontWeight:600, display:"flex",alignItems:"center", gap:4}}>
@@ -3556,7 +3556,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
             const csv = "﻿" + headers.join(",") + "\n" + rows.join("\n");
             const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
             const url = URL.createObjectURL(blob);
-            const a = document.createElement("a"); a.href=url; a.download="dandori_leads_"+TODAY+".csv"; a.click();
+            const a = document.createElement("a"); a.href=url; a.download="is_leads_"+TODAY+".csv"; a.click();
             URL.revokeObjectURL(url);
           }} style={S.btnSec}>📤 CSVエクスポート</button>
           {!readOnly && <button onClick={() => { setShowImport(v=>!v); setImportResult(null); }} style={S.btnSec}>
@@ -4714,7 +4714,7 @@ function LoginScreen({ onLogin }) {
         <div style={{ textAlign:"center", marginBottom:24 }}>
           <div style={{ fontSize:32, marginBottom:8 }}>🏗️</div>
           <div style={{ fontSize:22, fontWeight:900, color:"#174f35" }}>IS進捗管理</div>
-          <div style={{ fontSize:12, color:"#6a9a7a", marginTop:4 }}>ダンドリワーク インサイドセールス</div>
+          <div style={{ fontSize:12, color:"#6a9a7a", marginTop:4 }}>IS進捗管理 インサイドセールス</div>
         </div>
         <div style={{ marginBottom:12 }}>
           <label style={{ ...S.lbl, display:"block", marginBottom:3 }}>ログインID</label>
@@ -4879,7 +4879,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
           <div style={{marginBottom:10}}>
             <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>✍️ メール署名</label>
             <textarea value={form.signature||""} onChange={e=>setForm(p=>({...p,signature:e.target.value}))}
-              placeholder={"例：\n---\n田中 太郎\nダンドリワーク株式会社\nTEL: 03-xxxx-xxxx"}
+              placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
               style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",background:"#fff",fontSize:12,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"vertical",minHeight:72,lineHeight:1.5}} />
           </div>
           <div style={{marginBottom:12}}>

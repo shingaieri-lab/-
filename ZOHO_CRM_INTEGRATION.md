@@ -12,6 +12,87 @@
 | 本ツール → Zoho | アクション履歴をNoteとして登録、ステータス変更を自動反映 |
 | 商談確定時 → Zoho | 取引先・取引先責任者・商談を自動作成 |
 
+### 全体フロー図
+
+```mermaid
+flowchart TD
+    subgraph ZOHO["🏢 Zoho CRM"]
+        ZL["リードモジュール\n（Leads）"]
+        ZC["行動モジュール\n（Calls）"]
+        ZA["取引先\n（Accounts）"]
+        ZCT["取引先責任者\n（Contacts）"]
+        ZD["商談\n（Deals）"]
+        ZW["Webhook\n（ワークフロー）"]
+    end
+
+    subgraph TOOL["🛠 IS進捗管理（本ツール）"]
+        subgraph IMPORT["📥 リード取込"]
+            M1["手動取込\n（ZohoリードID指定）"]
+            M2["Webhook受信\n（自動・リアルタイム）"]
+        end
+
+        subgraph LEAD["📋 リード管理画面"]
+            L1["リード詳細\n（会社名・担当者・ステータス等）"]
+            L2["ステータス管理\n新規→架電済→日程調整中→商談確定"]
+        end
+
+        subgraph ACTION["⚡ アクション記録"]
+            A1["架電 / メール / SMS / その他"]
+            A2["AI分析（Gemini）\n次回アクション提案・メール下書き"]
+            A3["Googleカレンダー\n空き時間検索・候補提示"]
+            A4["Gmail\nメール下書き作成"]
+        end
+
+        subgraph DEAL["🤝 商談確定処理"]
+            D1["Zoho商談作成ボタン\n（ステータス＝商談確定時に出現）"]
+            D2["重複チェック\n（KVストア）"]
+        end
+    end
+
+    subgraph GOOGLE["🌐 Google"]
+        GC["Google Calendar API"]
+        GM["Gmail API"]
+        GG["Gemini API（AI分析）"]
+    end
+
+    %% Zoho → ツール（取込）
+    ZW -->|"リード作成・更新時\nPOST /api/zoho/webhook"| M2
+    ZL -->|"手動取込\nリードID指定"| M1
+    M1 --> L1
+    M2 -->|"IS担当フィルタ\n（方法A:Zoho側 / 方法B:ツール側）"| L1
+
+    %% ツール内フロー
+    L1 --> L2
+    L1 --> ACTION
+    A1 --> A2
+    A2 -.->|"AI分析リクエスト"| GG
+    GG -.->|"次回提案・メール文面"| A2
+    A3 -.->|"空き時間検索"| GC
+    A4 -.->|"下書き作成"| GM
+
+    %% ツール → Zoho（アクション履歴）
+    A1 -->|"🔗ボタン押下\nPOST /api/zoho/push-action"| ZC
+
+    %% ツール → Zoho（ステータス連携）
+    L2 -->|"ステータス変更時\n自動反映（マッピング適用）"| ZL
+
+    %% 商談確定フロー
+    L2 -->|"ステータス＝商談確定"| D1
+    D1 --> D2
+    D2 -->|"初回のみ\nPOST /api/zoho/create-deal"| ZA
+    D2 -->|"初回のみ"| ZCT
+    D2 -->|"初回のみ\nIS確度→確率変換\nD=20%/C=40%/B=60%/A=80%"| ZD
+    D2 -->|"2回目以降\n409エラーでブロック"| D1
+
+    %% スタイル
+    classDef zoho fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
+    classDef tool fill:#e3f2fd,stroke:#1565c0,color:#0d47a1
+    classDef google fill:#fff8e1,stroke:#f9a825,color:#e65100
+    class ZL,ZC,ZA,ZCT,ZD,ZW zoho
+    class M1,M2,L1,L2,A1,A2,A3,A4,D1,D2 tool
+    class GC,GM,GG google
+```
+
 ---
 
 ## 2. Zoho側で必要な準備（管理者作業）

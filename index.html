@@ -2242,7 +2242,8 @@ function Trend({ leads }) {
   const data=months.map(m=>{
     const fl=leads.filter(l=>normYM(l.date)===m);
     const srcCounts=Object.fromEntries(sources.map(src=>[src,fl.filter(l=>l.source===src).length]));
-    return { month:m.slice(5)+"月", 反響数:fl.length, 商談数:fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length, MQL数:fl.filter(l=>l.mql==="MQL").length, ...srcCounts };
+    const validCount=fl.filter(l=>l.status!=="育成対象外").length;
+    return { month:m.slice(5)+"月", 反響数:fl.length, 有効リード数:validCount, 商談数:fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length, MQL数:fl.filter(l=>l.mql==="MQL").length, ...srcCounts };
   });
   if (data.length===0) return (
     <div style={{padding:"24px 28px"}}>
@@ -2277,7 +2278,7 @@ function Trend({ leads }) {
         <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>📋 月別詳細データ</div>
         <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
           <thead><tr style={{background:"#f0f5f2"}}>
-            {["月","流入元","反響数","商談数","商談化率","MQL数","MQL率"].map(h=>(
+            {["月","流入元","反響数","有効リード数","商談数","商談化率","MQL数","MQL率"].map(h=>(
               <th key={h} style={{padding:"8px 12px",textAlign:"center",color:"#6a9a7a",fontWeight:700,borderBottom:"1px solid #e2f0e8",whiteSpace:"nowrap"}}>{h}</th>
             ))}
           </tr></thead>
@@ -2291,6 +2292,7 @@ function Trend({ leads }) {
               return srcList.map((src,si)=>{
                 const fl=monthLeads.filter(l=>l.source===src.key);
                 const cnt=fl.length;
+                const validCnt=fl.filter(l=>l.status!=="育成対象外").length;
                 const deals=fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
                 const mql=fl.filter(l=>l.mql==="MQL").length;
                 const isFirst=si===0;
@@ -2299,8 +2301,9 @@ function Trend({ leads }) {
                   {isFirst&&<td rowSpan={srcList.length} style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35",borderRight:"1px solid #e2f0e8",verticalAlign:"middle"}}>{d.month}{isLatest&&<span style={{fontSize:9,marginLeft:4,background:"#10b981",color:"#fff",borderRadius:3,padding:"1px 4px"}}>最新</span>}</td>}
                   <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:src.color}}>{src.label}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:src.color,fontWeight:700}}>{cnt}</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#15803d",fontWeight:700}}>{validCnt}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#f59e0b",fontWeight:700}}>{deals}</td>
-                  <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{cnt?Math.round(deals/cnt*100):0}%</td>
+                  <td style={{padding:"8px 12px",textAlign:"center",color:"#d97706"}}>{validCnt?Math.round(deals/validCnt*100):0}%</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#8b5cf6",fontWeight:700}}>{mql}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?Math.round(mql/cnt*100):0}%</td>
                 </tr>;
@@ -3043,6 +3046,7 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
   const isAppt   = l => ["日程調整中","商談確定"].includes(l.status);
   const isWon    = l => l.status === "商談確定";
   const rate     = (a,b) => b ? (a/b*100).toFixed(1)+"%" : "—";
+  const validLeads = fl.filter(l => l.status !== "育成対象外");
 
   const portal   = fl.filter(l => !!l.portal_site);
   const isCharged = l => !l.charge_applied;
@@ -3053,8 +3057,8 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
   const overdueActions = leads.filter(l => l.next_action_date && l.next_action_date < TODAY && l.is_member === currentUser?.name);
 
   const kpiItems = [
-    { icon:"📥", label:"総反響数",   value:fl.length+"件",          color:"#10b981", bg:"linear-gradient(135deg,#0ecf8a,#059669)", sub:`MQL ${fl.filter(l=>l.mql==="MQL").length}件 (${rate(fl.filter(l=>l.mql==="MQL").length, fl.length)})`, filter:{ month } },
-    { icon:"📅", label:"商談設定数", value:fl.filter(isAppt).length+"件",color:"#f59e0b", bg:"linear-gradient(135deg,#fbbf24,#d97706)", sub:`商談化率 ${rate(fl.filter(isAppt).length, fl.length)}`, filter:{ month, statuses:["日程調整中","商談確定"] } },
+    { icon:"📥", label:"総反響数",   value:fl.length+"件",          color:"#10b981", bg:"linear-gradient(135deg,#0ecf8a,#059669)", sub:`MQL ${fl.filter(l=>l.mql==="MQL").length}件 (${rate(fl.filter(l=>l.mql==="MQL").length, fl.length)}) / 有効リード ${validLeads.length}件`, filter:{ month } },
+    { icon:"📅", label:"商談設定数", value:fl.filter(isAppt).length+"件",color:"#f59e0b", bg:"linear-gradient(135deg,#fbbf24,#d97706)", sub:`商談化率 ${rate(fl.filter(isAppt).length, validLeads.length)}（有効リード ${validLeads.length}件）`, filter:{ month, statuses:["日程調整中","商談確定"] } },
     { icon:"📒", label:"課金見込み", value:"¥"+cost.toLocaleString(),color:"#8b5cf6", bg:"linear-gradient(135deg,#a78bfa,#7c3aed)", sub:`対象外申請済 ${applied.length}件`, filter:{ month, hasPortal: true } },
     { icon:"🔥", label:"本日追客",   value:todayActions.length+"件",color:"#0ea5e9", bg:"linear-gradient(135deg,#38bdf8,#0369a1)", sub:`期限切れ ${overdueActions.length}件`, filter:{ nextActionDate: TODAY } },
   ];
@@ -3109,13 +3113,14 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
             流入元別 商談化実績
           </div>
           <div style={{fontSize:11,color:"#6a9a7a",marginBottom:14}}>
-            各流入元ごとの「反響数」と「商談設定数（日程調整中＋商談確定）」、商談化率を表示
+            各流入元ごとの「反響数」と「有効リード（育成対象外を除く）」「商談設定数（日程調整中＋商談確定）」、商談化率（商談数÷有効リード）を表示
           </div>
           {getSources().map((src, srcIdx) => {
             const arr = bySrc(src);
+            const validArr = arr.filter(l => l.status !== "育成対象外");
             const ap = arr.filter(isAppt).length;
             const won = arr.filter(isWon).length;
-            const pct = arr.length ? ap/arr.length : 0;
+            const pct = validArr.length ? ap/validArr.length : 0;
             const srcColor = getSourceColor(src, srcIdx);
             const srcIconKey = getSourceIcon(src) || "document";
             return (
@@ -3127,8 +3132,11 @@ function Dashboard({ leads, currentUser, onNavigate, masterVer, isMobile }) {
                     <span style={{fontSize:11,background:"#fff",border:"1px solid #e2f0e8", borderRadius:6,padding:"2px 8px",color:"#6a9a7a"}}>
                       反響 <b style={{color:"#174f35"}}>{arr.length}</b>
                     </span>
+                    <span style={{fontSize:11,background:"#f0fdf4",border:"1px solid #bbf7d0", borderRadius:6,padding:"2px 8px",color:"#15803d",fontWeight:700}}>
+                      有効リード <b>{validArr.length}</b>
+                    </span>
                     <span style={{fontSize:11,background:"#fff8eb",border:"1px solid #fde68a", borderRadius:6,padding:"2px 8px",color:"#d97706",fontWeight:700}}>
-                      📅 商談 {ap}件 ({rate(ap,arr.length)})
+                      📅 商談 {ap}件 ({rate(ap,validArr.length)})
                     </span>
                     <span style={{fontSize:11,background:"#ecfdf5",border:"1px solid #a7f3d0", borderRadius:6,padding:"2px 8px",color:"#059669",fontWeight:700}}>
                       ✨ MQL {arr.filter(l=>l.mql==="MQL").length}件 ({rate(arr.filter(l=>l.mql==="MQL").length,arr.length)})

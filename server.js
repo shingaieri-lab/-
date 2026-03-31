@@ -526,6 +526,12 @@ app.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) => {
   if (!zohoLeadId) return res.status(400).json({ error: 'Zoho Lead IDが必要です' });
 
   try {
+    // 重複チェック
+    const leads = (await readData('leads')) || [];
+    if (leads.some(l => l.zoho_lead_id === zohoLeadId)) {
+      return res.status(409).json({ error: 'このZohoリードはすでに取込済みです' });
+    }
+
     const cfg = await readData('zoho_config');
     const data = await zohoApi('GET', `/Leads/${zohoLeadId}`);
     if (!data.data?.[0]) return res.status(404).json({ error: 'Zohoリードが見つかりません' });
@@ -539,7 +545,12 @@ app.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) => {
     const isMemberMap = cfg?.isMemberMap || {};
 
     const zohoIsValue = zl[isField] || '';
+    const today = new Date().toISOString().slice(0, 10);
     const lead = {
+      id: 'zoho-' + zohoLeadId + '-' + Date.now(),
+      date: today,
+      actions: [],
+      created_at: Date.now(),
       company: zl.Company || '',
       contact: [zl.Last_Name, zl.First_Name].filter(Boolean).join(' '),
       email: zl.Email || '',
@@ -551,6 +562,7 @@ app.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) => {
       zoho_lead_type: zl.Lead_Type || '',
       zoho_synced_at: new Date().toISOString(),
     };
+
     res.json({ lead });
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -738,6 +750,14 @@ app.post('/api/zoho/webhook', async (req, res) => {
     const statusMap = cfg?.statusMap || {};
     const isMemberMap = cfg?.isMemberMap || {};
 
+    // IS進捗管理に登録されているメンバー名の一覧
+    const accounts = (await readData('accounts')) || [];
+    const registeredMembers = new Set(
+      accounts.some(a => a.isStaff)
+        ? accounts.filter(a => a.isStaff).map(a => a.name)
+        : accounts.map(a => a.name)
+    );
+
     // Zohoリードの作成・更新を本ツールに反映
     if (payload.module === 'Leads' && Array.isArray(payload.ids)) {
       for (const zohoId of payload.ids) {
@@ -746,12 +766,17 @@ app.post('/api/zoho/webhook', async (req, res) => {
         if (!zl) continue;
 
         const zohoIsValue = zl[isField] || '';
+        const mappedMember = isMemberMap[zohoIsValue] || zohoIsValue;
+
+        // メインIS担当がこのツールに登録されているメンバーでなければスキップ
+        if (registeredMembers.size > 0 && !registeredMembers.has(mappedMember)) continue;
+
         const patch = {
           company: zl.Company || '',
           contact: [zl.Last_Name, zl.First_Name].filter(Boolean).join(' '),
           email: zl.Email || '',
           address: [zl.State, zl.City, zl.Street].filter(Boolean).join(''),
-          is_member: isMemberMap[zohoIsValue] || zohoIsValue,
+          is_member: mappedMember,
           hp_url: zl.Website || '',
           status: statusMap[zl.Lead_Status] || zl.Lead_Status || '',
           zoho_lead_id: zohoId,

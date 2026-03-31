@@ -2289,16 +2289,19 @@ function Trend({ leads }) {
               const monthLeads=leads.filter(l=>normYM(l.date)===monthKey);
               const srcList=sources.map(src=>({key:src,label:src,color:srcColors[src]}));
               const bgMonth=isLatest?"#f0fdf4":mi%2===0?"#fff":"#f8fbf9";
-              return srcList.map((src,si)=>{
+              const totalCnt=monthLeads.length;
+              const totalValid=monthLeads.filter(l=>l.status!=="育成対象外").length;
+              const totalDeals=monthLeads.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
+              const totalMql=monthLeads.filter(l=>l.mql==="MQL").length;
+              const srcRows=srcList.map((src,si)=>{
                 const fl=monthLeads.filter(l=>l.source===src.key);
                 const cnt=fl.length;
                 const validCnt=fl.filter(l=>l.status!=="育成対象外").length;
                 const deals=fl.filter(l=>["日程調整中","商談確定"].includes(l.status)).length;
                 const mql=fl.filter(l=>l.mql==="MQL").length;
                 const isFirst=si===0;
-                const isLast=si===srcList.length-1;
-                return <tr key={`${mi}-${si}`} style={{borderBottom:isLast?"2px solid #e2f0e8":"1px solid #f0f5f2",background:bgMonth}}>
-                  {isFirst&&<td rowSpan={srcList.length} style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35",borderRight:"1px solid #e2f0e8",verticalAlign:"middle"}}>{d.month}{isLatest&&<span style={{fontSize:9,marginLeft:4,background:"#10b981",color:"#fff",borderRadius:3,padding:"1px 4px"}}>最新</span>}</td>}
+                return <tr key={`${mi}-${si}`} style={{borderBottom:"1px solid #f0f5f2",background:bgMonth}}>
+                  {isFirst&&<td rowSpan={srcList.length+1} style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35",borderRight:"1px solid #e2f0e8",verticalAlign:"middle"}}>{d.month}{isLatest&&<span style={{fontSize:9,marginLeft:4,background:"#10b981",color:"#fff",borderRadius:3,padding:"1px 4px"}}>最新</span>}</td>}
                   <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:src.color}}>{src.label}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:src.color,fontWeight:700}}>{cnt}</td>
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#15803d",fontWeight:700}}>{validCnt}</td>
@@ -2308,6 +2311,16 @@ function Trend({ leads }) {
                   <td style={{padding:"8px 12px",textAlign:"center",color:"#7c3aed"}}>{cnt?Math.round(mql/cnt*100):0}%</td>
                 </tr>;
               });
+              const totalRow=<tr key={`${mi}-total`} style={{borderBottom:"2px solid #e2f0e8",background:isLatest?"#d1fae5":"#f0f5f2"}}>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35"}}>合計</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#174f35"}}>{totalCnt}</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#15803d"}}>{totalValid}</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#f59e0b"}}>{totalDeals}</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#d97706"}}>{totalValid?Math.round(totalDeals/totalValid*100):0}%</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#8b5cf6"}}>{totalMql}</td>
+                <td style={{padding:"8px 12px",textAlign:"center",fontWeight:700,color:"#7c3aed"}}>{totalCnt?Math.round(totalMql/totalCnt*100):0}%</td>
+              </tr>;
+              return [...srcRows, totalRow];
             })}
           </tbody>
         </table>

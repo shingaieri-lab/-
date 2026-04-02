@@ -3900,7 +3900,7 @@ function NextActionEditBtn({ nad, lead, onUpdate, currentUser }) {
   );
   return (
     <div style={{display:"flex", gap:4, marginLeft:4}}>
-      <button onClick={()=>setEditNA(true)} style={{...S.btnIconSm}} title="編集"><PencilIcon size={11} color="#059669"/></button>
+      <button onClick={()=>{ setNADate(nad||""); setNATime(lead.next_action_time||""); setNAMemo(lead.next_action||""); setEditNA(true); }} style={{...S.btnIconSm}} title="編集"><PencilIcon size={11} color="#059669"/></button>
       {(currentUser?.gmailClientId || window.__appData?.aiConfig?.gmailClientId) && nad && (
         <button onClick={()=>createCalTodo(nad, lead.next_action_time)} disabled={calSaving}
           style={{...S.btnIconSm,fontSize:11,opacity:calSaving?0.5:1,color:calSaved?"#7c3aed":"inherit"}}

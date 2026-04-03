@@ -64,8 +64,12 @@ async function loadLeads() {
   return window.__appData.leads || [];
 }
 async function saveLeads(leads) {
+  const prev = window.__appData.leads;
   window.__appData.leads = leads;
-  apiPost('/api/leads', leads);
+  const res = await apiPost('/api/leads', leads);
+  if (!res || !res.ok) {
+    window.__appData.leads = prev; // API失敗時はメモリ上のデータを元に戻す
+  }
 }
 
 const SOURCES = ["HP", "ポータルサイト", "電話"];
@@ -4754,9 +4758,13 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
     setInviteLoading(true);
     try {
       const r = await fetch('/api/invite', { method:'POST', headers:{ 'Content-Type':'application/json' } });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error(d.error || `エラーコード ${r.status}`);
+      }
       const data = await r.json();
       setInviteCode(data.code);
-    } catch { alert("招待コードの発行に失敗しました"); }
+    } catch (e) { alert("招待コードの発行に失敗しました: " + e.message); }
     setInviteLoading(false);
   };
 

@@ -124,7 +124,11 @@ async function rateLimit(req, res, next) {
     if (count > RATE_LIMIT) {
       return res.status(429).json({ error: 'リクエスト数の上限に達しました。しばらくしてから再試行してください。' });
     }
-  } catch { /* KVエラー時はスルー（可用性優先） */ }
+  } catch (e) {
+    // KV障害時は安全側に倒す（ブルートフォース攻撃を通さないよう429を返す）
+    console.error('rateLimit KV error:', e);
+    return res.status(429).json({ error: 'サービスが一時的に利用できません。しばらくしてから再試行してください。' });
+  }
   next();
 }
 
@@ -530,29 +534,45 @@ async function saveZohoTokens(tokens) {
 }
 
 // Access Tokenをリフレッシュ（期限切れ時に自動更新）
+// KVロックで複数リクエストの同時リフレッシュを防止
 async function refreshZohoToken() {
-  const cfg = await readData('zoho_config');
-  const tokens = await getZohoTokens();
-  if (!cfg || !tokens?.refresh_token) throw new Error('Zoho未認証');
+  const lockKey = 'zoho_refresh_lock';
+  const lockVal = crypto.randomBytes(8).toString('hex');
+  const lockAcquired = await kv.set(lockKey, lockVal, { nx: true, ex: 30 });
 
-  const domain = getZohoDomain(cfg.dataCenter);
-  const params = new URLSearchParams({
-    refresh_token: tokens.refresh_token,
-    client_id: cfg.clientId,
-    client_secret: cfg.clientSecret,
-    grant_type: 'refresh_token',
-  });
-  const r = await fetch(`https://accounts.${domain}/oauth/v2/token`, { method: 'POST', body: params });
-  const data = await r.json();
-  if (!data.access_token) throw new Error('トークンリフレッシュ失敗: ' + JSON.stringify(data));
+  if (!lockAcquired) {
+    // 別のプロセスがリフレッシュ中 → 1秒待って最新トークンを返す
+    await new Promise(r => setTimeout(r, 1000));
+    return await getZohoTokens();
+  }
 
-  const newTokens = {
-    ...tokens,
-    access_token: data.access_token,
-    expires_at: Date.now() + (data.expires_in - 60) * 1000,
-  };
-  await saveZohoTokens(newTokens);
-  return newTokens;
+  try {
+    const cfg = await readData('zoho_config');
+    const tokens = await getZohoTokens();
+    if (!cfg || !tokens?.refresh_token) throw new Error('Zoho未認証');
+
+    const domain = getZohoDomain(cfg.dataCenter);
+    const params = new URLSearchParams({
+      refresh_token: tokens.refresh_token,
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      grant_type: 'refresh_token',
+    });
+    const r = await fetch(`https://accounts.${domain}/oauth/v2/token`, { method: 'POST', body: params });
+    const data = await r.json();
+    if (!data.access_token) throw new Error('トークンリフレッシュ失敗: ' + JSON.stringify(data));
+
+    const newTokens = {
+      ...tokens,
+      access_token: data.access_token,
+      expires_at: Date.now() + (data.expires_in - 60) * 1000,
+    };
+    await saveZohoTokens(newTokens);
+    return newTokens;
+  } finally {
+    const cur = await kv.get(lockKey);
+    if (cur === lockVal) await kv.del(lockKey);
+  }
 }
 
 // Zoho API呼び出し（トークン自動更新付き）
@@ -877,6 +897,14 @@ app.post('/api/zoho/webhook', async (req, res) => {
     return res.status(401).json({ error: '認証エラー' });
   }
 
+  // 同時処理によるデータロス防止：KVロックで排他制御
+  const lockKey = 'webhook_lock';
+  const lockVal = crypto.randomBytes(8).toString('hex');
+  const lockAcquired = await kv.set(lockKey, lockVal, { nx: true, ex: 30 });
+  if (!lockAcquired) {
+    return res.status(409).json({ error: 'webhook処理中です。しばらくしてから再試行してください。' });
+  }
+
   try {
     const payload = req.body;
     const leads = (await readData('leads')) || [];
@@ -936,6 +964,10 @@ app.post('/api/zoho/webhook', async (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e.message });
+  } finally {
+    // 自分が取得したロックのみ解放（他プロセスのロックは消さない）
+    const cur = await kv.get(lockKey);
+    if (cur === lockVal) await kv.del(lockKey);
   }
 });
 

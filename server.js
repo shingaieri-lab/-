@@ -293,26 +293,6 @@ app.post('/api/reset-password/:id', requireAuth, rateLimit, async (req, res) => 
   res.json({ ok: true });
 });
 
-// 【一時エンドポイント】password_enc クリーンアップ（管理者のみ・実行後に削除すること）
-app.post('/api/admin/cleanup-password-enc', requireAuth, rateLimit, async (req, res) => {
-  const accounts = await getAccounts();
-  const requester = accounts.find(a => a.id === req.accountId);
-  if (!requester || requester.role !== 'admin') {
-    return res.status(403).json({ error: '管理者のみ実行できます' });
-  }
-  let count = 0;
-  const cleaned = accounts.map(account => {
-    if ('password_enc' in account) {
-      const { password_enc, ...rest } = account;
-      count++;
-      return rest;
-    }
-    return account;
-  });
-  await writeData('accounts', cleaned);
-  res.json({ ok: true, cleaned: count });
-});
-
 // ロック中アカウント一覧取得（管理者のみ）
 app.get('/api/login-locks', requireAuth, rateLimit, async (req, res) => {
   const accounts = await getAccounts();

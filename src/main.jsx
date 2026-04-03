@@ -9,6 +9,12 @@ import { Splash, Header, Card, KPI, IF, Note, Row2, Field } from './components/u
 import { useIsMobile } from './hooks/useIsMobile.js';
 import { TODAY } from './lib/holidays.js';
 import { ACTION_TYPES } from './constants/index.js';
+// Step 3 追加分
+import { SVGBarChart } from './components/charts/SVGBarChart.jsx';
+import { SVGLineChart } from './components/charts/SVGLineChart.jsx';
+import { Trend } from './components/charts/Trend.jsx';
+import { WizardOverlay, WizardStepBar, WizardStatusBadge } from './components/wizard/WizardParts.jsx';
+import { SetupWizard } from './components/wizard/SetupWizard.jsx';
 
 function Preview() {
   const isMobile = useIsMobile();

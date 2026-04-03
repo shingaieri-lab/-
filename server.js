@@ -2,14 +2,79 @@ const express = require('express');
 const { kv } = require('@vercel/kv');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
 
 const BCRYPT_ROUNDS = 10; // ハッシュ化の強度（数値が大きいほど安全だが遅い）
 
-// パスワード暗号化キー
-// PASSWORD_ENC_KEY（64文字16進数）を推奨。未設定時はKVトークンから自動導出
-const ENC_KEY = process.env.PASSWORD_ENC_KEY
-  ? Buffer.from(process.env.PASSWORD_ENC_KEY, 'hex')
-  : crypto.createHash('sha256').update(process.env.KV_REST_API_TOKEN || 'internal-fallback-key').digest();
+// AIシステムプロンプト（サーバー側に保持。フロントエンドには渡さない）
+const AI_SYSTEM_PROMPT = `あなたはIS進捗管理のインサイドセールス専任アシスタントです。
+
+ユーザーが電話メモ・アクション記録を入力すると、以下のJSON形式のみで出力してください。
+
+{"action_summary":"架電内容サマリー（2〜3文）","action_type":"call または email または sms または other","action_result":"取次 または 不在 または 不通 または 折電 または 送信済 または その他","next_action_date_offset":5,"next_action_time":"10:00","next_action_memo":"次回アクションメモ","next_action_type":"call または email または sms または schedule または other","followup_talk_points":["ポイント1","ポイント2"],"email_subject":"フォローメール件名","email_body":"フォローメール本文","interest_level":"高 または 中 または 低","memo_for_zoho":"Zoho用詳細サマリー（3〜5文）"}
+
+【next_action_typeの決定ルール】
+過去のアクション履歴を必ず参照した上で、次回アクションに最適な手段を判断してください。
+
+- schedule：
+  - 商談・打ち合わせの日程調整が必要で、候補日を提案するタイミング
+  - 「日程を調整したい」「いつが都合いいか」「商談の予定を入れたい」等の発言があった場合
+  - 興味度「高」で具体的な商談ステップに進める状況
+
+- email：
+  - 今回の通話で資料送付を依頼された（→ 送付後フォロー電話が次なので今はemail）
+  - 過去に資料・メールを送っており、次は別手段（call）が自然な流れの場合は除く
+  - 電話が繋がりにくい状況が続いており、メールでアプローチする方が有効
+  - 検討中でまず情報提供が先決
+
+- call：
+  - 過去にメール・資料送付済みで、次はリアクション確認の電話が適切
+  - 折電待ち・担当者から折り返し連絡が来る予定
+  - 興味度「高」で前向きな反応があり、直接会話で次のステップを決めたい
+  - 不在・不通が続いているが見込みがあり、引き続き電話アプローチが必要
+  - 急ぎの確認や意思決定を求める場面
+
+- sms：
+  - 電話に出ない・メールも反応が薄い・短い日程リマインドで十分
+
+- other：
+  - 訪問・商談・展示会対応など電話・メール以外が適切
+
+【next_action_date_offsetの決定ルール】
+メモ内容・過去のアクション履歴・顧客の反応を読み取り、最適な営業日数（整数）を判断してください。
+
+- 「来週」「1週間後」→ 5
+- 「2週間後」「再来週」→ 10
+- 「来月」「1ヶ月後」→ 22
+- 「3日後」「数日後」→ 3
+- 「明日」→ 1
+- 「2〜3日後」→ 3
+- 不在・不通が続いている → 過去の架電間隔を参考に同程度の日数
+- 折電待ち → 2〜3営業日後（早めにフォロー）
+- 興味度「高」で前向き → 2〜3営業日後
+- 興味度「中」検討中 → 5〜7営業日後
+- 興味度「低」・繁忙期 → 10〜22営業日後
+- 過去履歴がある場合は架電間隔のパターンも参考にすること
+
+【next_action_timeの制約】
+- 必ず営業時間内（09:00〜18:00）で設定すること
+- 12:00〜13:00（昼休み）は除外すること
+- 09:00〜11:30 または 13:00〜17:30 の範囲で30分単位で設定すること
+- 土日祝は next_action_date_offset で除外済みのため、時間のみこの制約に従うこと
+
+【フォローメールの生成ルール】
+- email_bodyの書き出しは「{会社名}\n{担当者名} 様」（【リード】の会社名・担当者名を使用、なければ「ご担当者」）
+- 本文中には「ダンドリワークの{送信者名}でございます」（【送信者情報】の名前を使用）
+- 【送信者情報】に署名が含まれる場合、メール本文末尾に必ずそのまま追加すること
+
+必ずJSONのみ返してください。`;
+
+// パスワード暗号化キー（PASSWORD_ENC_KEY必須。未設定時はサーバー起動を失敗させる）
+if (!process.env.PASSWORD_ENC_KEY) {
+  console.error('致命的エラー: 環境変数 PASSWORD_ENC_KEY が未設定です。サーバーを起動できません。');
+  process.exit(1);
+}
+const ENC_KEY = Buffer.from(process.env.PASSWORD_ENC_KEY, 'hex');
 
 // AES-256-GCMでパスワードを暗号化（管理者表示用）
 function encryptPassword(plaintext) {
@@ -33,7 +98,19 @@ function decryptPassword(encoded) {
 
 const app = express();
 app.use(express.json({ limit: '20mb' }));
+app.use(cookieParser());
 app.use(express.static(__dirname));
+
+// セッションCookieのオプション（HttpOnly + SameSite=Strict でXSS/CSRF対策）
+function sessionCookieOptions(req) {
+  return {
+    httpOnly: true,
+    secure: req.headers['x-forwarded-proto'] === 'https' || req.secure,
+    sameSite: 'strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7日間
+    path: '/',
+  };
+}
 
 // APIレート制限ミドルウェア（1分間に100リクエストまで）
 const RATE_LIMIT = 100;
@@ -65,9 +142,9 @@ async function getAccounts() {
   return (await readData('accounts')) || DEFAULT_ACCOUNTS;
 }
 
-// セッション管理（Vercel KV）: サーバーレス環境でもセッションを永続化
+// セッション管理（Vercel KV）: CookieからトークンをHTTPOnly属性で安全に取得
 async function requireAuth(req, res, next) {
-  const token = req.headers['x-session-token'];
+  const token = req.cookies?.session;
   if (!token) return res.status(401).json({ error: 'Unauthorized' });
   try {
     const accountId = await kv.get('session:' + token);
@@ -119,9 +196,12 @@ app.post('/api/login', async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  await kv.set('session:' + token, id, { ex: 60 * 60 * 24 * 30 }); // 30日間有効
-  const { password: _pw, ...safeAccount } = account; // パスワードを除外してから返す
-  res.json({ token, account: safeAccount });
+  await kv.set('session:' + token, id, { ex: 60 * 60 * 24 * 7 }); // 7日間有効
+  // パスワード・APIキーをフロントエンドに渡さない
+  const { password: _pw, geminiKey: _gk, ...safeAccount } = account;
+  // トークンはHttpOnly Cookieにセット（フロントエンドからJSでは読めない）
+  res.cookie('session', token, sessionCookieOptions(req));
+  res.json({ account: { ...safeAccount, geminiConfigured: !!_gk } });
 });
 
 // パスワード強度チェック（8文字以上・英字と数字を含む）
@@ -163,7 +243,8 @@ app.post('/api/signup', async (req, res) => {
 
 // ログアウト
 app.post('/api/logout', requireAuth, rateLimit, async (req, res) => {
-  await kv.del('session:' + req.headers['x-session-token']);
+  await kv.del('session:' + req.cookies.session);
+  res.clearCookie('session', { httpOnly: true, secure: req.headers['x-forwarded-proto'] === 'https' || req.secure, sameSite: 'strict', path: '/' });
   res.json({ ok: true });
 });
 
@@ -287,11 +368,17 @@ app.delete('/api/login-lock/:id', requireAuth, rateLimit, async (req, res) => {
 app.get('/api/data', requireAuth, rateLimit, async (req, res) => {
   const zohoConfig = await readData('zoho_config');
   const zohoTokens = await getZohoTokens();
+  const rawAiConfig = (await readData('ai_config')) || {};
+  const { geminiKey: _globalGeminiKey, ...safeAiConfig } = rawAiConfig;
   res.json({
-    accounts: (await getAccounts()).map(({ password: _pw, password_enc: _enc, ...a }) => a), // パスワード情報を除外
+    // パスワード・APIキー情報をフロントエンドに渡さない。設定済みかどうかのフラグのみ返す
+    accounts: (await getAccounts()).map(({ password: _pw, password_enc: _enc, geminiKey: _gk, ...a }) => ({
+      ...a,
+      geminiConfigured: !!_gk,
+    })),
     leads: (await readData('leads')) || [],
     masterSettings: await readData('master_settings'),
-    aiConfig: (await readData('ai_config')) || {},
+    aiConfig: { ...safeAiConfig, geminiConfigured: !!_globalGeminiKey },
     gcalConfig: (await readData('gcal_config')) || {},
     emailTpls: await readData('email_tpls'),
     // Zoho設定（Client SecretはフロントエンドへはセキュリティのためSecretを除いて返す）
@@ -348,6 +435,36 @@ app.post('/api/ai-config', requireAuth, rateLimit, async (req, res) => {
   res.json({ ok: true });
 });
 
+// AI解析（Gemini API呼び出しをサーバー経由に。APIキーはフロントエンドに渡さない）
+app.post('/api/ai/analyze', requireAuth, rateLimit, async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'promptが必要です' });
+
+  // APIキーの優先順位: ユーザー個人設定 → グローバル設定
+  const accounts = await getAccounts();
+  const account = accounts.find(a => a.id === req.accountId);
+  const globalAiConfig = (await readData('ai_config')) || {};
+  const apiKey = account?.geminiKey || globalAiConfig.geminiKey;
+
+  if (!apiKey) return res.status(400).json({ error: 'Gemini APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。' });
+
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 8192, responseMimeType: 'application/json' },
+      }),
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: 'AI解析リクエストに失敗しました: ' + e.message });
+  }
+});
+
 // カレンダー設定保存（全ユーザー共通）
 app.post('/api/gcal-config', requireAuth, rateLimit, async (req, res) => {
   await writeData('gcal_config', req.body);
@@ -389,7 +506,13 @@ app.post('/api/zoho-config', requireAuth, rateLimit, async (req, res) => {
   if (!account || account.role !== 'admin') {
     return res.status(403).json({ error: '管理者のみ実行できます' });
   }
-  await writeData('zoho_config', req.body);
+  // clientSecretが送られていない場合は既存の値を保持する（再入力不要にするため）
+  const existing = await readData('zoho_config');
+  const { clientSecret, ...rest } = req.body;
+  const newConfig = clientSecret
+    ? { ...rest, clientSecret }
+    : { ...rest, clientSecret: existing?.clientSecret };
+  await writeData('zoho_config', newConfig);
   res.json({ ok: true });
 });
 
@@ -470,7 +593,7 @@ app.get('/api/zoho/auth', requireAuth, async (req, res) => {
     'ZohoCRM.modules.Deals.CREATE',
   ].join(',');
 
-  const redirectUri = cfg.redirectUri || `${req.protocol}://${req.headers.host}/api/zoho/callback`;
+  const redirectUri = `${req.protocol}://${req.headers.host}/api/zoho/callback`;
   const url = `https://accounts.${domain}/oauth/v2/auth?response_type=code&client_id=${cfg.clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&access_type=offline&prompt=consent`;
   res.redirect(url);
 });
@@ -484,7 +607,7 @@ app.get('/api/zoho/callback', async (req, res) => {
   if (!cfg?.clientId) return res.status(400).send('Zoho設定が未完了です');
 
   const domain = getZohoDomain(cfg.dataCenter);
-  const redirectUri = cfg.redirectUri || `${req.protocol}://${req.headers.host}/api/zoho/callback`;
+  const redirectUri = `${req.protocol}://${req.headers.host}/api/zoho/callback`;
   const params = new URLSearchParams({
     code,
     client_id: cfg.clientId,
@@ -504,7 +627,8 @@ app.get('/api/zoho/callback', async (req, res) => {
       expires_at: Date.now() + (data.expires_in - 60) * 1000,
     });
     // 認証完了後は親ウィンドウに通知してこのウィンドウを閉じる
-    res.send('<html><body><script>window.opener&&window.opener.postMessage("zoho_auth_success","*");window.close();</script><p>認証完了。このウィンドウを閉じてください。</p></body></html>');
+    const origin = `${req.protocol}://${req.headers.host}`;
+    res.send(`<html><body><script>window.opener&&window.opener.postMessage("zoho_auth_success",${JSON.stringify(origin)});window.close();</script><p>認証完了。このウィンドウを閉じてください。</p></body></html>`);
   } catch (e) {
     res.status(500).send('トークン取得エラー: ' + e.message);
   }
@@ -741,7 +865,18 @@ app.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) => {
 
 // Zoho Webhook受信（Zoho → 本ツールへのリアルタイム連携）
 // ZohoCRMのワークフローでこのURLをWebhook先に指定する
+// URL例: https://is-kanri.vercel.app/api/zoho/webhook?token=<ZOHO_WEBHOOK_TOKEN>
 app.post('/api/zoho/webhook', async (req, res) => {
+  // トークン認証：クエリパラメータのtokenと環境変数を照合
+  const webhookToken = process.env.ZOHO_WEBHOOK_TOKEN;
+  if (!webhookToken) {
+    console.error('ZOHO_WEBHOOK_TOKEN が未設定です');
+    return res.status(500).json({ error: 'サーバー設定エラー' });
+  }
+  if (req.query.token !== webhookToken) {
+    return res.status(401).json({ error: '認証エラー' });
+  }
+
   try {
     const payload = req.body;
     const leads = (await readData('leads')) || [];

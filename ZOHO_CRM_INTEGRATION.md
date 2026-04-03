@@ -167,15 +167,21 @@ Zoho CRM管理画面
 
 ZohoからリードをリアルタイムでPushする場合は以下を設定する。
 
+> ⚠️ **セキュリティ対応：Webhook URLにトークンが必要になりました**
+> トークンなしのURLでは認証エラー（401）になります。必ず以下のURL形式を使用してください。
+
 ```
 Zoho CRM管理画面
 → 設定 → 自動化 → ワークフロー → Webhook
-→ 新規作成
-  URL：https://（本ツールのドメイン）/api/zoho/webhook
+→ 新規作成（または既存のWebhookを編集）
+  URL：https://is-kanri.vercel.app/api/zoho/webhook?token=<ZOHO_WEBHOOK_TOKEN>
   メソッド：POST
   モジュール：リード
   トリガー：作成時・更新時
 ```
+
+**`<ZOHO_WEBHOOK_TOKEN>` の確認方法：**
+本ツール管理者（開発担当）に問い合わせてください。Vercelの環境変数 `ZOHO_WEBHOOK_TOKEN` に設定されている値です。
 
 ### 2-6. Webhookの連携対象を特定のIS担当者に絞る（オプション）
 

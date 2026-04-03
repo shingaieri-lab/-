@@ -43,10 +43,9 @@ const TrashIcon = ({size=13,color="currentColor"}) => (
 
 // --- サーバーAPI層 ---
 window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null, zohoConfig: null, zohoAuthenticated: false };
-function getToken() { return localStorage.getItem('session_token') || ''; }
 async function apiPost(path, data) {
   try {
-    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() }, body: JSON.stringify(data) });
+    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
     // 413: ペイロードが大きすぎる / 507: Vercel KV の容量不足
     if (res.status === 413 || res.status === 507) {
       console.error('API storage error:', path, res.status);
@@ -327,67 +326,7 @@ const postGmailDraft = async (token, raw) => {
 const at = (v) => ACTION_TYPES.find(a => a.v === v) || ACTION_TYPES[0];
 
 
-const AI_SYSTEM_PROMPT = `あなたはIS進捗管理のインサイドセールス専任アシスタントです。
-
-ユーザーが電話メモ・アクション記録を入力すると、以下のJSON形式のみで出力してください。
-
-{"action_summary":"架電内容サマリー（2〜3文）","action_type":"call または email または sms または other","action_result":"取次 または 不在 または 不通 または 折電 または 送信済 または その他","next_action_date_offset":5,"next_action_time":"10:00","next_action_memo":"次回アクションメモ","next_action_type":"call または email または sms または schedule または other","followup_talk_points":["ポイント1","ポイント2"],"email_subject":"フォローメール件名","email_body":"フォローメール本文","interest_level":"高 または 中 または 低","memo_for_zoho":"Zoho用詳細サマリー（3〜5文）"}
-
-【next_action_typeの決定ルール】
-過去のアクション履歴を必ず参照した上で、次回アクションに最適な手段を判断してください。
-
-- schedule：
-  - 商談・打ち合わせの日程調整が必要で、候補日を提案するタイミング
-  - 「日程を調整したい」「いつが都合いいか」「商談の予定を入れたい」等の発言があった場合
-  - 興味度「高」で具体的な商談ステップに進める状況
-
-- email：
-  - 今回の通話で資料送付を依頼された（→ 送付後フォロー電話が次なので今はemail）
-  - 過去に資料・メールを送っており、次は別手段（call）が自然な流れの場合は除く
-  - 電話が繋がりにくい状況が続いており、メールでアプローチする方が有効
-  - 検討中でまず情報提供が先決
-
-- call：
-  - 過去にメール・資料送付済みで、次はリアクション確認の電話が適切
-  - 折電待ち・担当者から折り返し連絡が来る予定
-  - 興味度「高」で前向きな反応があり、直接会話で次のステップを決めたい
-  - 不在・不通が続いているが見込みがあり、引き続き電話アプローチが必要
-  - 急ぎの確認や意思決定を求める場面
-
-- sms：
-  - 電話に出ない・メールも反応が薄い・短い日程リマインドで十分
-
-- other：
-  - 訪問・商談・展示会対応など電話・メール以外が適切
-
-【next_action_date_offsetの決定ルール】
-メモ内容・過去のアクション履歴・顧客の反応を読み取り、最適な営業日数（整数）を判断してください。
-
-- 「来週」「1週間後」→ 5
-- 「2週間後」「再来週」→ 10
-- 「来月」「1ヶ月後」→ 22
-- 「3日後」「数日後」→ 3
-- 「明日」→ 1
-- 「2〜3日後」→ 3
-- 不在・不通が続いている → 過去の架電間隔を参考に同程度の日数
-- 折電待ち → 2〜3営業日後（早めにフォロー）
-- 興味度「高」で前向き → 2〜3営業日後
-- 興味度「中」検討中 → 5〜7営業日後
-- 興味度「低」・繁忙期 → 10〜22営業日後
-- 過去履歴がある場合は架電間隔のパターンも参考にすること
-
-【next_action_timeの制約】
-- 必ず営業時間内（09:00〜18:00）で設定すること
-- 12:00〜13:00（昼休み）は除外すること
-- 09:00〜11:30 または 13:00〜17:30 の範囲で30分単位で設定すること
-- 土日祝は next_action_date_offset で除外済みのため、時間のみこの制約に従うこと
-
-【フォローメールの生成ルール】
-- email_bodyの書き出しは「{会社名}\n{担当者名} 様」（【リード】の会社名・担当者名を使用、なければ「ご担当者」）
-- 本文中には「ダンドリワークの{送信者名}でございます」（【送信者情報】の名前を使用）
-- 【送信者情報】に署名が含まれる場合、メール本文末尾に必ずそのまま追加すること
-
-必ずJSONのみ返してください。`;
+// AI_SYSTEM_PROMPT はセキュリティのためサーバー側（server.js）に移動しました
 
 function LeadCombobox({ leads, value, onChange, placeholder, inputStyle, darkMode }) {
   const [inputVal, setInputVal] = React.useState("");
@@ -762,7 +701,7 @@ function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile
 }
 
 function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, currentUser, isMobile }) {
-  const apiKey = (aiConfig||{}).geminiKey||"";
+  const geminiConfigured = !!(aiConfig||{}).geminiConfigured;
   const SS_KEY = "ai_page_state";
   const loadSS = () => { try { return JSON.parse(sessionStorage.getItem(SS_KEY)||"{}"); } catch(_){ return {}; } };
   const [selLead, setSelLead] = React.useState(()=>loadSS().selLead||"");
@@ -825,7 +764,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
 
   const analyze=async()=>{
     if(!memo.trim()) return;
-    if(!apiKey){setError("APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。");return;}
+    if(!geminiConfigured){setError("APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。");return;}
     setLoading(true);setError("");setResult(null);setSaved(false);
     const senderName=currentUser?.name||"";
     const senderSig=currentUser?.signature||"";
@@ -839,8 +778,9 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
     }).join("\n"):"";
     const userCtx=`\n\n【送信者情報】名前:${senderName}`+(senderSig?`\n署名:\n${senderSig}`:"");
     try{
-      const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({system_instruction:{parts:[{text:AI_SYSTEM_PROMPT}]},contents:[{role:"user",parts:[{text:ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo}]}],generationConfig:{maxOutputTokens:8192,responseMimeType:"application/json"}})});
+      const res=await fetch('/api/ai/analyze',{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo})});
       const data=await res.json();
+      if(!res.ok) throw new Error(data.error||`エラーコード ${res.status}`);
       if(data.error) throw new Error(data.error.message||data.error.status);
       if(!data.candidates||!data.candidates[0]||!data.candidates[0].content){
         const reason=data.candidates?.[0]?.finishReason||data.promptFeedback?.blockReason||"不明";
@@ -1005,7 +945,7 @@ function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, current
           <div className="ai-header-sub" style={{fontSize:11,color:"#d1fae5",marginTop:2}}>アクション記録 → 自動解析 → 履歴登録・ネクストアクション提案</div>
         </div>
         <div style={{marginLeft:"auto"}}>
-          {apiKey?<div style={{background:"#ffffff33",border:"1px solid #ffffff66",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#fff"}}>✅ APIキー設定済み</div>:<div style={{background:"#ffffff22",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#fff"}}>⚠️ APIキー未設定</div>}
+          {geminiConfigured?<div style={{background:"#ffffff33",border:"1px solid #ffffff66",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#fff"}}>✅ APIキー設定済み</div>:<div style={{background:"#ffffff22",border:"1px solid #fca5a5",borderRadius:8,padding:"6px 14px",fontSize:12,color:"#fff"}}>⚠️ APIキー未設定</div>}
         </div>
       </div>
       <div className="ai-layout" style={{display:"flex",height: isMobile ? "auto" : "calc(100vh - 77px)"}}>
@@ -1260,12 +1200,14 @@ function ZohoCrmSettings() {
   const showMsg = (m) => { setMsg(m); setErr(''); setTimeout(() => setMsg(''), 3000); };
   const showErr = (m) => { setErr(m); setMsg(''); };
 
-  // 設定を保存（Client Secretが入力されている場合のみ更新）
+  // 設定を保存（Client Secretは変更時のみ送信。空欄の場合はサーバー側で既存値を保持）
   const save = async () => {
     if (!cfg.clientId.trim()) { showErr('Client IDを入力してください'); return; }
-    if (!cfg.clientSecret.trim()) { showErr('Client Secretを入力してください（初回のみ必要）'); return; }
+    // 初回設定時（既存設定がない）はClient Secretも必須
+    const isFirstTime = !window.__appData?.zohoConfig?.clientId;
+    if (isFirstTime && !cfg.clientSecret.trim()) { showErr('初回設定時はClient Secretの入力が必要です'); return; }
     const res = await fetch('/api/zoho-config', {
-      method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()},
+      method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify(cfg),
     });
     if (res.ok) {
@@ -1281,7 +1223,7 @@ function ZohoCrmSettings() {
   const startAuth = () => {
     const w = window.open('/api/zoho/auth', 'zoho_auth', 'width=600,height=700');
     const handler = (e) => {
-      if (e.data === 'zoho_auth_success') {
+      if (e.origin === window.location.origin && e.data === 'zoho_auth_success') {
         window.removeEventListener('message', handler);
         setAuthenticated(true);
         window.__appData.zohoAuthenticated = true;
@@ -1358,8 +1300,8 @@ function ZohoCrmSettings() {
         <label style={lbl}>Client Secret <span style={{color:'#dc2626'}}>*</span><span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>（変更する場合のみ入力）</span></label>
         <input type="password" value={cfg.clientSecret} onChange={e=>setCfg(c=>({...c,clientSecret:e.target.value}))} placeholder="Zoho API ConsoleのClient Secret" style={inp} />
         <label style={lbl}>Redirect URI</label>
-        <input value={cfg.redirectUri} onChange={e=>setCfg(c=>({...c,redirectUri:e.target.value}))} style={inp} />
-        <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Zoho API ConsoleのRedirect URIに上記と同じ値を登録してください</div>
+        <input value={window.location.origin + '/api/zoho/callback'} readOnly style={{...inp, background:'#f3f4f6', color:'#6b7280', cursor:'default'}} />
+        <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Redirect URIはサーバー側で自動設定されます。Zoho API Consoleに上記と同じ値を登録してください。</div>
       </div>
 
       {/* フィールドマッピング */}
@@ -1773,7 +1715,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
               {/* ウィザードバナー */}
               {(() => {
                 const gcalCfg = loadGCalConfig();
-                const geminiOk = !!currentUser?.geminiKey;
+                const geminiOk = !!(currentUser?.geminiConfigured);
                 const gmailOk = !!(currentUser?.gmailClientId || window.__appData?.aiConfig?.gmailClientId);
                 const calendarOk = !!(gcalCfg.apiKey && Object.keys(gcalCfg.calendarIds||{}).length > 0);
                 const allOk = geminiOk && gmailOk && calendarOk;
@@ -1822,7 +1764,7 @@ function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialT
                 <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4}}>
                   <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a"}}>Gemini APIキー</label>
                   <div style={{display:"flex", alignItems:"center", gap:8}}>
-                    {currentUser?.geminiKey
+                    {currentUser?.geminiConfigured
                       ? <span style={{fontSize:10,background:"#d1fae5",color:"#059669",borderRadius:20,padding:"1px 8px",fontWeight:700}}>✅ 設定済み</span>
                       : <span style={{fontSize:10,background:"#fef3c7",color:"#d97706",borderRadius:20,padding:"1px 8px",fontWeight:700}}>⚠️ 未設定</span>
                     }
@@ -2394,7 +2336,7 @@ function SetupWizard({ currentUser, onUpdateProfile, onSave, aiConfig, onClose }
   const [geminiTest, setGeminiTest] = useState(null); // null | "testing" | "ok" | "error"
   const members = getSalesMembers();
 
-  const geminiOk = !!currentUser?.geminiKey;
+  const geminiOk = !!(currentUser?.geminiConfigured);
   const gmailOk = !!(currentUser?.gmailClientId || window.__appData?.aiConfig?.gmailClientId);
   const calendarOk = !!(gcal0.apiKey && Object.keys(gcal0.calendarIds || {}).length > 0);
 
@@ -2801,10 +2743,8 @@ function App() {
     }
   };
   const logout = () => {
-    const token = localStorage.getItem('session_token');
-    if (token) apiPost('/api/logout', {});
+    apiPost('/api/logout', {});
     localStorage.removeItem('current_user_id');
-    localStorage.removeItem('session_token');
     window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null, zohoConfig: null, zohoAuthenticated: false };
     setCurrentUser(null);
     setLeads([]);
@@ -2825,15 +2765,13 @@ function App() {
   const [calendarLeadId, setCalendarLeadId] = useState("");
   const [aiOpenLeadId, setAiOpenLeadId] = useState(null);
   const [showWizard, setShowWizard] = useState(false);
-  // APIキーの優先順位: 個人設定（currentUser.geminiKey）> 管理者設定（aiConfig.geminiKey）
-  // 個人設定が空の場合のみ管理者設定のキーが使われる
+  // geminiConfiguredの優先順位: 個人設定 > グローバル設定（APIキー自体はサーバー側のみ保持）
   // ※ aiConfig は React state（saveAiConfig で更新）、window.__appData.aiConfig と常に同期している
   const effectiveAiConfig = useMemo(() => ({
     ...aiConfig,
-    geminiKey: currentUser?.geminiKey || aiConfig.geminiKey || "",
+    geminiConfigured: !!(currentUser?.geminiConfigured || aiConfig.geminiConfigured),
     gmailClientId: currentUser?.gmailClientId || aiConfig.gmailClientId || ""
   }), [currentUser, aiConfig]);
-  const apiKey = effectiveAiConfig.geminiKey;
   const saveAiConfig = (cfg) => {
     setAiConfig(cfg);
     window.__appData.aiConfig = cfg;
@@ -2842,33 +2780,30 @@ function App() {
 
   useEffect(() => {
     async function init() {
-      const token = localStorage.getItem('session_token');
+      // セッションCookieが有効なら自動的に認証される（localStorageのトークン不要）
       const savedId = localStorage.getItem('current_user_id');
-      if (token && savedId) {
-        try {
-          const r = await fetch('/api/data', { headers: { 'x-session-token': token } });
-          if (r.ok) {
-            const data = await r.json();
-            window.__appData = data;
-            data.accounts.forEach(a => {
-              USER_COLORS[a.name] = a.color;
-              IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
-            });
-            const user = data.accounts.find(a => a.id === savedId);
-            if (user) {
-              setCurrentUser(user);
-              USER_COLORS[user.name] = user.color;
-            } else {
-              localStorage.removeItem('current_user_id');
-            }
-            setAiConfig(data.aiConfig || {});
-            setMasterVer(v => v + 1);
-          } else if (r.status === 401) {
-            localStorage.removeItem('session_token');
+      try {
+        const r = await fetch('/api/data');
+        if (r.ok) {
+          const data = await r.json();
+          window.__appData = data;
+          data.accounts.forEach(a => {
+            USER_COLORS[a.name] = a.color;
+            IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
+          });
+          const user = data.accounts.find(a => a.id === savedId);
+          if (user) {
+            setCurrentUser(user);
+            USER_COLORS[user.name] = user.color;
+          } else {
             localStorage.removeItem('current_user_id');
           }
-        } catch {}
-      }
+          setAiConfig(data.aiConfig || {});
+          setMasterVer(v => v + 1);
+        } else if (r.status === 401) {
+          localStorage.removeItem('current_user_id');
+        }
+      } catch {}
       const l = await loadLeads();
       const migrated = l.map(lead => lead.portal_type === "請求" ? { ...lead, portal_type: "一括請求" } : lead);
       setLeads(migrated);
@@ -3595,7 +3530,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
               try {
                 const res = await fetch('/api/zoho/import-lead', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() },
+                  headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ zohoLeadId: zohoImportId.trim() }),
                 });
                 const data = await res.json();
@@ -3716,7 +3651,7 @@ function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, in
                   if (lead.zoho_lead_id && window.__appData?.zohoAuthenticated) {
                     fetch('/api/zoho/update-lead-status', {
                       method: 'POST',
-                      headers: { 'Content-Type': 'application/json', 'x-session-token': getToken() },
+                      headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, localStatus: s }),
                     }).catch(() => {});
                   }
@@ -4399,7 +4334,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
     setZohoCreating(true); setZohoMsg('');
     try {
       const res = await fetch('/api/zoho/create-deal', {
-        method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()},
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ lead }),
       });
       const data = await res.json();
@@ -4433,7 +4368,7 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
     setZohoPushingId(action.id);
     try {
       const res = await fetch('/api/zoho/push-action', {
-        method:'POST', headers:{'Content-Type':'application/json','x-session-token':getToken()},
+        method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, action }),
       });
       const data = await res.json();
@@ -4604,8 +4539,7 @@ function saveAccounts(accounts) {
     IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
   });
 }
-// APIキーの優先順位: 個人設定（currentUser.xxx）> 管理者設定（shared.xxx）
-// 個人設定が空の場合のみ管理者設定のキーが使われる
+// ※ geminiKey はサーバー側のみ保持。フロントエンドには geminiConfigured（設定済みフラグ）のみ返す
 // ※ window.__appData.aiConfig はログイン時・saveAiConfig 時に更新される
 function getEffectiveAiConfig(currentUser) {
   if (!currentUser) return {};
@@ -4613,7 +4547,7 @@ function getEffectiveAiConfig(currentUser) {
   // → メンバーが個別に設定していなくても管理者設定のClient IDが使われる
   const shared = window.__appData?.aiConfig || {};
   return {
-    geminiKey: currentUser.geminiKey || shared.geminiKey || "",
+    geminiConfigured: !!(currentUser.geminiConfigured || shared.geminiConfigured),
     gmailClientId: currentUser.gmailClientId || shared.gmailClientId || ""
   };
 }
@@ -4662,10 +4596,9 @@ function LoginScreen({ onLogin }) {
     try {
       const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ id:userId.trim(), password }) });
       if (!r.ok) { setErr("IDまたはパスワードが違います"); return; }
-      const { token, account } = await r.json();
-      localStorage.setItem('session_token', token);
+      const { account } = await r.json();
       localStorage.setItem('current_user_id', account.id);
-      const dataR = await fetch('/api/data', { headers: { 'x-session-token': token } });
+      const dataR = await fetch('/api/data');
       const data = dataR.ok ? await dataR.json() : null;
       if (data) {
         window.__appData = data;
@@ -4805,14 +4738,14 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
 
   React.useEffect(() => {
     // ロック中アカウントを取得
-    fetch('/api/login-locks', { headers: { 'x-session-token': getToken() } })
+    fetch('/api/login-locks')
       .then(r => r.ok ? r.json() : {})
       .then(setLockedAccounts)
       .catch(err => console.error('ロック情報取得失敗:', err));
   }, []);
 
   const handleUnlock = async (id) => {
-    await fetch('/api/login-lock/' + id, { method:'DELETE', headers:{ 'x-session-token': getToken() } });
+    await fetch('/api/login-lock/' + id, { method:'DELETE' });
     setLockedAccounts(prev => { const n = {...prev}; delete n[id]; return n; });
   };
 
@@ -4820,7 +4753,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const handleGenerateInvite = async () => {
     setInviteLoading(true);
     try {
-      const r = await fetch('/api/invite', { method:'POST', headers:{ 'Content-Type':'application/json', 'x-session-token': getToken() } });
+      const r = await fetch('/api/invite', { method:'POST', headers:{ 'Content-Type':'application/json' } });
       const data = await r.json();
       setInviteCode(data.code);
     } catch { alert("招待コードの発行に失敗しました"); }
@@ -4855,7 +4788,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const startEdit = async (a) => {
     setForm({ ...a, password: "" });
     setEditingId(a.id); setErr("");
-    const r = await fetch('/api/account-password/' + a.id, { headers: { 'x-session-token': getToken() } });
+    const r = await fetch('/api/account-password/' + a.id);
     if (r.ok) { const data = await r.json(); setForm(p => ({ ...p, password: data.password })); }
   };
   const cancelEdit = () => { setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"", isStaff:false }); setEditingId(null); setErr(""); };

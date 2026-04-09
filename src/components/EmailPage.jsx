@@ -1,29 +1,21 @@
 import React from 'react';
-import { apiPost } from '../lib/api.js';
 import { getSalesMembers, getEffectiveAiConfig } from '../lib/master.js';
 import { acquireGmailToken, buildGmailDraftRaw, postGmailDraft } from '../lib/gmail.js';
+import { loadEmailTpls, saveEmailTpls, applyVars, formatSlot } from '../lib/emailTpls.js';
 import { PencilIcon, TrashIcon } from './icons.jsx';
 import { LeadCombobox } from './LeadCombobox.jsx';
+import { EmailTemplateEditor } from './EmailTemplateEditor.jsx';
 
 export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], isMobile, initialLeadId = "" }) {
-  const DEFAULT_EMAIL_TEMPLATES = [
-    { id:"t1", name:"初回フォロー", useSlots:false, subject:"【ダンドリワーク】資料のご確認のお願い", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n先日はお電話にてご対応いただきありがとうございました。\nご案内した資料をご確認いただけましたでしょうか？\n\n何かご不明な点がございましたら、お気軽にご連絡ください。\n\nよろしくお願いいたします。" },
-    { id:"t2", name:"商談日程調整", useSlots:true, subject:"【ダンドリワーク{{送信者名}}】ご説明日程候補日をお送りします", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n下記日程のご都合は、いかがでしょうか。\n\n============================\n【日程候補】\n{{候補日時}}\n============================\n\nご都合のよろしい日程をご返信いただけますと幸いです。\nよろしくお願いいたします。" },
-    { id:"t3", name:"ナーチャリング", useSlots:false, subject:"【ダンドリワーク】建設業の施工管理DX事例のご紹介", body:"{{担当者名}} 様\n\nお世話になっております。\nダンドリワークの{{送信者名}}でございます。\n\n以前お話しさせていただいた件で、成果が出た事例をご紹介します。" },
-  ];
-  const loadTpls = () => window.__appData.emailTpls || DEFAULT_EMAIL_TEMPLATES;
-  const saveTpls = (t) => { window.__appData.emailTpls = t; apiPost('/api/email-tpls', t); };
-  const applyVars = (body, vars) => Object.entries(vars).reduce((s,[k,v])=>s.replaceAll("{{"+k+"}}",v||("{{"+k+"}}")),body);
-
-  const [tpls, setTpls] = React.useState(loadTpls);
+  const [tpls, setTpls] = React.useState(loadEmailTpls);
   const [dragIdx, setDragIdx] = React.useState(null);
   const [overIdx, setOverIdx] = React.useState(null);
   const [selTpl, setSelTpl] = React.useState(() => {
     if (candidateSlots.length > 0) {
-      const slotsTpl = loadTpls().find(t => t.useSlots);
+      const slotsTpl = loadEmailTpls().find(t => t.useSlots);
       if (slotsTpl) return slotsTpl.id;
     }
-    return loadTpls()[0]?.id || "";
+    return loadEmailTpls()[0]?.id || "";
   });
   const [selLead, setSelLead] = React.useState(initialLeadId);
   const [vars, setVars] = React.useState({担当者名:"",担当者苗字:"",会社名:"",送信者名:"",候補日時:"",商談月:"",商談日:"",商談曜日:"",商談時:"",商談分:"",商談担当:"",宛先メール:""});
@@ -75,14 +67,6 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
       setVars(v=>({...v, 商談曜日:""}));
     }
   },[vars.商談月, vars.商談日]);
-
-  // 候補日スロットのフォーマット
-  const formatSlot = (slot) => {
-    const d = new Date(slot.date + "T00:00:00");
-    const dow = ["日","月","火","水","木","金","土"][d.getDay()];
-    const [y,m,day] = slot.date.split("-");
-    return `${parseInt(y)}年${parseInt(m)}月${parseInt(day)}日（${dow}）${slot.start}〜${slot.end}`;
-  };
 
   // スロット選択切り替え（最大3つ）
   const toggleSlot = (idx) => {
@@ -157,10 +141,10 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
     }
   };
 
-  const saveEdit=()=>{ const u=tpls.map(t=>t.id===editTpl.id?editTpl:t); setTpls(u); saveTpls(u); setEditMode(false); };
-  const deleteTpl=(id)=>{ if(!window.confirm("削除しますか？")) return; const u=tpls.filter(t=>t.id!==id); setTpls(u); saveTpls(u); if(selTpl===id) setSelTpl(u[0]?.id||""); };
-  const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,useMeeting:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
-  const handleDrop=(toIdx)=>{ if(dragIdx===null||dragIdx===toIdx) return; const r=[...tpls]; const [moved]=r.splice(dragIdx,1); r.splice(toIdx,0,moved); setTpls(r); saveTpls(r); setDragIdx(null); setOverIdx(null); };
+  const saveEdit=()=>{ const u=tpls.map(t=>t.id===editTpl.id?editTpl:t); setTpls(u); saveEmailTpls(u); setEditMode(false); };
+  const deleteTpl=(id)=>{ if(!window.confirm("削除しますか？")) return; const u=tpls.filter(t=>t.id!==id); setTpls(u); saveEmailTpls(u); if(selTpl===id) setSelTpl(u[0]?.id||""); };
+  const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,useMeeting:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveEmailTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
+  const handleDrop=(toIdx)=>{ if(dragIdx===null||dragIdx===toIdx) return; const r=[...tpls]; const [moved]=r.splice(dragIdx,1); r.splice(toIdx,0,moved); setTpls(r); saveEmailTpls(r); setDragIdx(null); setOverIdx(null); };
   const inpStyle = {width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe"};
   const lblStyle = {fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3};
   return (
@@ -194,35 +178,7 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
         </div>
         <div>
           {editMode&&editTpl ? (
-            <div style={{background:"#fff",borderRadius:12,border:"1px solid #fde68a",padding:"16px",display:"flex",flexDirection:"column",minHeight:"calc(100vh - 180px)"}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12}}>✏️ テンプレート編集</div>
-              {[["テンプレート名","name"],["件名","subject"]].map(([l,k])=>(
-                <div key={k} style={{marginBottom:8}}><label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>{l}</label>
-                  <input value={editTpl[k]} onChange={e=>setEditTpl(p=>({...p,[k]:e.target.value}))} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit"}} />
-                </div>
-              ))}
-              <div style={{marginBottom:6}}>
-                <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}>
-                  <input type="checkbox" checked={!!editTpl.useSlots} onChange={e=>setEditTpl(p=>({...p,useSlots:e.target.checked}))} />
-                  <span>{'{{候補日時}}'} を使用する（日程調整テンプレート）</span>
-                </label>
-              </div>
-              <div style={{marginBottom:10}}>
-                <label style={{fontSize:11,color:"#6a9a7a",display:"flex",alignItems:"center",gap:6,cursor:"pointer",userSelect:"none"}}>
-                  <input type="checkbox" checked={!!editTpl.useMeeting} onChange={e=>setEditTpl(p=>({...p,useMeeting:e.target.checked}))} />
-                  <span>{'{{商談月}}'}{'{{商談日}}'}{'{{商談曜日}}'}{'{{商談時}}'}{'{{商談分}}'}{'{{商談担当}}'} を使用する（確定商談テンプレート）</span>
-                </label>
-              </div>
-              <div style={{flex:1,display:"flex",flexDirection:"column",marginBottom:12}}>
-                <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>本文</label>
-                <textarea value={editTpl.body} onChange={e=>setEditTpl(p=>({...p,body:e.target.value}))} style={{flex:1,width:"100%",minHeight:320,padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",resize:"none",lineHeight:1.7}} />
-              </div>
-              <div style={{fontSize:12,color:"#6b7280",marginBottom:10}}>使用可能な変数：{"{{"+"担当者名"+"}}"}　{"{{"+"担当者苗字"+"}}"}　{"{{"+"会社名"+"}}"}　{"{{"+"送信者名"+"}}"}　{"{{"+"商談担当"+"}}"}　{"{{"+"候補日時"+"}}"}（useSlots ON時）　{"{{"+"商談月"+"}}"}　{"{{"+"商談日"+"}}"}　{"{{"+"商談曜日"+"}}"}　{"{{"+"商談時"+"}}"}　{"{{"+"商談分"+"}}"}</div>
-              <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                <button onClick={()=>setEditMode(false)} style={{padding:"7px 16px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#3d7a5e",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>キャンセル</button>
-                <button onClick={saveEdit} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>保存</button>
-              </div>
-            </div>
+            <EmailTemplateEditor editTpl={editTpl} setEditTpl={setEditTpl} onSave={saveEdit} onCancel={()=>setEditMode(false)} />
           ) : (
             <div className="email-main-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,alignItems:"start",minHeight:"calc(100vh - 180px)"}}>
               <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px"}}>

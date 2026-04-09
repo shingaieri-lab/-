@@ -1,6 +1,6 @@
 # IS進捗管理ツール レビュー記録
 
-レビュー開始：2026-03-23　／　最終更新：2026-04-09
+レビュー開始：2026-03-23　／　最終更新：2026-04-09（API分離対応）
 
 ---
 
@@ -95,6 +95,7 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 | **Vite移行完了**（`feature/vite-migration`）：5,759行の単一 index.html を Vite + React ESM 構成に分割。54モジュール、ビルドエラーゼロ |
 | **server.js 分割完了**（`feature/file-split`）：983行のモノリスを `lib/`・`routes/` に8ファイル分割。`server.js` はエントリーポイント30行のみに |
 | **コンポーネント分割完了**（`feature/component-split`）：`src/main.jsx` 4,885行 → 192行に削減。19コンポーネントを `src/components/` に、ビジネスロジックを `src/lib/` に分離。41モジュール、ビルドエラーゼロ |
+| **API分離完了**（`feature/api-separation`）：7コンポーネントに直書きされていたfetch呼び出しを `src/lib/` に切り出し。`ai.js`, `account.js`, `zoho.js`, `authApi.js`, `gcal.js` に集約 |
 
 ---
 
@@ -109,24 +110,16 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 | ファイル | 行数 | 分割案 |
 |------|------|------|
 | `src/components/SettingsPage.jsx` | 955行 | タブ別にコンポーネント分割（PortalSettings, SalesSettings, ApiKeySettings 等） |
-| `src/components/CalendarPage.jsx` | 611行 | freeBusy計算ロジックを `lib/gcal.js` に移動、カレンダー登録UIを別コンポーネントに |
+| `src/components/CalendarPage.jsx` | 590行 | カレンダー登録UIを別コンポーネントに分割 |
 | `src/components/SetupWizard.jsx` | 449行 | ステップ別コンポーネントに分割 |
-| `src/components/AIPage.jsx` | 434行 | AI解析ロジックを `lib/ai.js` に移動 |
-| `src/components/LeadList.jsx` | 340行 | フィルター・テーブルUIを別コンポーネントに |
+| `src/components/AIPage.jsx` | 432行 | AIPage内のUI部分をさらに分割 |
+| `src/components/LeadList.jsx` | 332行 | フィルター・テーブルUIを別コンポーネントに |
 | `src/components/EmailPage.jsx` | 331行 | テンプレート編集UIを別コンポーネントに |
 | `src/components/LeadForms.jsx` | 326行 | LeadForm / ActionForm / ActEntry を別ファイルに分割 |
 
-#### API呼び出しのコンポーネント直書き（`lib/` に切り出すべき）
+#### ~~API呼び出しのコンポーネント直書き~~ ✅ 対応済み（2026-04-09）
 
-| コンポーネント | 直書きしているAPI |
-|------|------|
-| `src/components/ActionHistoryPanel.jsx` | `/api/zoho/create-deal`, `/api/zoho/push-action` |
-| `src/components/AccountManager.jsx` | `/api/login-locks`, `/api/login-lock/:id`, `/api/invite` |
-| `src/components/SettingsPage.jsx` | `/api/zoho-config` |
-| `src/components/AIPage.jsx` | `/api/ai/analyze` |
-| `src/components/CalendarPage.jsx` | Google Calendar freeBusy API, カレンダー登録API |
-| `src/components/LeadList.jsx` | `/api/zoho/import-lead`, `/api/zoho/update-lead-status` |
-| `src/components/LoginScreen.jsx` | `/api/signup`, `/api/login`, `/api/reset-password-direct`, `/api/data` |
+全7コンポーネントの fetch 直書きを `src/lib/` に移行済み。
 
 ---
 

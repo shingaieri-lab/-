@@ -3,6 +3,7 @@ import { ACTION_TYPES, ACTION_RESULTS } from '../lib/constants.js';
 import { JP_HOLIDAYS } from '../lib/date.js';
 import { getEffectiveAiConfig } from '../lib/master.js';
 import { handleOAuthCallbackError, handleOAuthPopupError, isTokenValid, acquireGmailToken, buildGmailDraftRaw, postGmailDraft } from '../lib/gmail.js';
+import { analyzeWithAI } from '../lib/ai.js';
 import { LeadCombobox } from './LeadCombobox.jsx';
 
 export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, currentUser, isMobile }) {
@@ -83,10 +84,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
     }).join("\n"):"";
     const userCtx=`\n\n【送信者情報】名前:${senderName}`+(senderSig?`\n署名:\n${senderSig}`:"");
     try{
-      const res=await fetch('/api/ai/analyze',{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo})});
-      const data=await res.json();
-      if(!res.ok) throw new Error(data.error||`エラーコード ${res.status}`);
-      if(data.error) throw new Error(data.error.message||data.error.status);
+      const data = await analyzeWithAI(ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo);
       if(!data.candidates||!data.candidates[0]||!data.candidates[0].content){
         const reason=data.candidates?.[0]?.finishReason||data.promptFeedback?.blockReason||"不明";
         throw new Error(`AIレスポンスが空です（終了理由: ${reason}）`);

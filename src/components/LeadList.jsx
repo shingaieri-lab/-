@@ -4,6 +4,7 @@ import {
   getSources, sourceHasPortal, getPortalSitesForSource,
   getStatuses, getStatusColor, getISMembers,
 } from '../lib/master.js';
+import { importZohoLead, updateZohoLeadStatus } from '../lib/zoho.js';
 import { S } from './styles.js';
 import { Header } from './ui.jsx';
 import { CSVImport } from './CSVImport.jsx';
@@ -132,13 +133,8 @@ export function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulk
               setZohoImporting(true);
               setZohoImportMsg(null);
               try {
-                const res = await fetch('/api/zoho/import-lead', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ zohoLeadId: zohoImportId.trim() }),
-                });
-                const data = await res.json();
-                if (!res.ok) {
+                const { ok: resOk, data } = await importZohoLead(zohoImportId.trim());
+                if (!resOk) {
                   setZohoImportMsg({ type: 'err', text: data.error || '取込に失敗しました' });
                 } else {
                   onAdd(data.lead);
@@ -253,11 +249,7 @@ export function LeadList({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulk
                   onUpdate(lead.id, patch);
                   // Zoho連携済みリードはステータス変更をZohoにも反映（fire-and-forget）
                   if (lead.zoho_lead_id && window.__appData?.zohoAuthenticated) {
-                    fetch('/api/zoho/update-lead-status', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, localStatus: s }),
-                    }).catch(() => {});
+                    updateZohoLeadStatus(lead.zoho_lead_id, s);
                   }
                 }}
                 onUpdate={p => onUpdate(lead.id, p)}

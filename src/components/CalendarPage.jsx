@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { TODAY } from '../lib/constants.js';
 import { JP_HOLIDAYS } from '../lib/date.js';
-import { loadGCalConfig, saveGCalConfig } from '../lib/gcal.js';
+import { loadGCalConfig, saveGCalConfig, fetchFreeBusy, createCalendarEvent } from '../lib/gcal.js';
 import { loadAccounts, getSalesMembers } from '../lib/master.js';
 import { isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../lib/gmail.js';
 import { TrashIcon } from './icons.jsx';
@@ -75,19 +75,7 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
 
       if (items.length === 0) { setError("選択したメンバーのカレンダーIDが設定されていません"); setLoading(false); return; }
 
-      const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/freeBusy?key=${cfg.apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ timeMin, timeMax, items })
-        }
-      );
-      if (!res.ok) {
-        const e = await res.json();
-        throw new Error(e.error?.message || "APIエラー");
-      }
-      const data = await res.json();
+      const data = await fetchFreeBusy(cfg.apiKey, timeMin, timeMax, items);
 
       // 各メンバーの busy 時間帯を収集
       const busyByMember = {};
@@ -231,21 +219,12 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
           .filter(m => mergedCalendarIds[m])
           .map(m => ({ email: mergedCalendarIds[m] }));
         try {
-          const startDT = `${slot.date}T${slot.start}:00+09:00`;
-          const endDT = `${slot.date}T${slot.end}:00+09:00`;
-          const resp = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none`,
-            { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ summary: title, start: { dateTime: startDT, timeZone: "Asia/Tokyo" }, end: { dateTime: endDT, timeZone: "Asia/Tokyo" }, attendees }) }
-          );
-          if (!resp.ok) {
-            const err = await resp.json();
-            if (err.error?.code === 401) { setCalRegToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
-            slotMembers.forEach(member => results.push({ slot, member, success: false, error: err.error?.message || "登録失敗" }));
-          } else {
-            slotMembers.forEach(member => results.push({ slot, member, success: true }));
-          }
-        } catch(e) { slotMembers.forEach(member => results.push({ slot, member, success: false, error: e.message })); }
+          await createCalendarEvent(token, title, slot, attendees);
+          slotMembers.forEach(member => results.push({ slot, member, success: true }));
+        } catch(e) {
+          if (e.message === '__AUTH_EXPIRED__') { setCalRegToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+          slotMembers.forEach(member => results.push({ slot, member, success: false, error: e.message }));
+        }
       }
       setCalRegResults(results);
     } catch(e) {

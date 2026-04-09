@@ -1,6 +1,7 @@
 import React from 'react';
 import { PALETTE } from '../lib/constants.js';
 import { loadAccounts, saveAccounts } from '../lib/master.js';
+import { getLoginLocks, unlockAccount, createInvite } from '../lib/account.js';
 import { PencilIcon, TrashIcon } from './icons.jsx';
 
 export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
@@ -14,26 +15,20 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
 
   React.useEffect(() => {
     // ロック中アカウントを取得
-    fetch('/api/login-locks')
-      .then(r => r.ok ? r.json() : {})
+    getLoginLocks()
       .then(setLockedAccounts)
       .catch(err => console.error('ロック情報取得失敗:', err));
   }, []);
 
   const handleUnlock = async (id) => {
-    await fetch('/api/login-lock/' + id, { method:'DELETE' });
+    await unlockAccount(id);
     setLockedAccounts(prev => { const n = {...prev}; delete n[id]; return n; });
   };
 
   const handleGenerateInvite = async () => {
     setInviteLoading(true);
     try {
-      const r = await fetch('/api/invite', { method:'POST', headers:{ 'Content-Type':'application/json' } });
-      if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        throw new Error(d.error || `エラーコード ${r.status}`);
-      }
-      const data = await r.json();
+      const data = await createInvite();
       setInviteCode(data.code);
     } catch (e) { alert("招待コードの発行に失敗しました: " + e.message); }
     setInviteLoading(false);

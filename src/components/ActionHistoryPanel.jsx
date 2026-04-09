@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { getStatusColor, getSourceColor } from '../lib/master.js';
 import { isOverdue, isDueToday, isDueSoon } from '../lib/date.js';
+import { createZohoDeal, pushZohoAction } from '../lib/zoho.js';
 import { S } from './styles.js';
 import { PencilIcon, TrashIcon } from './icons.jsx';
 import { ActionForm, ActEntry } from './LeadForms.jsx';
@@ -24,12 +25,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
     if (!window.confirm(`「${lead.company}」の取引先・取引先責任者・商談をZohoに作成しますか？`)) return;
     setZohoCreating(true); setZohoMsg('');
     try {
-      const res = await fetch('/api/zoho/create-deal', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ lead }),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
+      const { ok: resOk, status: resStatus, data } = await createZohoDeal(lead);
+      if (resOk && data.ok) {
         // 作成されたIDをリードに保存
         onUpdate({ zoho_account_id: data.accountId, zoho_contact_id: data.contactId, zoho_deal_id: data.dealId });
         if (data.warn === 'kv_save_failed') {
@@ -37,7 +34,7 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
         } else {
           setZohoMsg('✅ Zohoに取引先・取引先責任者・商談を作成しました');
         }
-      } else if (res.status === 409) {
+      } else if (resStatus === 409) {
         // すでに作成済み → IDを反映して画面を「作成済み」状態に更新
         onUpdate({ zoho_account_id: data.zoho_account_id, zoho_contact_id: data.zoho_contact_id, zoho_deal_id: data.zoho_deal_id });
         setZohoMsg('ℹ️ この商談はすでにZohoに作成済みです');
@@ -58,12 +55,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
     if (!lead.zoho_lead_id) { alert('このリードはZohoと連携されていません。\nZohoリードIDが設定されていないため同期できません。'); return; }
     setZohoPushingId(action.id);
     try {
-      const res = await fetch('/api/zoho/push-action', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, action }),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
+      const { ok: resOk, data } = await pushZohoAction(lead.zoho_lead_id, action);
+      if (resOk && data.ok) {
         setZohoMsg('✅ アクション履歴をZohoに同期しました');
       } else {
         setZohoMsg('❌ 同期失敗: ' + (data.error || '不明なエラー'));

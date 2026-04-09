@@ -3,6 +3,7 @@ import { DEFAULT_SOURCES, DEFAULT_STATUSES_WITH_COLORS, LEAD_SOURCE_ICONS, PALET
 import { loadLeads, saveLeads } from '../lib/api.js';
 import { getMaster, saveMasterSettings, getStatuses, getSalesMembers } from '../lib/master.js';
 import { loadGCalConfig } from '../lib/gcal.js';
+import { saveZohoConfig } from '../lib/zoho.js';
 import { PencilIcon, TrashIcon } from './icons.jsx';
 import { SourceIconSVG } from './SourceIconSVG.jsx';
 import { AccountManager } from './AccountManager.jsx';
@@ -45,16 +46,12 @@ function ZohoCrmSettings() {
     // 初回設定時（既存設定がない）はClient Secretも必須
     const isFirstTime = !window.__appData?.zohoConfig?.clientId;
     if (isFirstTime && !cfg.clientSecret.trim()) { showErr('初回設定時はClient Secretの入力が必要です'); return; }
-    const res = await fetch('/api/zoho-config', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(cfg),
-    });
-    if (res.ok) {
+    const result = await saveZohoConfig(cfg);
+    if (result.ok) {
       window.__appData.zohoConfig = { ...cfg, clientSecret: undefined };
       showMsg('設定を保存しました ✓');
     } else {
-      const d = await res.json().catch(() => ({}));
-      showErr('保存失敗: ' + (d.error || res.status));
+      showErr('保存失敗: ' + result.error);
     }
   };
 

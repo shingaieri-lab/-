@@ -1,6 +1,28 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import ReactDOM from 'react-dom/client';
 
+import {
+  SOURCES, PORTAL_SITES, PORTAL_TYPES, PORTAL_PRICE,
+  DEFAULT_SOURCES, DEFAULT_STATUSES_WITH_COLORS,
+  SOURCE_COLOR_PALETTE, STATUS_COLOR_PALETTE, LEAD_SOURCE_ICONS,
+  MQL_OPTIONS, ACTION_TYPES, ACTION_RESULTS,
+  DEFAULT_SALES_MEMBERS, DEFAULT_IS_MEMBERS, DEFAULT_PORTAL_SITES, DEFAULT_PORTAL_TYPES,
+  TODAY, THIS_MONTH, uid, PALETTE, NEXT_ACTION_RULES, at,
+} from './lib/constants.js';
+import { apiPost, loadLeads, saveLeads } from './lib/api.js';
+import {
+  loadMasterSettings, saveMasterSettings, getMaster,
+  getStatuses, getStatusColor,
+  getSalesMembers, getPortalSites, getPortalTypes, getPortalPrice,
+  getPortalSiteSource, getPortalSitesForSource, sourceHasPortal,
+  getSources, getSourcesWithMeta, getSourceIcon, getSourceColor,
+  getISMembers, IS_COLORS, syncISColors,
+  USER_COLORS, DEFAULT_ACCOUNTS, loadAccounts, saveAccounts, getEffectiveAiConfig,
+} from './lib/master.js';
+import { JP_HOLIDAYS, isBusinessDay, isOverdue, isDueToday, isDueSoon, addBusinessDays } from './lib/date.js';
+import { handleOAuthCallbackError, handleOAuthPopupError, isTokenValid, acquireGmailToken, buildGmailDraftRaw, postGmailDraft } from './lib/gmail.js';
+import { loadGCalConfig, saveGCalConfig } from './lib/gcal.js';
+
 
 const PencilIcon = ({size=13,color="currentColor"}) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{display:"block"}}>
@@ -17,303 +39,6 @@ const TrashIcon = ({size=13,color="currentColor"}) => (
     <line x1="10" y1="7" x2="10" y2="11"/>
   </svg>
 );
-
-
-// --- サーバーAPI層 ---
-window.__appData = { accounts: [], leads: [], masterSettings: null, aiConfig: {}, gcalConfig: {}, emailTpls: null, zohoConfig: null, zohoAuthenticated: false };
-async function apiPost(path, data) {
-  try {
-    const res = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    // 413: ペイロードが大きすぎる / 507: Vercel KV の容量不足
-    if (res.status === 413 || res.status === 507) {
-      console.error('API storage error:', path, res.status);
-      alert('データの保存に失敗しました。ストレージの上限に達している可能性があります。管理者にお問い合わせください。');
-    } else if (!res.ok) {
-      // バリデーションエラー等はユーザーに表示する
-      const errData = await res.json().catch(() => ({}));
-      console.error('API error:', path, res.status, errData);
-      alert('保存に失敗しました: ' + (errData.error || `エラーコード ${res.status}`));
-    }
-    return res;
-  } catch(e) { console.error('API error:', path, e); }
-}
-
-async function loadLeads() {
-  return window.__appData.leads || [];
-}
-async function saveLeads(leads) {
-  const prev = window.__appData.leads;
-  window.__appData.leads = leads;
-  const res = await apiPost('/api/leads', leads);
-  if (!res || !res.ok) {
-    window.__appData.leads = prev; // API失敗時はメモリ上のデータを元に戻す
-  }
-}
-
-// Google OAuth のエラーハンドリング共通処理
-function handleOAuthCallbackError(resp, rej) {
-  if (resp.error === 'redirect_uri_mismatch' || resp.error === 'invalid_client') {
-    rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" を追加してください。`));
-  } else {
-    rej(new Error(resp.error));
-  }
-}
-function handleOAuthPopupError(err, rej) {
-  if (err.type === 'popup_blocked_by_browser') {
-    rej(new Error('ポップアップがブロックされました。ブラウザのポップアップブロックを解除してください。'));
-  } else {
-    rej(new Error(`OAuth設定エラー: Google Cloud ConsoleのOAuthクライアントの「承認済みJavaScriptオリジン」に "${window.location.origin}" が登録されているか確認してください。`));
-  }
-}
-
-const SOURCES = ["HP", "ポータルサイト", "電話"];
-const PORTAL_SITES = ["アスピック", "現場TECH", "DX親方"];
-const PORTAL_TYPES = {
-  "アスピック":  ["一括請求"],
-  "現場TECH":   ["一括請求", "ピンポイント請求"],
-  "DX親方":     ["一括請求", "ピンポイント請求"],
-};
-const PORTAL_PRICE = (site, type) => {
-  if (!type) return 0;
-  if (type === "ピンポイント請求") return 12000;
-  if (type === "一括請求") return 10000;
-  return 0;
-};
-const DEFAULT_SOURCES = [];
-const DEFAULT_STATUSES_WITH_COLORS = [];
-const SOURCE_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#f59e0b","#10b981","#d97706","#ea580c","#6366f1","#ec4899"];
-const STATUS_COLOR_PALETTE = ["#0ea5e9","#8b5cf6","#0d9488","#d97706","#dc2626","#ea580c","#10b981","#f59e0b","#6366f1","#ec4899"];
-const LEAD_SOURCE_ICONS = [
-  { key: "home",       label: "ホーム・HP",    color: "#10b981" },
-  { key: "search",     label: "ポータル検索",  color: "#8b5cf6" },
-  { key: "phone",      label: "電話",          color: "#f59e0b" },
-  { key: "mail",       label: "メール",        color: "#0ea5e9" },
-  { key: "chat",       label: "チャット",      color: "#0d9488" },
-  { key: "megaphone",  label: "広告",          color: "#ea580c" },
-  { key: "star",       label: "口コミ",        color: "#eab308" },
-  { key: "people",     label: "紹介",          color: "#6366f1" },
-  { key: "briefcase",  label: "飛び込み",      color: "#d97706" },
-  { key: "map",        label: "マップ",        color: "#dc2626" },
-  { key: "globe",      label: "Web広告",       color: "#06b6d4" },
-  { key: "newspaper",  label: "媒体・メディア",color: "#6a9a7a" },
-  { key: "video",      label: "動画広告",      color: "#f43f5e" },
-  { key: "qr",         label: "QRコード",      color: "#374151" },
-  { key: "social",     label: "SNS",           color: "#ec4899" },
-  { key: "document",   label: "資料請求",      color: "#475569" },
-  { key: "building",   label: "施設・展示場",  color: "#92400e" },
-  { key: "lightbulb",  label: "セミナー",      color: "#ca8a04" },
-  { key: "event",      label: "イベント",      color: "#7c3aed" },
-  { key: "referral",   label: "他社紹介",      color: "#65a30d" },
-];
-function getStatuses() { return (getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS).map(s => s.label || s); }
-function getStatusColor(label) {
-  const statuses = getMaster().statuses || DEFAULT_STATUSES_WITH_COLORS;
-  const found = statuses.find(s => (s.label || s) === label);
-  return found ? (found.color || "#6a9a7a") : "#6a9a7a";
-}
-const MQL_OPTIONS = ["MQL", "非MQL"];
-const ACTION_TYPES = [
-  { v: "call",    label: "電話",  icon: "📞", color: "#10b981" },
-  { v: "email",   label: "メール",icon: "✉️",  color: "#8b5cf6" },
-  { v: "sms",     label: "SMS",   icon: "💬", color: "#0ea5e9" },
-  { v: "other",   label: "その他",icon: "📝", color: "#6a9a7a" },
-];
-const ACTION_RESULTS = ["取次", "不在", "不通", "折電", "送信済", "その他"];
-
-const DEFAULT_SALES_MEMBERS = [];
-const DEFAULT_IS_MEMBERS = [];
-const DEFAULT_PORTAL_SITES = [];
-const DEFAULT_PORTAL_TYPES = {};
-function loadMasterSettings() {
-  return window.__appData.masterSettings || null;
-}
-function saveMasterSettings(s) {
-  window.__appData.masterSettings = s;
-  apiPost('/api/master-settings', s);
-}
-function getMaster() {
-  const s = loadMasterSettings();
-  const defaults = {
-    salesMembers: DEFAULT_SALES_MEMBERS,
-    portalSites: DEFAULT_PORTAL_SITES,
-    portalTypes: DEFAULT_PORTAL_TYPES,
-    portalSiteSource: {},
-    sources: DEFAULT_SOURCES,
-    statuses: DEFAULT_STATUSES_WITH_COLORS,
-  };
-  if (!s) return defaults;
-  return {
-    ...defaults,
-    ...s,
-    portalSiteSource: s.portalSiteSource || {},
-    sources: s.sources || DEFAULT_SOURCES,
-    statuses: s.statuses || DEFAULT_STATUSES_WITH_COLORS,
-  };
-}
-// 動的取得関数
-function getSalesMembers() { return getMaster().salesMembers; }
-function getPortalSites() { return getMaster().portalSites; }
-function getPortalTypes() { return getMaster().portalTypes; }
-function getPortalPrice(site, type) {
-  if (!type) return 0;
-  const types = getPortalTypes()[site] || [];
-  const found = types.find(t => t.label === type);
-  return found ? found.price : 0;
-}
-function getPortalSiteSource(site) { return (getMaster().portalSiteSource || {})[site] || ""; }
-function getPortalSitesForSource(source) {
-  if (!source) return [];
-  const m = getMaster().portalSiteSource || {};
-  return getPortalSites().filter(s => m[s] === source);
-}
-function sourceHasPortal(source) { return getPortalSitesForSource(source).length > 0; }
-function getSources() { return (getMaster().sources || DEFAULT_SOURCES).map(s => typeof s === "string" ? s : s.label); }
-function getSourcesWithMeta() { return (getMaster().sources || DEFAULT_SOURCES).map(s => typeof s === "string" ? {label:s, icon:null} : s); }
-function getSourceIcon(sourceName) {
-  const src = (getMaster().sources || DEFAULT_SOURCES).find(s => (typeof s === "string" ? s : s.label) === sourceName);
-  return (src && typeof src === "object") ? src.icon : null;
-}
-function getSourceColor(sourceName, fallbackIdx) {
-  const iconKey = getSourceIcon(sourceName);
-  if (iconKey) { const def = LEAD_SOURCE_ICONS.find(d => d.key === iconKey); if (def) return def.color; }
-  if (sourceName === "HP") return "#0ea5e9";
-  if (sourceName === "ポータルサイト") return "#8b5cf6";
-  if (sourceName === "電話") return "#f59e0b";
-  return SOURCE_COLOR_PALETTE[(fallbackIdx + 3) % SOURCE_COLOR_PALETTE.length];
-}
-function getISMembers() {
-  const accounts = window.__appData?.accounts || [];
-  if (accounts.length > 0) {
-    const isStaffAccounts = accounts.filter(a => a.isStaff).map(a => a.name);
-    return isStaffAccounts.length > 0 ? isStaffAccounts : accounts.map(a => a.name);
-  }
-  return DEFAULT_IS_MEMBERS;
-}
-const IS_COLORS = {};
-function syncISColors() {
-  const accounts = window.__appData?.accounts || [];
-  accounts.forEach(a => {
-    IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
-  });
-}
-syncISColors();
-
-// フォールバック用ハードコードリスト（APIが取得できない場合に使用）
-const JP_HOLIDAYS = new Set([
-  "2025-01-01","2025-01-13","2025-02-11","2025-02-23","2025-02-24",
-  "2025-03-20","2025-04-29","2025-05-03","2025-05-04","2025-05-05","2025-05-06",
-  "2025-07-21","2025-08-11","2025-09-15","2025-09-23","2025-10-13",
-  "2025-11-03","2025-11-23","2025-11-24","2025-12-23",
-  "2026-01-01","2026-01-12","2026-02-11","2026-02-23",
-  "2026-03-20","2026-04-29","2026-05-03","2026-05-04","2026-05-05","2026-05-06",
-  "2026-07-20","2026-08-11","2026-09-21","2026-09-22","2026-09-23","2026-10-12",
-  "2026-11-03","2026-11-23",
-]);
-// 起動時に内閣府データ準拠の祝日APIから最新の祝日を取得してSetを自動更新する
-// 取得失敗時はハードコードリストをそのまま使う（ネットワーク不要で動作）
-(async () => {
-  try {
-    const res = await fetch('https://holidays-jp.github.io/api/v1/date.json');
-    if (res.ok) {
-      const data = await res.json();
-      Object.keys(data).forEach(d => JP_HOLIDAYS.add(d));
-    }
-  } catch(e) { /* フォールバック継続 */ }
-})();
-const isBusinessDay = (dateStr) => {
-  if (!dateStr) return true;
-  const d = new Date(dateStr + "T00:00:00");
-  const dow = d.getDay();
-  return dow !== 0 && dow !== 6 && !JP_HOLIDAYS.has(dateStr);
-};
-const isOverdue = (dateStr) => {
-  if (!dateStr) return false;
-  return dateStr < TODAY;
-};
-const isDueToday = (dateStr) => dateStr === TODAY;
-const isDueSoon = (dateStr) => {
-  if (!dateStr || dateStr < TODAY) return false;
-  const d = new Date(dateStr + "T00:00:00");
-  const t = new Date(TODAY + "T00:00:00");
-  return (d - t) / 86400000 <= 2;
-};
-
-const TODAY = new Date().toISOString().split("T")[0];
-const THIS_MONTH = TODAY.slice(0, 7);
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-
-// ── Gmail共通ユーティリティ ──────────────────────────────────────────────────
-// トークンオブジェクト { token, expiresAt } が有効かチェック（期限の60秒前に再取得）
-// Googleのアクセストークンは発行から60分で失効するため、55分を目安に期限切れ扱いにする
-const isTokenValid = (tokenObj) =>
-  !!(tokenObj?.token && tokenObj.expiresAt > Date.now() + 60 * 1000);
-
-// OAuthトークン（Googleの認証許可証）を取得する共通関数
-// currentTokenObj: すでに持っているトークンオブジェクト { token, expiresAt }（有効期限内ならそのまま返す）
-// 戻り値: { token: string, expiresAt: number }
-const acquireGmailToken = async (clientId, currentTokenObj) => {
-  if (isTokenValid(currentTokenObj)) return currentTokenObj;
-  // Googleのスクリプトがまだ読み込まれていなければ動的に読み込む
-  if (!window.google?.accounts?.oauth2) {
-    await new Promise((res, rej) => {
-      if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
-      const s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client';
-      s.onload = res; s.onerror = rej;
-      document.head.appendChild(s);
-    });
-    await new Promise(r => setTimeout(r, 500));
-  }
-  return new Promise((res, rej) => {
-    const client = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: 'https://www.googleapis.com/auth/gmail.compose',
-      callback: (resp) => {
-        if (resp.error) {
-          handleOAuthCallbackError(resp, rej);
-        } else {
-          // 55分後に期限切れとして扱う（Googleトークンは60分有効）
-          res({ token: resp.access_token, expiresAt: Date.now() + 55 * 60 * 1000 });
-        }
-      },
-      error_callback: (err) => handleOAuthPopupError(err, rej)
-    });
-    client.requestAccessToken();
-  });
-};
-
-// MIMEメール形式のRAWデータ（Gmail APIが受け取る形式）を組み立てる共通関数
-const buildGmailDraftRaw = (to, subject, body) => {
-  const utf8B64 = (str) => { const b = new TextEncoder().encode(str); let s=''; for(let c of b) s+=String.fromCharCode(c); return btoa(s); };
-  const lines = [];
-  if (to) lines.push(`To: ${to}`);
-  lines.push(`Subject: =?UTF-8?B?${utf8B64(subject)}?=`);
-  lines.push('MIME-Version: 1.0');
-  lines.push('Content-Type: text/plain; charset=UTF-8');
-  lines.push('Content-Transfer-Encoding: base64');
-  lines.push('');
-  lines.push(utf8B64(body));
-  return btoa(lines.join('\r\n')).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-};
-
-// Gmail APIに下書きを送信する共通関数
-// 認証切れ（401）の場合は isUnauthenticated フラグ付きエラーをスローする
-const postGmailDraft = async (token, raw) => {
-  const res = await fetch('https://www.googleapis.com/gmail/v1/users/me/drafts', {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: { raw } })
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    if ((err.error?.code===401)||(err.error?.status==='UNAUTHENTICATED')) {
-      throw Object.assign(new Error('認証の期限が切れました。再度お試しください。'), { isUnauthenticated: true });
-    }
-    throw new Error(err.error?.message || '保存に失敗しました');
-  }
-};
-// ────────────────────────────────────────────────────────────────────────────
-const at = (v) => ACTION_TYPES.find(a => a.v === v) || ACTION_TYPES[0];
 
 
 // AI_SYSTEM_PROMPT はセキュリティのためサーバー側（server.js）に移動しました
@@ -4493,36 +4218,6 @@ function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAct
   );
 }
 
-const PALETTE = ["#7c3aed","#0369a1","#059669","#d97706","#dc2626","#0891b2","#db2777","#65a30d","#ea580c","#0f766e","#6d28d9","#1d4ed8","#047857","#b45309","#991b1b","#0e7490","#9d174d","#3f6212","#c2410c","#134e4a"];
-const USER_COLORS = {};  // 動的に設定
-
-const DEFAULT_ACCOUNTS = [];
-
-function loadAccounts() {
-  const saved = window.__appData?.accounts;
-  if (!saved || saved.length === 0) return DEFAULT_ACCOUNTS;
-  return saved;
-}
-function saveAccounts(accounts) {
-  window.__appData.accounts = accounts;
-  apiPost('/api/accounts', accounts);
-  accounts.forEach(a => {
-    USER_COLORS[a.name] = a.color;
-    IS_COLORS[a.name] = { bg: a.color, text: a.color, border: a.color + "55" };
-  });
-}
-// ※ geminiKey はサーバー側のみ保持。フロントエンドには geminiConfigured（設定済みフラグ）のみ返す
-// ※ window.__appData.aiConfig はログイン時・saveAiConfig 時に更新される
-function getEffectiveAiConfig(currentUser) {
-  if (!currentUser) return {};
-  // 共有設定（管理者が設定したもの）をフォールバックとして使用する
-  // → メンバーが個別に設定していなくても管理者設定のClient IDが使われる
-  const shared = window.__appData?.aiConfig || {};
-  return {
-    geminiConfigured: !!(currentUser.geminiConfigured || shared.geminiConfigured),
-    gmailClientId: currentUser.gmailClientId || shared.gmailClientId || ""
-  };
-}
 
 function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -4876,35 +4571,7 @@ function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   );
 }
 
-const NEXT_ACTION_RULES = [
-  { result:"繋がった",  type:"call",    days:7,  memo:"状況確認の架電",      label:"1週間後に状況確認" },
-  { result:"不在",      type:"call",    days:3,  memo:"再架電",              label:"3営業日後に再架電" },
-  { result:"不通",      type:"call",    days:5,  memo:"再架電（別時間帯）",   label:"5営業日後に別時間帯で架電" },
-  { result:"送信済",    type:"email",   days:2,  memo:"開封・返信確認",       label:"2日後に開封確認" },
-  { result:"その他",    type:"call",    days:5,  memo:"フォローアップ",       label:"5営業日後にフォロー" },
-];
-
-function addBusinessDays(dateStr, days) {
-  const d = new Date((dateStr || TODAY) + "T00:00:00");
-  let added = 0;
-  while (added < days) {
-    d.setDate(d.getDate() + 1);
-    const dow = d.getDay();
-    const ds = d.toISOString().split("T")[0];
-    if (dow !== 0 && dow !== 6 && !JP_HOLIDAYS.has(ds)) added++;
-  }
-  return d.toISOString().split("T")[0];
-}
-
 // ─── Google Calendar 設定 ───────────────────────────────
-
-function loadGCalConfig() {
-  return window.__appData?.gcalConfig || {};
-}
-function saveGCalConfig(cfg) {
-  window.__appData.gcalConfig = cfg;
-  apiPost('/api/gcal-config', cfg);
-}
 
 function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGoEmail = ()=>{}, currentUser, leads = [] }) {
   const [cfg, setCfg] = useState(() => loadGCalConfig());

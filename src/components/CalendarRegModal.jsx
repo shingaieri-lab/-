@@ -20,7 +20,9 @@ export function CalendarRegModal({ show, onClose, candidateSlots, leads, selecte
       setCalRegCompany(lead?.company || "");
       setCalRegResults([]);
     }
-  }, [show, initialLeadId, leads]);
+  // leads は初期化時のスナップショットとして使うため依存から除外
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, initialLeadId]);
 
   if (!show) return null;
 

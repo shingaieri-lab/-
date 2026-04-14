@@ -87,8 +87,14 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
       return base+nextPart+talkPart;
     }).join("\n"):"";
     const userCtx=`\n\n【送信者情報】名前:${senderName}`+(senderSig?`\n署名:\n${senderSig}`:"");
+    // 今日の日付・曜日をJST基準でAIに渡す（AIが曜日を考慮したネクストアクションを提案できるようにする）
+    const WEEKDAYS=["日","月","火","水","木","金","土"];
+    const todayJST=new Date().toLocaleDateString('sv',{timeZone:'Asia/Tokyo'});
+    const todayWeekday=WEEKDAYS[new Date(todayJST+"T00:00:00").getDay()];
+    const actionWeekday=WEEKDAYS[new Date(actionDate+"T00:00:00").getDay()];
+    const dateCtx=`\n\n【日付情報】今日:${todayJST}（${todayWeekday}曜日） / アクション実施日:${actionDate}（${actionWeekday}曜日）`;
     try{
-      const res=await fetch('/api/ai/analyze',{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:ctx+actHistory+userCtx+"\n\n【メモ】\n"+memo})});
+      const res=await fetch('/api/ai/analyze',{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:ctx+actHistory+userCtx+dateCtx+"\n\n【メモ】\n"+memo})});
       const data=await res.json();
       if(!res.ok) throw new Error(data.error||`エラーコード ${res.status}`);
       if(data.error) throw new Error(data.error.message||data.error.status);

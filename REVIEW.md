@@ -1,6 +1,6 @@
 # IS進捗管理ツール レビュー記録
 
-レビュー開始：2026-03-23　／　最終更新：2026-04-09（API分離対応）
+レビュー開始：2026-03-23　／　最終更新：2026-04-14（Vite移行完了・デッドコード検出）
 
 ---
 
@@ -88,11 +88,11 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 
 ---
 
-### 🟢 リファクタリング（2026-04-08）
+### 🟢 リファクタリング（2026-04-08〜14）
 
 | 対応内容 |
 |---------|
-| **Vite移行完了**（`feature/vite-migration`）：5,759行の単一 index.html を Vite + React ESM 構成に分割。54モジュール、ビルドエラーゼロ |
+| **Vite移行・フル分割完了**（`feature/vite-migration`、PR #129、2026-04-14マージ）：CDN版ReactからVite+ESM構成へ全面移行。`src/App.jsx` をルートに、`src/pages/`・`src/components/actions/`・`src/components/leads/`・`src/components/nav/`・`src/components/settings/`・`src/components/ui/`・`src/components/wizard/`・`src/components/charts/` にページ・コンポーネントを階層分離。55モジュール、ビルドエラーゼロ |
 | **server.js 分割完了**（`feature/file-split`）：983行のモノリスを `lib/`・`routes/` に8ファイル分割。`server.js` はエントリーポイント30行のみに |
 | **コンポーネント分割完了**（`feature/component-split`）：`src/main.jsx` 4,885行 → 192行に削減。19コンポーネントを `src/components/` に、ビジネスロジックを `src/lib/` に分離。41モジュール、ビルドエラーゼロ |
 | **API分離完了**（`feature/api-separation`）：7コンポーネントに直書きされていたfetch呼び出しを `src/lib/` に切り出し。`ai.js`, `account.js`, `zoho.js`, `authApi.js`, `gcal.js` に集約 |
@@ -101,21 +101,47 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 
 ## ❌ 未対応・今後の課題
 
-### 🔴 コード品質（CLAUDE.md違反）― 2026-04-09 時点
+### 🔴 コード品質（CLAUDE.md違反）― 2026-04-14 時点
 
-#### ファイル肥大化（300行超）
+#### デッドコード残存（優先対応）
 
-`src/main.jsx` の分割は完了。抽出したコンポーネントの一部がまだ300行超。
+Vite移行（PR #129）により `src/pages/` + 階層型 `src/components/` に移行済みだが、旧フラット構造のファイルが**どこからもインポートされていない状態**で残存している。「同じ処理を2箇所以上に書かない」ルール違反。
+
+| ファイル | 行数 | 状態 |
+|------|------|------|
+| `src/components/SettingsPage.jsx` | 952行 | 未使用・削除可 |
+| `src/components/CalendarPage.jsx` | 590行 | 未使用・削除可 |
+| `src/components/SetupWizard.jsx` | 449行 | 未使用・削除可 |
+| `src/components/AIPage.jsx` | 432行 | 未使用・削除可 |
+| `src/components/LeadList.jsx` | 332行 | 未使用・削除可 |
+| `src/components/EmailPage.jsx` | 331行 | 未使用・削除可 |
+| `src/components/LeadForms.jsx` | 326行 | 未使用・削除可 |
+| `src/components/Dashboard.jsx` | 212行 | 未使用・削除可 |
+| `src/components/ActionHistoryPanel.jsx` | 208行 | 未使用・削除可 |
+| `src/components/AccountManager.jsx` | 174行 | 未使用・削除可 |
+| `src/components/LoginScreen.jsx` | 166行 | 未使用・削除可 |
+| `src/components/Charts.jsx` | 158行 | 未使用・削除可 |
+| `src/components/Nav.jsx` | 128行 | 未使用・削除可 |
+| `src/components/styles.js` | 128行 | 未使用・削除可 |
+| `src/components/ui.jsx` | 未確認 | 未使用・削除可 |
+| `src/components/LeadRow.jsx` | 265行 | 未使用・削除可 |
+| `src/components/CSVImport.jsx` | 240行 | 未使用・削除可 |
+| `src/components/LeadCombobox.jsx` | 未確認 | 未使用・削除可 |
+| `src/components/SourceIconSVG.jsx` | 未確認 | 未使用・削除可 |
+| `src/components/icons.jsx` | 未確認 | 未使用・削除可 |
+
+#### ファイル肥大化（300行超）― アクティブファイル
+
+`src/pages/` に移行済みのファイルで、まだ300行超のものが残っている。
 
 | ファイル | 行数 | 分割案 |
 |------|------|------|
-| `src/components/SettingsPage.jsx` | 955行 | タブ別にコンポーネント分割（PortalSettings, SalesSettings, ApiKeySettings 等） |
-| `src/components/CalendarPage.jsx` | 590行 | カレンダー登録UIを別コンポーネントに分割 |
-| `src/components/SetupWizard.jsx` | 449行 | ステップ別コンポーネントに分割 |
-| `src/components/AIPage.jsx` | 432行 | AIPage内のUI部分をさらに分割 |
-| `src/components/LeadList.jsx` | 332行 | フィルター・テーブルUIを別コンポーネントに |
-| `src/components/EmailPage.jsx` | 331行 | テンプレート編集UIを別コンポーネントに |
-| `src/components/LeadForms.jsx` | 326行 | LeadForm / ActionForm / ActEntry を別ファイルに分割 |
+| `src/pages/SettingsPage.jsx` | 705行 | タブ別にコンポーネント分割（PortalSettings, SalesSettings, ApiKeySettings 等） |
+| `src/pages/CalendarPage.jsx` | 623行 | カレンダー登録UIを別コンポーネントに分割 |
+| `src/components/wizard/SetupWizard.jsx` | 408行 | ステップ別コンポーネントに分割 |
+| `src/pages/AIPage.jsx` | 435行 | AIPage内のUI部分をさらに分割 |
+| `src/pages/EmailPage.jsx` | 334行 | テンプレート編集UIを別コンポーネントに |
+| `src/pages/LeadsPage.jsx` | 319行 | フィルター・テーブルUIを別コンポーネントに |
 
 #### ~~API呼び出しのコンポーネント直書き~~ ✅ 対応済み（2026-04-09）
 

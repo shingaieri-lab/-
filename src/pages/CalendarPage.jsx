@@ -7,7 +7,8 @@ import { loadGCalConfig, saveGCalConfig } from '../lib/gcal.js';
 import { loadAccounts } from '../lib/accounts.js';
 import { JP_HOLIDAYS, TODAY } from '../lib/holidays.js';
 import { getSalesMembers } from '../lib/master.js';
-import { isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../lib/oauth.js';
+import { CalendarSetupPanel } from '../components/calendar/CalendarSetupPanel.jsx';
+import { CalendarRegModal } from '../components/calendar/CalendarRegModal.jsx';
 
 // ローカルスタイル定数（このページでのみ使用）
 const S = {
@@ -58,12 +59,6 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
 
   // カレンダー登録モーダル用
   const [showCalReg, setShowCalReg] = useState(false);
-  const [calRegLeadId, setCalRegLeadId] = useState("");
-  const [calRegCompany, setCalRegCompany] = useState("");
-  const [calRegTitleTpl, setCalRegTitleTpl] = useState("仮WEB営1）【{{会社名}}様】");
-  const [calRegLoading, setCalRegLoading] = useState(false);
-  const [calRegToken, setCalRegToken] = useState(null);
-  const [calRegResults, setCalRegResults] = useState([]);
   const [emailLeadId, setEmailLeadId] = useState("");
 
   const isConfigured = cfg.apiKey && Object.keys(mergedCalendarIds).length > 0;
@@ -183,89 +178,6 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
     }
   };
 
-  const resolvedCalTitle = calRegTitleTpl.replace(/\{\{会社名\}\}/g, calRegCompany);
-
-  const openCalReg = () => {
-    setCalRegTitleTpl("仮WEB営1）【{{会社名}}様】");
-    const preselectedLead = leads.find(l => l.id === emailLeadId);
-    setCalRegLeadId(emailLeadId);
-    setCalRegCompany(preselectedLead?.company || "");
-    setCalRegResults([]);
-    setShowCalReg(true);
-  };
-
-  const registerToCalendar = async () => {
-    const aiCfg = window.__appData?.aiConfig || {};
-    const clientId = currentUser?.gmailClientId || aiCfg.gmailClientId || "";
-    if (!clientId) { alert(currentUser?.role === "admin" ? "設定 > APIキー設定 で Gmail Client ID を入力してください" : "管理者にGmail OAuth Client IDの設定を依頼してください"); return; }
-    if (candidateSlots.length === 0) return;
-    setCalRegLoading(true); setCalRegResults([]);
-    try {
-      // 有効期限内のトークンがあれば再利用、期限切れなら再取得する
-      let tokenObj = calRegToken;
-      if (!isTokenValid(tokenObj)) {
-        if (!window.google?.accounts?.oauth2) {
-          await new Promise((res, rej) => {
-            // 既にスクリプトがDOMにあれば重複追加しない
-            if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
-            const s = document.createElement('script');
-            s.src = 'https://accounts.google.com/gsi/client';
-            s.onload = res; s.onerror = rej;
-            document.head.appendChild(s);
-          });
-          await new Promise(r => setTimeout(r, 500));
-        }
-        const rawToken = await new Promise((res, rej) => {
-          const client = window.google.accounts.oauth2.initTokenClient({
-            client_id: clientId,
-            scope: 'https://www.googleapis.com/auth/calendar.events',
-            callback: (resp) => {
-              if (resp.error) { handleOAuthCallbackError(resp, rej); }
-              else { res(resp.access_token); }
-            },
-            error_callback: (err) => handleOAuthPopupError(err, rej)
-          });
-          client.requestAccessToken();
-        });
-        tokenObj = { token: rawToken, expiresAt: Date.now() + 55 * 60 * 1000 };
-        setCalRegToken(tokenObj);
-      }
-      const token = tokenObj.token;
-      const title = resolvedCalTitle;
-      const results = [];
-      for (const slot of candidateSlots) {
-        const slotMembers = slot.members?.length > 0 ? slot.members : selectedMembers;
-        const missingMembers = slotMembers.filter(m => !mergedCalendarIds[m]);
-        missingMembers.forEach(member => results.push({ slot, member, success: false, error: "カレンダーIDなし" }));
-        const attendees = slotMembers
-          .filter(m => mergedCalendarIds[m])
-          .map(m => ({ email: mergedCalendarIds[m] }));
-        try {
-          const startDT = `${slot.date}T${slot.start}:00+09:00`;
-          const endDT = `${slot.date}T${slot.end}:00+09:00`;
-          const resp = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none`,
-            { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ summary: title, start: { dateTime: startDT, timeZone: "Asia/Tokyo" }, end: { dateTime: endDT, timeZone: "Asia/Tokyo" }, attendees }) }
-          );
-          if (!resp.ok) {
-            const err = await resp.json();
-            if (err.error?.code === 401) { setCalRegToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
-            slotMembers.forEach(member => results.push({ slot, member, success: false, error: err.error?.message || "登録失敗" }));
-          } else {
-            slotMembers.forEach(member => results.push({ slot, member, success: true }));
-          }
-        } catch(e) { slotMembers.forEach(member => results.push({ slot, member, success: false, error: e.message })); }
-      }
-      setCalRegResults(results);
-    } catch(e) {
-      setCalRegToken(null);
-      alert("エラー：" + e.message);
-    } finally {
-      setCalRegLoading(false);
-    }
-  };
-
   const members = getSalesMembers();
   const inp2 = { ...S.inp, marginBottom:0 };
 
@@ -278,56 +190,13 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
 
       {/* 設定パネル */}
       {showSetup && (
-        <div style={{...S.card, marginBottom:16, border:"1px solid #fde68a", background:"#fffbeb"}}>
-          <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12}}>⚙️ Google Calendar API 設定</div>
-
-          {/* 設定手順 */}
-          <div style={{background:"#fff",border:"1px solid #fde68a",borderRadius:8,padding:"12px 14px",marginBottom:14,fontSize:12,color:"#92400e",lineHeight:1.8}}>
-            <div style={{fontWeight:700,marginBottom:6}}>📋 設定手順</div>
-            <div>① <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{color:"#0284c7"}}>Google Cloud Console</a> でプロジェクトを作成</div>
-            <div>② 「APIとサービス」→「ライブラリ」→ <b>Google Calendar API</b> を有効化</div>
-            <div>③ 「認証情報」→「APIキーを作成」→ APIキーをコピー</div>
-            <div>④ 各担当者のGoogleカレンダーを開き「設定」→「カレンダーのID」をコピー<br/>　　（例：<code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>abcdef@gmail.com</code> または <code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>xxx@group.calendar.google.com</code>）</div>
-            <div>⑤ カレンダーの「共有設定」で <b>「一般公開して誰でも閲覧できるようにする」</b> をON（または「予定の詳細を表示」を許可）</div>
-          </div>
-
-          {/* カレンダー登録機能の追加設定 */}
-          <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"12px 14px",marginBottom:14,fontSize:12,color:"#1e40af",lineHeight:1.9}}>
-            <div style={{fontWeight:700,marginBottom:6}}>📅 「カレンダーに登録」機能を使う場合の追加設定（管理者が1回だけ実施）</div>
-            <div>⑥ 「認証情報」→「OAuthクライアントID」を作成（種類：<b>ウェブアプリケーション</b>）</div>
-            <div>　　→ 「承認済みJavaScriptオリジン」に <code style={{background:"#dbeafe",padding:"1px 4px",borderRadius:3}}>{window.location.origin}</code> を追加</div>
-            <div>⑦ 「OAuthの同意画面」でスコープに <code style={{background:"#dbeafe",padding:"1px 4px",borderRadius:3}}>https://www.googleapis.com/auth/calendar.events</code> を追加</div>
-            <div>⑧ 作成した <b>クライアントID</b> を ⚙️設定 &gt; APIキー設定 の「Gmail Client ID」欄に入力すれば全員が使用可能になります</div>
-            <div style={{marginTop:8,padding:"6px 10px",background:"#dbeafe",borderRadius:6,color:"#1e40af"}}>
-              💡 各営業は初回のみGoogleの認証ポップアップで「許可」を押すだけです。個別の設定は不要です。
-            </div>
-            <div style={{marginTop:6,color:"#1d4ed8",fontWeight:600}}>※ 空き時間の検索（freeBusy）は APIキーのみで動作します。カレンダーへの予定登録にはOAuth認証（Client ID）が必要です。</div>
-          </div>
-
-          <div style={{marginBottom:10}}>
-            <label style={{...S.lbl}}>Google Calendar APIキー</label>
-            <input value={editCfg.apiKey||""} onChange={e=>setEditCfg(p=>({...p,apiKey:e.target.value}))}
-              placeholder="AIzaSy..." style={inp2} />
-          </div>
-
-          <div style={{marginBottom:4}}>
-            <label style={{...S.lbl}}>担当者ごとのカレンダーID</label>
-          </div>
-          {members.map(m => (
-            <div key={m} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-              <span style={{fontSize:12,fontWeight:600,color:"#174f35",minWidth:70}}>{m}</span>
-              <input value={(editCfg.calendarIds||{})[m]||""}
-                onChange={e=>setEditCfg(p=>({...p,calendarIds:{...(p.calendarIds||{}),[m]:e.target.value}}))}
-                placeholder="例：tanaka@gmail.com"
-                style={{...inp2,flex:1}} />
-            </div>
-          ))}
-
-          <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12}}>
-            <button onClick={()=>setShowSetup(false)} style={S.btnSec}>閉じる</button>
-            <button onClick={()=>{ saveGCalConfig(editCfg); setCfg(editCfg); setShowSetup(false); }} style={S.btnP}>保存</button>
-          </div>
-        </div>
+        <CalendarSetupPanel
+          editCfg={editCfg}
+          setEditCfg={setEditCfg}
+          onSave={() => { saveGCalConfig(editCfg); setCfg(editCfg); setShowSetup(false); }}
+          onClose={() => setShowSetup(false)}
+          members={members}
+        />
       )}
 
       {!isConfigured && !showSetup && (
@@ -486,7 +355,7 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
                 style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"none",background:candidateSlots.length===0?"#d1d5db":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",cursor:candidateSlots.length===0?"default":"pointer",fontFamily:"inherit",fontWeight:700}}>
                 📧 メールに使う
               </button>
-              <button onClick={openCalReg} disabled={candidateSlots.length===0}
+              <button onClick={()=>setShowCalReg(true)} disabled={candidateSlots.length===0}
                 style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"none",background:candidateSlots.length===0?"#d1d5db":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",cursor:candidateSlots.length===0?"default":"pointer",fontFamily:"inherit",fontWeight:700}}>
                 📅 カレンダーに登録
               </button>
@@ -544,80 +413,16 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
       )}
 
       {/* カレンダー登録モーダル */}
-      {showCalReg && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}}
-          onClick={e=>{if(e.target===e.currentTarget){setShowCalReg(false);setCalRegLeadId("");}}}>
-          <div style={{background:"#fff",borderRadius:16,padding:28,width:500,maxWidth:"95vw",boxShadow:"0 8px 40px rgba(0,0,0,0.2)",maxHeight:"85vh",overflowY:"auto"}}>
-            <div style={{fontSize:16,fontWeight:800,color:"#174f35",marginBottom:18}}>📅 Googleカレンダーに登録</div>
-
-            <div style={{marginBottom:12}}>
-              <label style={{...S.lbl}}>会社名<span style={{fontWeight:400,color:"#6b7280",fontSize:11,marginLeft:6}}>（{"{{会社名}}"} に代入されます）</span></label>
-              {leads.length > 0 && (
-                <div style={{marginBottom:6}}>
-                  <LeadCombobox
-                    leads={leads}
-                    value={calRegLeadId}
-                    onChange={id => {
-                      setCalRegLeadId(id);
-                      const lead = leads.find(l => l.id === id);
-                      if (lead) setCalRegCompany(lead.company || "");
-                    }}
-                    placeholder="リードから検索・選択"
-                    inputStyle={S.inp}
-                    darkMode={false}
-                  />
-                </div>
-              )}
-              <input value={calRegCompany} onChange={e=>setCalRegCompany(e.target.value)}
-                placeholder="例：株式会社〇〇" style={S.inp} />
-            </div>
-
-            <div style={{marginBottom:16}}>
-              <label style={{...S.lbl}}>タイトルテンプレート</label>
-              <input value={calRegTitleTpl} onChange={e=>setCalRegTitleTpl(e.target.value)} style={S.inp} />
-              <div style={{fontSize:11,color:"#6b7280",marginTop:4,background:"#f0f5f2",borderRadius:6,padding:"5px 10px"}}>
-                プレビュー：<span style={{fontWeight:700,color:"#174f35"}}>{resolvedCalTitle || "（タイトル未入力）"}</span>
-              </div>
-            </div>
-
-            <div style={{marginBottom:16}}>
-              <label style={{...S.lbl}}>登録する候補日（{candidateSlots.length}件）</label>
-              {candidateSlots.map((slot,i)=>(
-                <div key={i} style={{fontSize:12,background:"#ecfdf5",border:"1px solid #10b98144",borderRadius:8,padding:"7px 12px",marginBottom:6,color:"#174f35",display:"flex",alignItems:"center",gap:8}}>
-                  <span>📅 {slot.date}（{["日","月","火","水","木","金","土"][new Date(slot.date+"T00:00:00").getDay()]}）{slot.start}〜{slot.end}</span>
-                  {slot.members?.length > 0 && <span style={{color:"#6a9a7a",fontSize:11}}>担当：{slot.members.join("・")}</span>}
-                </div>
-              ))}
-            </div>
-
-            {calRegResults.length > 0 && (
-              <div style={{marginBottom:16}}>
-                <label style={{...S.lbl}}>登録結果</label>
-                {calRegResults.map((r,i)=>(
-                  <div key={i} style={{fontSize:12,borderRadius:8,padding:"5px 10px",marginBottom:4,
-                    background:r.success?"#ecfdf5":"#fef2f2",
-                    border:`1px solid ${r.success?"#10b98144":"#fca5a544"}`,
-                    color:r.success?"#065f46":"#b91c1c"}}>
-                    {r.success ? "✅" : "❌"} {r.slot.date} {r.slot.start}〜{r.slot.end}
-                    {r.member && <span style={{marginLeft:6,fontWeight:600}}>{r.member}</span>}
-                    ：{r.success ? "登録完了" : r.error}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:4}}>
-              <button onClick={()=>{setShowCalReg(false);setCalRegLeadId("");}} style={S.btnSec}>閉じる</button>
-              <button onClick={registerToCalendar}
-                disabled={calRegLoading || !resolvedCalTitle.trim()}
-                style={{...S.btnP,opacity:(calRegLoading||!resolvedCalTitle.trim())?0.6:1,
-                  cursor:(calRegLoading||!resolvedCalTitle.trim())?"not-allowed":"pointer"}}>
-                {calRegLoading ? "⏳ 登録中..." : calRegResults.length > 0 && calRegResults.every(r=>r.success) ? "✅ 登録済み（再登録）" : "📅 カレンダーに登録する"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CalendarRegModal
+        show={showCalReg}
+        onClose={() => setShowCalReg(false)}
+        initialLeadId={emailLeadId}
+        candidateSlots={candidateSlots}
+        leads={leads}
+        selectedMembers={selectedMembers}
+        currentUser={currentUser}
+        mergedCalendarIds={mergedCalendarIds}
+      />
     </div>
   );
 }

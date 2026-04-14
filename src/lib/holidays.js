@@ -1,17 +1,4 @@
-// 日付・営業日ユーティリティ
-
-// 日付を YYYY-MM-DD に正規化する
-// 対応フォーマット: "YYYY-MM-DD"（そのまま）、"YYYY/M/D" or "YYYY-M-D"（ゼロ埋め変換）
-export function normalizeDate(s) {
-  if (!s) return "";
-  s = s.trim();
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-  const m = s.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
-  if (m) return `${m[1]}-${m[2].padStart(2, "0")}-${m[3].padStart(2, "0")}`;
-  return s;
-}
-
-import { TODAY } from './constants.js';
+// 祝日・営業日ユーティリティ
 
 // フォールバック用ハードコードリスト（APIが取得できない場合に使用）
 export const JP_HOLIDAYS = new Set([
@@ -34,9 +21,16 @@ export const JP_HOLIDAYS = new Set([
       const data = await res.json();
       Object.keys(data).forEach(d => JP_HOLIDAYS.add(d));
     }
-  } catch(e) { /* フォールバック継続 */ }
+  } catch (e) { /* フォールバック継続 */ }
 })();
 
+export const TODAY = new Date().toISOString().split("T")[0];
+export const THIS_MONTH = TODAY.slice(0, 7);
+
+// ユニークIDを生成する（リードIDなどに使用）
+export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+// 指定日が営業日かどうかを判定（土日・祝日はfalse）
 export const isBusinessDay = (dateStr) => {
   if (!dateStr) return true;
   const d = new Date(dateStr + "T00:00:00");
@@ -58,14 +52,13 @@ export const isDueSoon = (dateStr) => {
   return (d - t) / 86400000 <= 2;
 };
 
-export function addBusinessDays(dateStr, days) {
-  const d = new Date((dateStr || TODAY) + "T00:00:00");
-  let added = 0;
-  while (added < days) {
+// 指定日から営業日数後の日付を返す（土日・祝日をスキップ）
+export const addBizDays = (dateStr, days) => {
+  let d = new Date(dateStr + "T00:00:00"), c = 0;
+  while (c < days) {
     d.setDate(d.getDate() + 1);
-    const dow = d.getDay();
-    const ds = d.toISOString().split("T")[0];
-    if (dow !== 0 && dow !== 6 && !JP_HOLIDAYS.has(ds)) added++;
+    const s = d.toISOString().split("T")[0];
+    if (d.getDay() !== 0 && d.getDay() !== 6 && !JP_HOLIDAYS.has(s)) c++;
   }
   return d.toISOString().split("T")[0];
-}
+};

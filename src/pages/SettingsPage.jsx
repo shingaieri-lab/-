@@ -1,13 +1,12 @@
 // 設定ページ（リード管理・ポータル・営業担当・API設定・Zoho CRM・アカウント管理）
 import { useState } from 'react';
 import { PencilIcon, TrashIcon } from '../components/ui/Icons.jsx';
-import { SourceIconSVG } from '../components/ui/SourceIconSVG.jsx';
 import { ZohoCrmSettings } from '../components/settings/ZohoCrmSettings.jsx';
 import { AccountManager } from '../components/settings/AccountManager.jsx';
-import { PALETTE, LEAD_SOURCE_ICONS } from '../constants/index.js';
-import { getMaster, saveMasterSettings, DEFAULT_SOURCES, DEFAULT_STATUSES_WITH_COLORS } from '../lib/master.js';
-import { loadLeads, saveLeads } from '../lib/api.js';
-import { loadGCalConfig } from '../lib/gcal.js';
+import { ApiKeyTab } from '../components/settings/ApiKeyTab.jsx';
+import { LeadMgmtTab } from '../components/settings/LeadMgmtTab.jsx';
+import { PALETTE } from '../constants/index.js';
+import { getMaster, saveMasterSettings } from '../lib/master.js';
 
 export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave, onOpenWizard }) {
   const [master, setMaster] = useState(() => getMaster());
@@ -19,8 +18,6 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
   const saveProfile = () => {
     if (!profileForm.name.trim()) return;
     onUpdateProfile(profileForm);
-    // 管理者の場合、gmailClientId を共有設定にも保存する
-    // → これにより全メンバーが自動的にこのClient IDを使えるようになる
     if (currentUser?.role === "admin" && profileForm.gmailClientId !== undefined) {
       onSave({ ...aiConfig, gmailClientId: profileForm.gmailClientId });
     }
@@ -105,83 +102,6 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
     setEditSalesIdx(null); setEditSalesName("");
   };
 
-  // リード管理（ステータス）
-  const getStatusData = () => master.statuses || DEFAULT_STATUSES_WITH_COLORS;
-  const [editStatusIdx, setEditStatusIdx] = useState(null);
-  const [editStatusForm, setEditStatusForm] = useState({ label:"", color:"" });
-  const [newStatusForm, setNewStatusForm] = useState({ label:"", color:"#0ea5e9" });
-  const [dragStatusIdx, setDragStatusIdx] = useState(null);
-  const [dragOverStatusIdx, setDragOverStatusIdx] = useState(null);
-  const addStatus = () => {
-    const l = newStatusForm.label.trim(); if (!l) return;
-    if (getStatusData().some(s=>s.label===l)) { alert("既に存在します"); return; }
-    save({ ...master, statuses: [...getStatusData(), { label:l, color:newStatusForm.color }] });
-    setNewStatusForm({ label:"", color:"#0ea5e9" });
-  };
-  const removeStatus = (idx) => {
-    if (!window.confirm("削除しますか？")) return;
-    save({ ...master, statuses: getStatusData().filter((_,i)=>i!==idx) });
-  };
-  const startEditStatus = (idx) => { const s=getStatusData()[idx]; setEditStatusForm({label:s.label,color:s.color}); setEditStatusIdx(idx); };
-  const saveStatus = () => {
-    const l = editStatusForm.label.trim(); if (!l) return;
-    if (getStatusData().some((s,i)=>s.label===l && i!==editStatusIdx)) { alert("既に存在します"); return; }
-    save({ ...master, statuses: getStatusData().map((s,i)=>i===editStatusIdx?{...s,...editStatusForm,label:l}:s) });
-    setEditStatusIdx(null);
-  };
-  const moveStatus = (idx, dir) => {
-    const data = [...getStatusData()];
-    if (dir==="up" && idx>0) { [data[idx-1],data[idx]]=[data[idx],data[idx-1]]; }
-    else if (dir==="down" && idx<data.length-1) { [data[idx+1],data[idx]]=[data[idx],data[idx+1]]; }
-    else return; save({ ...master, statuses: data });
-  };
-
-  // リード管理（流入元）
-  const [newSource, setNewSource] = useState("");
-  const [newSourceIcon, setNewSourceIcon] = useState("home");
-  const [editSourceIdx, setEditSourceIdx] = useState(null);
-  const [editSourceVal, setEditSourceVal] = useState("");
-  const [editSourceIcon, setEditSourceIcon] = useState(null);
-  const [showIconPicker, setShowIconPicker] = useState(null); // null | "new" | idx number
-  const [dragSrcIdx, setDragSrcIdx] = useState(null);
-  const [dragOverSrcIdx, setDragOverSrcIdx] = useState(null);
-  const addSource = () => {
-    const s = newSource.trim(); if (!s) return;
-    const currentSources = master.sources || DEFAULT_SOURCES;
-    if (currentSources.some(x => (typeof x === "string" ? x : x.label) === s)) { alert("既に存在します"); return; }
-    save({ ...master, sources: [...currentSources, {label: s, icon: newSourceIcon}] });
-    setNewSource(""); setNewSourceIcon("home");
-  };
-  const removeSource = (s) => {
-    if ((master.sources||DEFAULT_SOURCES).length <= 1) { alert("最低1つ必要です"); return; }
-    save({ ...master, sources: (master.sources||DEFAULT_SOURCES).filter(x => (typeof x === "string" ? x : x.label) !== s) });
-  };
-  const startEditSource = (idx) => {
-    setEditSourceIdx(idx);
-    const src = (master.sources||DEFAULT_SOURCES)[idx];
-    setEditSourceVal(typeof src === "string" ? src : src.label);
-    setEditSourceIcon(typeof src === "object" ? src.icon : null);
-  };
-  const saveSource = async () => {
-    const newVal = editSourceVal.trim();
-    if (!newVal) return;
-    const sources = master.sources||DEFAULT_SOURCES;
-    const oldSrc = sources[editSourceIdx];
-    const oldVal = typeof oldSrc === "string" ? oldSrc : oldSrc.label;
-    if (newVal === oldVal && editSourceIcon === (typeof oldSrc === "object" ? oldSrc.icon : null)) { setEditSourceIdx(null); return; }
-    if (sources.some((s,i) => i !== editSourceIdx && (typeof s === "string" ? s : s.label) === newVal)) { alert("既に存在します"); return; }
-    const newSources = sources.map((s,i) => i===editSourceIdx ? {label: newVal, icon: editSourceIcon} : s);
-    save({ ...master, sources: newSources });
-    // 既存リードの流入元も一括更新
-    if (newVal !== oldVal) {
-      const leads = await loadLeads();
-      const updated = leads.map(l => l.source === oldVal ? { ...l, source: newVal } : l);
-      await saveLeads(updated);
-      if (onLeadsChange) onLeadsChange(updated);
-    }
-    setEditSourceIdx(null);
-  };
-
   const tabBtn = (key, label) => (
     <button onClick={()=>setTab(key)} style={{padding:"7px 18px",borderRadius:"8px 8px 0 0",border:"1px solid #d8ede1",borderBottom: tab===key ? "1px solid #fff" : "1px solid #d8ede1", background: tab===key ? "#fff" : "#f0f5f2", color: tab===key ? "#174f35" : "#6a9a7a", fontWeight: tab===key ? 700 : 400, fontSize:12, cursor:"pointer", fontFamily:"inherit", marginRight:4, marginBottom:-1}}>
       {label}
@@ -236,18 +156,10 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                 <div style={{padding:"12px 14px"}}>
                   <div style={{fontSize:11,color:"#6a9a7a",marginBottom:6,fontWeight:600}}>流入元設定</div>
                   <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                    <select
-                      value={(master.portalSiteSource||{})[site]||""}
-                      onChange={e=>{
-                        const ps = { ...(master.portalSiteSource||{}), [site]: e.target.value };
-                        save({ ...master, portalSiteSource: ps });
-                      }}
+                    <select value={(master.portalSiteSource||{})[site]||""} onChange={e=>{ const ps = { ...(master.portalSiteSource||{}), [site]: e.target.value }; save({ ...master, portalSiteSource: ps }); }}
                       style={{flex:1,padding:"5px 8px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",color:"#174f35"}}>
                       <option value="">（未設定）</option>
-                      {(master.sources||[]).map(srcObj=>{
-                        const lbl = typeof srcObj==="string"?srcObj:srcObj.label;
-                        return <option key={lbl} value={lbl}>{lbl}</option>;
-                      })}
+                      {(master.sources||[]).map(srcObj=>{ const lbl = typeof srcObj==="string"?srcObj:srcObj.label; return <option key={lbl} value={lbl}>{lbl}</option>; })}
                     </select>
                     <span style={{fontSize:11,color:"#6a9a7a",flexShrink:0}}>に連結</span>
                   </div>
@@ -299,360 +211,17 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
           </div>
         )}
         {tab === "apikey" && (
-          <div>
-            <div>
-              {/* ウィザードバナー */}
-              {(() => {
-                const gcalCfg = loadGCalConfig();
-                const geminiOk = !!(currentUser?.geminiConfigured);
-                const gmailOk = !!(currentUser?.gmailClientId || window.__appData?.aiConfig?.gmailClientId);
-                const calendarOk = !!(gcalCfg.apiKey && Object.keys(gcalCfg.calendarIds||{}).length > 0);
-                const allOk = geminiOk && gmailOk && calendarOk;
-                return (
-                  <div style={{background: allOk ? "#f0fdf4" : "#fffbeb", border:`1px solid ${allOk?"#86efac":"#fde68a"}`, borderRadius:10, padding:"12px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:12}}>
-                    <div style={{fontSize:22, flexShrink:0}}>{allOk ? "✅" : "🚀"}</div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:12, fontWeight:700, color: allOk ? "#166534" : "#92400e"}}>
-                        {allOk ? "すべての設定が完了しています" : "ウィザードを使うと簡単に設定できます"}
-                      </div>
-                      <div style={{fontSize:11, color: allOk ? "#166534" : "#d97706", marginTop:2}}>
-                        {[
-                          geminiOk ? null : "AIアシスタント未設定",
-                          gmailOk  ? null : "Gmail未設定",
-                          calendarOk ? null : "カレンダー未設定",
-                        ].filter(Boolean).join("　")||"全機能が利用可能です"}
-                      </div>
-                    </div>
-                    {!allOk && onOpenWizard && (
-                      <button onClick={onOpenWizard} style={{padding:"7px 14px", borderRadius:8, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", flexShrink:0}}>
-                        ウィザードで設定 →
-                      </button>
-                    )}
-                  </div>
-                );
-              })()}
-
-              {/* 役割別の説明バナー */}
-              {currentUser?.role === "admin" ? (
-                <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#1e40af",lineHeight:1.8}}>
-                  <b>👑 管理者の設定内容</b><br />
-                  ① <b>Gemini APIキー</b>：ご自身のAIアシスタント用に取得・入力してください。<br />
-                  ② <b>Gmail OAuth Client ID</b>：Google Cloud Console で1回だけ作成し、入力してください。設定後は全メンバーがGmail・GoogleタスクTODO機能を使えるようになります（各メンバーは初回に「許可」を押すだけでOKです）。
-                </div>
-              ) : (
-                <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"10px 14px",marginBottom:16,fontSize:12,color:"#166534",lineHeight:1.8}}>
-                  <b>👤 メンバーの設定内容</b><br />
-                  ① <b>Gemini APIキー</b>：AIアシスタントを使うために、ご自身のキーを取得・入力してください。<br />
-                  ② <b>Gmail・GoogleタスクTODO</b>：管理者が設定済みであれば、初回利用時にGoogleのポップアップで「許可」を押すだけで使えます。
-                </div>
-              )}
-
-              {/* ── 全員共通：Gemini APIキー ── */}
-              <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:8,marginTop:4}}>🔑 AIアシスタント用 Gemini APIキー（各自が取得・入力）</div>
-              <div style={{marginBottom:12}}>
-                <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4}}>
-                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a"}}>Gemini APIキー</label>
-                  <div style={{display:"flex", alignItems:"center", gap:8}}>
-                    {currentUser?.geminiConfigured
-                      ? <span style={{fontSize:10,background:"#d1fae5",color:"#059669",borderRadius:20,padding:"1px 8px",fontWeight:700}}>✅ 設定済み</span>
-                      : <span style={{fontSize:10,background:"#fef3c7",color:"#d97706",borderRadius:20,padding:"1px 8px",fontWeight:700}}>⚠️ 未設定</span>
-                    }
-                    {onOpenWizard && <button onClick={()=>onOpenWizard()} style={{fontSize:10,padding:"2px 8px",borderRadius:6,border:"1px solid #c0dece",background:"#f0f5f2",color:"#059669",cursor:"pointer",fontFamily:"inherit"}}>？ ウィザードで設定</button>}
-                  </div>
-                </div>
-                <input type="password" value={profileForm.geminiKey||""} onChange={e=>setProfileForm(p=>({...p,geminiKey:e.target.value}))}
-                  placeholder="AIzaSy..."
-                  style={{...inp, fontFamily:"monospace"}} />
-                <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>AIアシスタント機能に使用します。<a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio</a>で無料取得できます。</div>
-              </div>
-              <div style={{background:"#f0f5f2",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#3d7a5e",lineHeight:2,marginBottom:24}}>
-                <div style={{fontWeight:700,marginBottom:6,fontSize:13}}>📋 Gemini APIキー 取得手順</div>
-                <div><b>① Googleアカウントでサインイン</b></div>
-                <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google AI Studio（aistudio.google.com）</a> にアクセスし、Googleアカウントでログインします。
-                </div>
-                <div><b>② 「APIキーを作成」をクリック</b></div>
-                <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                  左メニューまたは画面上部の <b>「Get API key」→「Create API key」</b> をクリックします。
-                </div>
-                <div><b>③ プロジェクトを選択または作成</b></div>
-                <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                  既存のGoogle Cloudプロジェクトを選択するか、「新しいプロジェクトでAPIキーを作成」を選びます。
-                </div>
-                <div><b>④ APIキーをコピーして上の欄に貼り付け、「保存」をクリック</b></div>
-                <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6}}>
-                  発行された <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>AIzaSy...</code> で始まるキーをコピーし、入力欄にペーストして保存します。
-                </div>
-              </div>
-
-              {/* ── Gmail OAuth Client ID ── 管理者とメンバーで完全に分ける */}
-              <div style={{borderTop:"1px solid #d8ede1",paddingTop:20,marginBottom:12}}>
-                <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:12}}>
-                  📨 Gmail・GoogleタスクTODO 連携設定
-                </div>
-
-                {currentUser?.role === "admin" ? (
-                  /* ── 管理者向け：Client ID入力 ＋ Google Cloud Console 設定手順 ── */
-                  <div>
-                    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:4}}>
-                      <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a"}}>Gmail OAuth Client ID</label>
-                      <div style={{display:"flex", alignItems:"center", gap:8}}>
-                        {profileForm.gmailClientId
-                          ? <span style={{fontSize:10,background:"#d1fae5",color:"#059669",borderRadius:20,padding:"1px 8px",fontWeight:700}}>✅ 設定済み</span>
-                          : <span style={{fontSize:10,background:"#fef3c7",color:"#d97706",borderRadius:20,padding:"1px 8px",fontWeight:700}}>⚠️ 未設定</span>
-                        }
-                        {onOpenWizard && <button onClick={()=>onOpenWizard()} style={{fontSize:10,padding:"2px 8px",borderRadius:6,border:"1px solid #c0dece",background:"#f0f5f2",color:"#059669",cursor:"pointer",fontFamily:"inherit"}}>？ ウィザードで設定</button>}
-                      </div>
-                    </div>
-                    <input type="text" value={profileForm.gmailClientId||""} onChange={e=>setProfileForm(p=>({...p,gmailClientId:e.target.value}))}
-                      placeholder="xxxxxxxxxx.apps.googleusercontent.com"
-                      style={{...inp, fontFamily:"monospace"}} />
-                    <div style={{fontSize:11,color:"#9ca3af",marginTop:4,marginBottom:12}}>
-                      <b>管理者が1回だけ</b>設定すると、全メンバーがGmail・GoogleタスクTODO機能を使えるようになります。<a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a> で取得できます。
-                    </div>
-                    <div style={{background:"#f0f5f2",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#3d7a5e",lineHeight:2,marginBottom:12}}>
-                      <div style={{fontWeight:700,marginBottom:6,fontSize:13}}>📋 Gmail OAuth Client ID 取得手順（管理者が実施）</div>
-                      <div><b>① Google Cloud Console でプロジェクトを準備</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                        <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a> にアクセスし、Googleアカウントでログイン。画面上部のプロジェクト選択から既存のプロジェクトを選ぶか「新しいプロジェクト」を作成します。
-                      </div>
-                      <div><b>② Gmail API を有効化</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                        左メニュー「APIとサービス」→「ライブラリ」→ 検索欄に <b>「Gmail API」</b> と入力 → 「Gmail API」を選択 →「有効にする」をクリック。
-                      </div>
-                      <div><b>③ OAuth 同意画面を設定</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                        「APIとサービス」→「OAuth 同意画面」→ ユーザーの種類は <b>「内部」</b> を選択 →「作成」。アプリ名・サポートメールを入力し「保存して次へ」を繰り返して完了します。（Google Workspace 組織の場合。個人アカウントの場合は「外部」を選択してください）
-                      </div>
-                      <div><b>④ OAuth クライアント ID を作成</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                        「APIとサービス」→「<a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>認証情報</a>」→「認証情報を作成」→「OAuth クライアント ID」をクリック。アプリケーションの種類は <b>「ウェブ アプリケーション」</b> を選択します。
-                      </div>
-                      <div><b>⑤ 承認済みJavaScript オリジンにURLを追加</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                        「承認済みの JavaScript 生成元」の <b>「URIを追加」</b> をクリックし、このアプリのURL（<code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>{window.location.origin}</code>）を入力してください。
-                      </div>
-                      <div><b>⑥ 承認済みリダイレクト URI にURLを追加</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6,marginBottom:4}}>
-                        同様に「承認済みのリダイレクト URI」にも同じURLを追加し、「作成」をクリック。
-                      </div>
-                      <div><b>⑦ クライアント ID をコピーして上の欄に貼り付け、「保存」をクリック</b></div>
-                      <div style={{paddingLeft:16,color:"#5a8a6a",lineHeight:1.6}}>
-                        作成完了画面に表示される <code style={{background:"#d8ede1",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>xxxxxxxxxx.apps.googleusercontent.com</code> 形式のクライアント ID をコピーし、入力欄に貼り付けて保存します。
-                      </div>
-                    </div>
-                    <div style={{background:"#eff6ff",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#1e40af",lineHeight:2,marginBottom:12,border:"1px solid #bfdbfe"}}>
-                      <div style={{fontWeight:700,marginBottom:6,fontSize:13}}>✅ GoogleタスクTODO登録・カレンダー登録 — 追加設定（管理者が実施）</div>
-                      <div style={{fontSize:11,color:"#3b82f6",marginBottom:10}}>上記の Gmail OAuth Client ID をそのまま使います。以下の追加設定が必要です。</div>
-                      <div><b>① Google Tasks API を有効化</b></div>
-                      <div style={{paddingLeft:16,color:"#1d4ed8",lineHeight:1.6,marginBottom:4}}>
-                        <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{color:"#2563eb"}}>Google Cloud Console</a> →「APIとサービス」→「ライブラリ」→ <b>「Google Tasks API」</b> を検索 → 選択 →「<b>有効にする</b>」をクリック。
-                      </div>
-                      <div><b>② OAuth 同意画面にスコープを追加</b></div>
-                      <div style={{paddingLeft:16,color:"#1d4ed8",lineHeight:1.6,marginBottom:4}}>
-                        「OAuth 同意画面」→「<b>スコープを追加または削除</b>」→ <code style={{background:"#dbeafe",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>tasks</code> で検索 → <b><code style={{background:"#dbeafe",padding:"1px 5px",borderRadius:3,fontFamily:"monospace"}}>.../auth/tasks</code></b> にチェック →「更新」→「保存して次へ」。
-                      </div>
-                      <div style={{marginTop:6,padding:"6px 10px",background:"#dbeafe",borderRadius:6,color:"#1e40af"}}>
-                        💡 設定後は各メンバーが初回のみGoogleの認証ポップアップで「許可」を押すだけです。個別の追加設定は不要です。
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  /* ── メンバー向け：管理者設定状況の表示 ＋ 初回ポップアップ説明のみ ── */
-                  <div>
-                    {(() => {
-                      const sharedClientId = window.__appData?.aiConfig?.gmailClientId || "";
-                      return sharedClientId ? (
-                        <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:8,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#166534",display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{fontSize:20}}>✅</div>
-                          <div>
-                            <div style={{fontWeight:700}}>Gmail・TODOの連携設定は管理者が完了しています</div>
-                            <div style={{fontSize:11,color:"#15803d",marginTop:2}}>初回利用時にGoogleのポップアップが表示されます。「許可」を押すだけで使えるようになります。</div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{background:"#fff7ed",border:"1px solid #fde68a",borderRadius:8,padding:"12px 14px",marginBottom:16,fontSize:12,color:"#92400e",display:"flex",alignItems:"center",gap:10}}>
-                          <div style={{fontSize:20}}>⚠️</div>
-                          <div>
-                            <div style={{fontWeight:700}}>管理者がまだGmailの設定を完了していません</div>
-                            <div style={{fontSize:11,color:"#b45309",marginTop:2}}>管理者に「API設定」画面でGmail OAuth Client IDを設定してもらってください。</div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    <div style={{background:"#f0fdf4",borderRadius:8,padding:"14px 16px",fontSize:12,color:"#166534",lineHeight:2,marginBottom:12,border:"1px solid #86efac"}}>
-                      <div style={{fontWeight:700,marginBottom:6,fontSize:13}}>📋 メンバーがやること（初回のみ）</div>
-                      <div><b>① Gmail送信またはTODOボタンを押す</b></div>
-                      <div style={{paddingLeft:16,color:"#15803d",lineHeight:1.6,marginBottom:4}}>
-                        AIページや営業メールページの「Gmail下書き保存」「GoogleタスクにTODO作成」ボタンをクリックします。
-                      </div>
-                      <div><b>② Googleのポップアップで「許可」をクリック</b></div>
-                      <div style={{paddingLeft:16,color:"#15803d",lineHeight:1.6,marginBottom:4}}>
-                        Googleアカウントの選択画面が表示されます。使用するアカウントを選び、「<b>許可</b>」をクリックしてください。
-                      </div>
-                      <div><b>③ 完了！以降はポップアップは表示されません</b></div>
-                      <div style={{paddingLeft:16,color:"#15803d",lineHeight:1.6}}>
-                        同じブラウザセッション中は自動でログイン状態が保持されます。ページを再読込した場合は再度ポップアップが表示されることがあります。
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {profileMsg && <div style={{fontSize:12,color:"#059669",fontWeight:700,marginBottom:10}}>{profileMsg}</div>}
-              <button onClick={saveProfile}
-                style={{padding:"8px 28px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
-                保存
-              </button>
-            </div>
-          </div>
+          <ApiKeyTab
+            currentUser={currentUser}
+            profileForm={profileForm}
+            setProfileForm={setProfileForm}
+            profileMsg={profileMsg}
+            saveProfile={saveProfile}
+            onOpenWizard={onOpenWizard}
+          />
         )}
         {tab === "leadmgmt" && currentUser?.role==="admin" && (
-          <div>
-            {/* 流入元 */}
-            <div style={{marginBottom:24}}>
-              <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:8}}>流入元</div>
-              {/* 新規追加行 */}
-              <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
-                {/* アイコン選択ボタン */}
-                <div style={{position:"relative"}}>
-                  <button onClick={()=>setShowIconPicker(showIconPicker==="new"?null:"new")} title="アイコン選択"
-                    style={{padding:4,borderRadius:8,border:"2px solid #c0dece",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",width:38,height:38}}>
-                    <SourceIconSVG iconKey={newSourceIcon} size={26}/>
-                  </button>
-                  {showIconPicker==="new" && (
-                    <div style={{position:"absolute",top:42,left:0,zIndex:200,background:"#fff",border:"1px solid #d8ede1",borderRadius:12,padding:10,boxShadow:"0 6px 24px #0003",display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5,width:218}}>
-                      <div style={{gridColumn:"1/-1",fontSize:11,fontWeight:700,color:"#6a9a7a",marginBottom:4}}>アイコンを選択</div>
-                      {LEAD_SOURCE_ICONS.map(icon=>(
-                        <button key={icon.key} onClick={()=>{setNewSourceIcon(icon.key);setShowIconPicker(null);}} title={icon.label}
-                          style={{padding:2,borderRadius:8,border:"none",boxShadow:newSourceIcon===icon.key?"0 0 0 2.5px #10b981":"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-                          <SourceIconSVG iconKey={icon.key} size={32}/>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <input value={newSource} onChange={e=>setNewSource(e.target.value)} placeholder="新しい流入元" style={{...inp,flex:1,minWidth:120}} onKeyDown={e=>e.key==="Enter"&&addSource()} />
-                <button onClick={addSource} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
-              </div>
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {(master.sources||DEFAULT_SOURCES).map((srcObj,idx)=>{
-                  const sLabel = typeof srcObj==="string" ? srcObj : srcObj.label;
-                  const sIcon  = typeof srcObj==="object" ? srcObj.icon : null;
-                  return (
-                    <div key={sLabel}
-                      draggable={editSourceIdx!==idx}
-                      onDragStart={()=>setDragSrcIdx(idx)}
-                      onDragOver={e=>{e.preventDefault();setDragOverSrcIdx(idx);}}
-                      onDrop={()=>{
-                        if(dragSrcIdx===null||dragSrcIdx===idx){setDragOverSrcIdx(null);return;}
-                        const arr=[...(master.sources||DEFAULT_SOURCES)];
-                        const [moved]=arr.splice(dragSrcIdx,1);
-                        arr.splice(idx,0,moved);
-                        save({...master,sources:arr});
-                        setDragSrcIdx(null);setDragOverSrcIdx(null);
-                      }}
-                      onDragEnd={()=>{setDragSrcIdx(null);setDragOverSrcIdx(null);}}
-                      style={{display:"flex",alignItems:"center",gap:8,background:"#f8fbf9",borderRadius:10,padding:"8px 12px",
-                        border:dragOverSrcIdx===idx&&dragSrcIdx!==idx?"2px solid #10b981":"1px solid #e2f0e8",
-                        opacity:dragSrcIdx===idx?0.4:1,transition:"opacity 0.15s"}}>
-                      {editSourceIdx===idx ? (
-                        <div style={{display:"flex",alignItems:"center",gap:6,flex:1,flexWrap:"wrap"}}>
-                          {/* アイコン選択 (編集中) */}
-                          <div style={{position:"relative"}}>
-                            <button onClick={()=>setShowIconPicker(showIconPicker===idx?null:idx)} title="アイコン選択"
-                              style={{padding:3,borderRadius:7,border:"2px solid #c0dece",background:"#fff",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34}}>
-                              <SourceIconSVG iconKey={editSourceIcon||"home"} size={24}/>
-                            </button>
-                            {showIconPicker===idx && (
-                              <div style={{position:"absolute",top:38,left:0,zIndex:200,background:"#fff",border:"1px solid #d8ede1",borderRadius:12,padding:10,boxShadow:"0 6px 24px #0003",display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:5,width:218}}>
-                                <div style={{gridColumn:"1/-1",fontSize:11,fontWeight:700,color:"#6a9a7a",marginBottom:4}}>アイコンを選択</div>
-                                {LEAD_SOURCE_ICONS.map(icon=>(
-                                  <button key={icon.key} onClick={()=>{setEditSourceIcon(icon.key);setShowIconPicker(null);}} title={icon.label}
-                                    style={{padding:2,borderRadius:8,border:"none",boxShadow:editSourceIcon===icon.key?"0 0 0 2.5px #10b981":"none",background:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxSizing:"border-box"}}>
-                                    <SourceIconSVG iconKey={icon.key} size={32}/>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <input value={editSourceVal} onChange={e=>setEditSourceVal(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")saveSource();if(e.key==="Escape")setEditSourceIdx(null);}} style={{...inp,flex:1,minWidth:80,padding:"4px 8px"}} autoFocus />
-                          <button onClick={saveSource} style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:"none",background:"#10b981",color:"#fff",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>保存</button>
-                          <button onClick={()=>{setEditSourceIdx(null);setShowIconPicker(null);}} style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"1px solid #c0dece",background:"#fff",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕</button>
-                        </div>
-                      ) : (
-                        <>
-                          <span title="ドラッグして並び替え" style={{cursor:"grab",color:"#c0dece",fontSize:18,flexShrink:0,lineHeight:1,userSelect:"none",paddingRight:2}}>⠿</span>
-                          <SourceIconSVG iconKey={sIcon||"home"} size={28}/>
-                          <span style={{fontSize:13,color:"#174f35",fontWeight:600,flex:1}}>{sLabel}</span>
-                          <button onClick={()=>startEditSource(idx)} style={{padding:"3px 6px",borderRadius:6,background:"#f0fdf4",color:"#059669",border:"1px solid #86efac",cursor:"pointer",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center"}} title="編集"><PencilIcon color="#059669"/></button>
-                          <button onClick={()=>removeSource(sLabel)} style={{padding:"3px 6px",borderRadius:5,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",cursor:"pointer",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center"}} title="削除"><TrashIcon color="#dc2626"/></button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            {/* ステータス */}
-            <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>ステータス管理</div>
-            <div style={{marginBottom:12}}>
-              {getStatusData().map((s, idx) => (
-                <div key={idx}
-                  draggable={editStatusIdx!==idx}
-                  onDragStart={()=>setDragStatusIdx(idx)}
-                  onDragOver={e=>{e.preventDefault();setDragOverStatusIdx(idx);}}
-                  onDrop={()=>{
-                    if(dragStatusIdx===null||dragStatusIdx===idx){setDragOverStatusIdx(null);return;}
-                    const arr=[...getStatusData()];
-                    const [moved]=arr.splice(dragStatusIdx,1);
-                    arr.splice(idx,0,moved);
-                    save({...master,statuses:arr});
-                    setDragStatusIdx(null);setDragOverStatusIdx(null);
-                  }}
-                  onDragEnd={()=>{setDragStatusIdx(null);setDragOverStatusIdx(null);}}
-                  style={{display:"flex",alignItems:"center",gap:8,background:"#f8fbf9",borderRadius:8,padding:"8px 12px",marginBottom:6,
-                    border:dragOverStatusIdx===idx&&dragStatusIdx!==idx?"2px solid #10b981":"1px solid #e2f0e8",
-                    opacity:dragStatusIdx===idx?0.4:1,transition:"opacity 0.15s"}}>
-                  {editStatusIdx===idx ? (
-                    <div style={{display:"flex",alignItems:"center",gap:8,flex:1,flexWrap:"wrap"}}>
-                      <input value={editStatusForm.label} onChange={e=>setEditStatusForm(p=>({...p,label:e.target.value}))} onKeyDown={e=>e.key==="Enter"&&saveStatus()} style={{...inp,flex:1,minWidth:100,padding:"4px 8px"}} autoFocus />
-                      <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-                        {PALETTE.map(c=>(
-                          <button key={c} onClick={()=>setEditStatusForm(p=>({...p,color:c}))} style={{width:18,height:18,borderRadius:"50%",background:c,border:editStatusForm.color===c?"3px solid #174f35":"2px solid #fff",cursor:"pointer",flexShrink:0}} />
-                        ))}
-                      </div>
-                      <button onClick={saveStatus} style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:"none",background:"#10b981",color:"#fff",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>保存</button>
-                      <button onClick={()=>setEditStatusIdx(null)} style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"1px solid #c0dece",background:"#fff",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕</button>
-                    </div>
-                  ) : (
-                    <>
-                      <span title="ドラッグして並び替え" style={{cursor:"grab",color:"#c0dece",fontSize:18,flexShrink:0,lineHeight:1,userSelect:"none",paddingRight:2}}>⠿</span>
-                      <div style={{width:14,height:14,borderRadius:"50%",background:s.color,flexShrink:0,boxShadow:"0 1px 3px #0003"}} />
-                      <span style={{flex:1,fontSize:13,fontWeight:600,color:"#174f35"}}>{s.label}</span>
-                      <button onClick={()=>startEditStatus(idx)} style={{padding:"3px 6px",borderRadius:6,background:"#f0fdf4",color:"#059669",border:"1px solid #86efac",cursor:"pointer",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center"}} title="編集"><PencilIcon color="#059669"/></button>
-                      <button onClick={()=>removeStatus(idx)} style={{padding:"3px 6px",borderRadius:5,background:"#fef2f2",color:"#dc2626",border:"1px solid #fca5a5",cursor:"pointer",fontFamily:"inherit",flexShrink:0,display:"flex",alignItems:"center"}} title="削除"><TrashIcon color="#dc2626"/></button>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div style={{background:"#f0f5f2",borderRadius:10,padding:"14px 16px",border:"1px solid #d8ede1"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:10}}>＋ ステータス追加</div>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                <input value={newStatusForm.label} onChange={e=>setNewStatusForm(p=>({...p,label:e.target.value}))} placeholder="ステータス名" style={{...inp,flex:"1 1 120px",minWidth:120}} onKeyDown={e=>e.key==="Enter"&&addStatus()} />
-                <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
-                  {PALETTE.map(c=>(
-                    <button key={c} onClick={()=>setNewStatusForm(p=>({...p,color:c}))} style={{width:18,height:18,borderRadius:"50%",background:c,border:newStatusForm.color===c?"3px solid #174f35":"2px solid #fff",cursor:"pointer",flexShrink:0}} />
-                  ))}
-                </div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{width:16,height:16,borderRadius:"50%",background:newStatusForm.color,boxShadow:"0 1px 3px #0003"}} />
-                  <button onClick={addStatus} style={{padding:"6px 18px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>追加</button>
-                </div>
-              </div>
-            </div>
-          </div>
+          <LeadMgmtTab master={master} save={save} onLeadsChange={onLeadsChange} />
         )}
         {tab === "zoho" && currentUser?.role==="admin" && (
           <ZohoCrmSettings />

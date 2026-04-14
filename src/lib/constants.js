@@ -55,7 +55,9 @@ export const DEFAULT_IS_MEMBERS = [];
 export const DEFAULT_PORTAL_SITES = [];
 export const DEFAULT_PORTAL_TYPES = {};
 
-export const TODAY = new Date().toISOString().split("T")[0];
+// toISOString()はUTC基準のため、日本時間(UTC+9)で日付を取得する
+// 例: 日本時間 1:00 AM → UTC 前日16:00 → toISOString()だと昨日の日付になるバグを防ぐ
+export const TODAY = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
 export const THIS_MONTH = TODAY.slice(0, 7);
 export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 

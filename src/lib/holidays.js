@@ -24,11 +24,9 @@ export const JP_HOLIDAYS = new Set([
   } catch (e) { /* フォールバック継続 */ }
 })();
 
-export const TODAY = new Date().toISOString().split("T")[0];
-export const THIS_MONTH = TODAY.slice(0, 7);
-
-// ユニークIDを生成する（リードIDなどに使用）
-export const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// TODAYはconstants.jsで一元管理（JST対応）。関数内でも参照するためimportする
+import { TODAY, THIS_MONTH, uid } from './constants.js';
+export { TODAY, THIS_MONTH, uid };
 
 // 指定日が営業日かどうかを判定（土日・祝日はfalse）
 export const isBusinessDay = (dateStr) => {

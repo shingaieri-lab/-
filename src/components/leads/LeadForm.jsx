@@ -28,8 +28,8 @@ export function LeadForm({ initial, onSave, onClose }) {
   const set = (k, v) => setD(p => ({...p, [k]: v}));
 
   return (
-    <div style={S.overlay} onClick={onClose}>
-      <div style={S.modal} onClick={e => e.stopPropagation()}>
+    <div style={S.overlay}>
+      <div style={S.modal}>
         <div style={S.modalHead}>
           <span style={{fontWeight:700, fontSize:16}}>{initial ? "リード編集" : "新規リード登録"}</span>
           <div style={{display:"flex", alignItems:"center", gap:12}}>

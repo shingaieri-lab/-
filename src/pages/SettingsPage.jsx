@@ -62,7 +62,32 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
     else return; save({ ...master, portalSites: sites });
   };
   const [selSite, setSelSite] = useState(master.portalSites[0]||"");
+  const [editRowSource, setEditRowSource] = useState("");
+  const [dragSrcIdx, setDragSrcIdx] = useState(null);
+  const [dragOverSrcIdx, setDragOverSrcIdx] = useState(null);
   const [newPlan, setNewPlan] = useState({ label:"", price:"" });
+
+  const startRowEdit = (site) => {
+    setEditSite(site);
+    setEditSiteName(site);
+    setEditRowSource((master.portalSiteSource||{})[site]||"");
+    setSelSite(site);
+    setNewPlan({ label:"", price:"" });
+  };
+  const saveRowEdit = () => {
+    const newName = editSiteName.trim(); if (!newName) return;
+    const oldName = editSite;
+    if (newName !== oldName && master.portalSites.includes(newName)) { alert("既に存在します"); return; }
+    let m = { ...master };
+    if (newName !== oldName) {
+      m.portalSites = master.portalSites.map(s => s === oldName ? newName : s);
+      const pt = {}; Object.keys(master.portalTypes).forEach(k => { pt[k===oldName?newName:k] = master.portalTypes[k]; }); m.portalTypes = pt;
+      const ps = {}; Object.keys(master.portalSiteSource||{}).forEach(k => { ps[k===oldName?newName:k] = (master.portalSiteSource||{})[k]; }); m.portalSiteSource = ps;
+    }
+    m.portalSiteSource = { ...(m.portalSiteSource||{}), [newName]: editRowSource };
+    save(m);
+    setEditSite(null); setEditSiteName("");
+  };
   const addPlan = () => {
     const l = newPlan.label.trim(), p = parseInt(newPlan.price);
     if (!l || isNaN(p)) { alert("プラン名と金額を入力してください"); return; }
@@ -107,7 +132,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
               display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
               gap:8, padding:"18px 8px",
               borderRadius:14,
-              border: tab===key ? `2px solid ${color}` : "1.5px solid #e2f0e8",
+              border: tab===key ? `2px solid ${color}` : "2px solid #e2f0e8",
               background: tab===key ? color + "18" : "#fff",
               cursor:"pointer", fontFamily:"inherit",
               boxShadow: tab===key ? `0 2px 10px ${color}33` : "0 1px 4px #0000000d",
@@ -122,7 +147,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         </div>
       </div>
       {/* 右コンテンツ */}
-      <div style={{flex:1, overflowY:"auto", padding:"32px 36px", maxWidth:760}}>
+      <div style={{flex:1, overflowY:"auto", padding:"32px 36px"}}>
         {activeMenu && (
           <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:24, paddingBottom:16, borderBottom:"2px solid #e2f0e8"}}>
             <div style={{width:44, height:44, borderRadius:12, background:activeMenu.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
@@ -136,79 +161,107 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
         {tab === "portal" && (
           <div>
-            <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:8}}>ポータルサイト一覧</div>
-            <div style={addRow}>
-              <input value={newSite} onChange={e=>setNewSite(e.target.value)} placeholder="新しいポータルサイト名" style={{...inp, flex:1}} onKeyDown={e=>e.key==="Enter"&&addSite()} />
+            <div style={{display:"flex", gap:8, marginBottom:16}}>
+              <input value={newSite} onChange={e=>setNewSite(e.target.value)} placeholder="新しいポータルサイト名" style={{...inp, flex:1, maxWidth:320}} onKeyDown={e=>e.key==="Enter"&&addSite()} />
               <button onClick={addSite} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
             </div>
-            {master.portalSites.map((site, siteIdx) => (
-              <div key={site} style={{background:"#f8fbf9",borderRadius:10,border:"1px solid #e2f0e8",marginBottom:12,overflow:"hidden"}}>
-                <div style={{display:"flex",alignItems:"center",gap:6,padding:"10px 14px",background:"#f0f5f2",borderBottom:"1px solid #e2f0e8"}}>
-                  <div style={{display:"flex",flexDirection:"column",gap:1,flexShrink:0}}>
-                    <button onClick={()=>moveSite(site,"up")} disabled={siteIdx===0} style={{fontSize:9,padding:"1px 5px",borderRadius:3,border:"1px solid #c0dece",background:siteIdx===0?"#f5f5f5":"#fff",color:siteIdx===0?"#ccc":"#6a9a7a",cursor:siteIdx===0?"default":"pointer",lineHeight:1.2,fontFamily:"inherit"}}>▲</button>
-                    <button onClick={()=>moveSite(site,"down")} disabled={siteIdx===master.portalSites.length-1} style={{fontSize:9,padding:"1px 5px",borderRadius:3,border:"1px solid #c0dece",background:siteIdx===master.portalSites.length-1?"#f5f5f5":"#fff",color:siteIdx===master.portalSites.length-1?"#ccc":"#6a9a7a",cursor:siteIdx===master.portalSites.length-1?"default":"pointer",lineHeight:1.2,fontFamily:"inherit"}}>▼</button>
-                  </div>
-                  {editSite===site ? (
-                    <div style={{display:"flex",alignItems:"center",gap:6,flex:1}}>
-                      <input value={editSiteName} onChange={e=>setEditSiteName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&renameSite(site)} style={{...inp,flex:1,padding:"4px 8px"}} autoFocus />
-                      <button onClick={()=>renameSite(site)} style={{fontSize:11,padding:"3px 10px",borderRadius:6,border:"none",background:"#10b981",color:"#fff",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>保存</button>
-                      <button onClick={()=>setEditSite(null)} style={{fontSize:11,padding:"3px 8px",borderRadius:6,border:"1px solid #c0dece",background:"#fff",color:"#6a9a7a",cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>✕</button>
-                    </div>
-                  ) : (
-                    <>
-                      <span style={{fontWeight:700,color:"#174f35",fontSize:13,flex:1}}>🏢 {site}</span>
-                      <button onClick={()=>{setEditSite(site);setEditSiteName(site)}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
-                      <button onClick={()=>removeSite(site)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
-                    </>
-                  )}
-                </div>
-                <div style={{padding:"12px 14px"}}>
-                  <div style={{fontSize:11,color:"#6a9a7a",marginBottom:6,fontWeight:600}}>流入元設定</div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                    <select value={(master.portalSiteSource||{})[site]||""} onChange={e=>{ const ps = { ...(master.portalSiteSource||{}), [site]: e.target.value }; save({ ...master, portalSiteSource: ps }); }}
-                      style={{flex:1,padding:"5px 8px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",color:"#174f35"}}>
-                      <option value="">（未設定）</option>
-                      {(master.sources||[]).map(srcObj=>{ const lbl = typeof srcObj==="string"?srcObj:srcObj.label; return <option key={lbl} value={lbl}>{lbl}</option>; })}
-                    </select>
-                    <span style={{fontSize:11,color:"#6a9a7a",flexShrink:0}}>に連結</span>
-                  </div>
-                  <div style={{fontSize:11,color:"#6a9a7a",marginBottom:8,fontWeight:600}}>プラン・金額</div>
-                  {(master.portalTypes[site]||[]).map((plan,idx)=>(
-                    <div key={idx} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                      <input value={plan.label} onChange={e=>updatePlanLabel(site,idx,e.target.value)} style={{...inp,flex:1,padding:"4px 8px"}} />
-                      <span style={{fontSize:11,color:"#6a9a7a"}}>¥</span>
-                      <input type="number" value={plan.price} onChange={e=>updatePlanPrice(site,idx,e.target.value)} style={{...inp,width:100,padding:"4px 8px"}} />
-                      <button onClick={()=>removePlan(site,idx)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
-                    </div>
-                  ))}
-                  <div style={{display:"flex",gap:6,marginTop:8}} onClick={()=>setSelSite(site)}>
-                    <input value={selSite===site?newPlan.label:""} onFocus={()=>setSelSite(site)} onChange={e=>setNewPlan(p=>({...p,label:e.target.value}))} placeholder="プラン名" style={{...inp,flex:1,padding:"5px 8px"}} />
-                    <input type="number" value={selSite===site?newPlan.price:""} onFocus={()=>setSelSite(site)} onChange={e=>setNewPlan(p=>({...p,price:e.target.value}))} placeholder="金額" style={{...inp,width:90,padding:"5px 8px"}} />
-                    <button onClick={addPlan} style={{padding:"5px 12px",borderRadius:6,border:"none",background:"#10b981",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
-                  </div>
-                </div>
+            <div style={{border:"1px solid #e2f0e8", borderRadius:10, overflow:"hidden"}}>
+              {/* ヘッダー */}
+              <div style={{display:"grid", gridTemplateColumns:"28px 1fr 160px 1fr 72px", background:"#f0f5f2", padding:"8px 12px", gap:12, borderBottom:"1px solid #e2f0e8"}}>
+                <div/>
+                <div style={{fontSize:11, fontWeight:700, color:"#6a9a7a"}}>サイト名</div>
+                <div style={{fontSize:11, fontWeight:700, color:"#6a9a7a"}}>流入元</div>
+                <div style={{fontSize:11, fontWeight:700, color:"#6a9a7a"}}>プラン</div>
+                <div/>
               </div>
-            ))}
+              {master.portalSites.map((site, siteIdx) => {
+                const srcLabel = (master.portalSiteSource||{})[site]||"";
+                const plans = master.portalTypes[site]||[];
+                const isEditing = editSite === site;
+                return (
+                  <div key={site}
+                    draggable={!isEditing}
+                    onDragStart={()=>setDragSrcIdx(siteIdx)}
+                    onDragOver={e=>{e.preventDefault();setDragOverSrcIdx(siteIdx);}}
+                    onDrop={()=>{
+                      if(dragSrcIdx===null||dragSrcIdx===siteIdx){setDragOverSrcIdx(null);return;}
+                      const arr=[...master.portalSites]; const [m]=arr.splice(dragSrcIdx,1); arr.splice(siteIdx,0,m);
+                      save({...master,portalSites:arr}); setDragSrcIdx(null);setDragOverSrcIdx(null);
+                    }}
+                    onDragEnd={()=>{setDragSrcIdx(null);setDragOverSrcIdx(null);}}
+                    style={{borderTop: siteIdx===0?"none":"1px solid #e2f0e8", background: dragOverSrcIdx===siteIdx&&dragSrcIdx!==siteIdx?"#f0fdf4": isEditing?"#f8fbf9":"#fff", opacity:dragSrcIdx===siteIdx?0.4:1}}>
+                    {isEditing ? (
+                      <div style={{padding:"14px 16px"}}>
+                        <div style={{display:"grid", gridTemplateColumns:"1fr 160px", gap:12, marginBottom:12}}>
+                          <div>
+                            <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>サイト名</label>
+                            <input value={editSiteName} onChange={e=>setEditSiteName(e.target.value)} style={{...inp, padding:"6px 10px"}} autoFocus />
+                          </div>
+                          <div>
+                            <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>流入元</label>
+                            <select value={editRowSource} onChange={e=>setEditRowSource(e.target.value)} style={{...inp, padding:"6px 8px"}}>
+                              <option value="">（未設定）</option>
+                              {(master.sources||[]).map(s=>{ const l=typeof s==="string"?s:s.label; return <option key={l} value={l}>{l}</option>; })}
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{marginBottom:10}}>
+                          <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:6}}>プラン・金額</label>
+                          {plans.map((plan,idx)=>(
+                            <div key={idx} style={{display:"flex", alignItems:"center", gap:8, marginBottom:6}}>
+                              <input value={plan.label} onChange={e=>updatePlanLabel(site,idx,e.target.value)} style={{...inp, flex:1, padding:"5px 8px"}} />
+                              <span style={{fontSize:11,color:"#6a9a7a"}}>¥</span>
+                              <input type="number" value={plan.price} onChange={e=>updatePlanPrice(site,idx,e.target.value)} style={{...inp, width:100, padding:"5px 8px"}} />
+                              <button onClick={()=>removePlan(site,idx)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}}><TrashIcon size={16} color="#ef4444"/></button>
+                            </div>
+                          ))}
+                          <div style={{display:"flex", gap:6, marginTop:4}}>
+                            <input value={selSite===site?newPlan.label:""} onFocus={()=>setSelSite(site)} onChange={e=>setNewPlan(p=>({...p,label:e.target.value}))} placeholder="プラン名" style={{...inp, flex:1, padding:"5px 8px"}} />
+                            <input type="number" value={selSite===site?newPlan.price:""} onFocus={()=>setSelSite(site)} onChange={e=>setNewPlan(p=>({...p,price:e.target.value}))} placeholder="金額" style={{...inp, width:90, padding:"5px 8px"}} />
+                            <button onClick={addPlan} style={{padding:"5px 12px",borderRadius:6,border:"none",background:"#10b981",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
+                          </div>
+                        </div>
+                        <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+                          <button onClick={()=>{setEditSite(null);setEditSiteName("");}} style={{padding:"6px 14px",borderRadius:7,border:"1px solid #c0dece",background:"#fff",color:"#6a9a7a",fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>キャンセル</button>
+                          <button onClick={saveRowEdit} style={{padding:"6px 18px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>保存</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{display:"grid", gridTemplateColumns:"28px 1fr 160px 1fr 72px", padding:"10px 12px", gap:12, alignItems:"center"}}>
+                        <span title="ドラッグして並び替え" style={{cursor:"grab",color:"#c0dece",fontSize:16,lineHeight:1,userSelect:"none"}}>⠿</span>
+                        <span style={{fontSize:13, fontWeight:600, color:"#174f35"}}>🏢 {site}</span>
+                        <span style={{fontSize:12, color: srcLabel?"#174f35":"#c0dece"}}>{srcLabel||"未設定"}</span>
+                        <span style={{fontSize:12, color:"#6a9a7a"}}>{plans.length===0?"—":plans.map(p=>`${p.label} ¥${p.price.toLocaleString()}`).join("  /  ")}</span>
+                        <div style={{display:"flex", gap:4, justifyContent:"flex-end"}}>
+                          <button onClick={()=>startRowEdit(site)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="編集"><PencilIcon size={16} color="#059669"/></button>
+                          <button onClick={()=>removeSite(site)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={16} color="#ef4444"/></button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
         {tab === "apikey" && (
-          <ApiKeyTab
+          <div style={{maxWidth:600}}><ApiKeyTab
             currentUser={currentUser}
             profileForm={profileForm}
             setProfileForm={setProfileForm}
             profileMsg={profileMsg}
             saveProfile={saveProfile}
             onOpenWizard={onOpenWizard}
-          />
+          /></div>
         )}
         {tab === "leadmgmt" && currentUser?.role==="admin" && (
-          <LeadMgmtTab master={master} save={save} onLeadsChange={onLeadsChange} />
+          <div style={{maxWidth:720}}><LeadMgmtTab master={master} save={save} onLeadsChange={onLeadsChange} /></div>
         )}
         {tab === "zoho" && currentUser?.role==="admin" && (
           <ZohoCrmSettings />
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
-          <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
+          <div style={{maxWidth:720}}><AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} /></div>
         )}
         {tab === "myaccount" && (
           <div>

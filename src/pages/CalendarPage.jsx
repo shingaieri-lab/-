@@ -32,7 +32,11 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
     ...accountCalendarIds
   }), [cfg, accountCalendarIds]);
 
-  const [selectedMembers, setSelectedMembers] = useState(() => currentUser?.name ? [currentUser.name] : []);
+  const [selectedMembers, setSelectedMembers] = useState(() => {
+    const salesMembers = getSalesMembers();
+    const name = currentUser?.name;
+    return (name && salesMembers.includes(name)) ? [name] : [];
+  });
   const [dateFrom, setDateFrom] = useState(TODAY);
   const [dateTo, setDateTo] = useState(() => {
     const d = new Date(TODAY + "T00:00:00"); d.setDate(d.getDate()+14);

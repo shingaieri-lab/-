@@ -2,7 +2,7 @@
 // コンポーネント内で style={S.card} のように使う
 
 export const S = {
-  root:       { display:"flex",height:"100vh",background:"#f0f5f2",fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif",color:"#1f5c40",overflow:"hidden" },
+  root:       { display:"flex",height:"100vh",background:"#f0f5f2",fontFamily:"'BIZ UDPGothic','Meiryo','Hiragino Kaku Gothic ProN',sans-serif",color:"#1f5c40",overflow:"hidden" },
   main:       { flex:1,overflow:"auto",background:"#f0f5f2" },
   page:       { padding:"24px 28px",minHeight:"100vh" },
   nav:        { width:120,background:"#134e3a",display:"flex",flexDirection:"column",padding:"0",flexShrink:0 },

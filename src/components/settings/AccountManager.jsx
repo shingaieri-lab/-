@@ -76,8 +76,62 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
 
   const inp = { width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", background:"#fff", fontSize:12, color:"#174f35", outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
 
+  const formPanel = (showAddForm || editingId) && (
+    <div style={{flex:"0 0 360px", background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1", alignSelf:"flex-start"}}>
+      <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:12}}>{editingId ? "✏️ アカウント編集" : "＋ アカウント追加"}</div>
+      <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:10}}>
+        {[["ユーザーID","id","例：tanaka"],["表示名","name","例：田中"],["パスワード","password","パスワード"],["メールアドレス","email","例：tanaka@example.com"]].map(([lbl, key, ph]) => (
+          <div key={key}>
+            <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>{lbl}{key==="password"&&editingId&&<span style={{fontWeight:400, color:"#9ca3af", marginLeft:4}}>（空欄で変更なし）</span>}</label>
+            <input value={form[key]||""} onChange={e => {
+              const v = e.target.value;
+              if (key==="email") { const prefix = v.includes("@") ? v.split("@")[0] : v; setForm(p => ({...p, email:v, id:prefix})); }
+              else if (key!=="id") { setForm(p => ({...p, [key]:v})); }
+            }} placeholder={key==="password"&&editingId?"新しいパスワードを入力":ph} type={key==="email"?"email":"text"}
+            readOnly={key==="id"}
+            style={{...inp, background:key==="id"?"#f0f5f2":"#fff", color:key==="id"?"#6a9a7a":"#174f35", cursor:key==="id"?"not-allowed":"text"}} />
+          </div>
+        ))}
+        <div>
+          <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>権限</label>
+          <select value={form.role} onChange={e => setForm(p => ({...p, role:e.target.value}))} style={inp}>
+            <option value="member">メンバー</option>
+            <option value="admin">管理者</option>
+          </select>
+        </div>
+        <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <input type="checkbox" id="isStaffCheck" checked={!!form.isStaff} onChange={e => setForm(p => ({...p, isStaff:e.target.checked}))} style={{width:16, height:16, accentColor:"#10b981", cursor:"pointer"}} />
+          <label htmlFor="isStaffCheck" style={{fontSize:12, color:"#174f35", cursor:"pointer", userSelect:"none"}}>IS担当の選択肢に表示する</label>
+        </div>
+      </div>
+      <div style={{marginBottom:10}}>
+        <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>✍️ メール署名</label>
+        <textarea value={form.signature||""} onChange={e => setForm(p => ({...p, signature:e.target.value}))}
+          placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
+          style={{...inp, resize:"vertical", minHeight:72, lineHeight:1.5}} />
+      </div>
+      <div style={{marginBottom:12}}>
+        <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:5}}>アイコン色</label>
+        <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
+          {PALETTE.map(c => (
+            <button key={c} onClick={() => setForm(p => ({...p, color:c}))}
+              style={{width:24, height:24, borderRadius:"50%", background:c, border:form.color===c?"3px solid #174f35":"2px solid #fff", cursor:"pointer", boxShadow:form.color===c?"0 0 0 2px "+c:"none"}} />
+          ))}
+        </div>
+      </div>
+      {err && <div style={{fontSize:12, color:"#dc2626", marginBottom:8}}>⚠️ {err}</div>}
+      <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
+        <button onClick={cancelEdit} style={{padding:"7px 16px", borderRadius:7, border:"1px solid #c0dece", background:"#fff", color:"#6a9a7a", fontSize:12, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
+        <button onClick={handleSubmit} style={{padding:"7px 20px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
+          {editingId ? "更新" : "追加"}
+        </button>
+      </div>
+    </div>
+  );
+
   const content = (
-    <>
+    <div style={{display:"flex", gap:24, alignItems:"flex-start"}}>
+      <div style={{flex:1, minWidth:0}}>
       {!inline && (
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}}>
           <div style={{fontSize:16, fontWeight:800, color:"#174f35"}}>👥 アカウント管理</div>
@@ -125,62 +179,12 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
           </div>
         ))}
       </div>
-      {(showAddForm || editingId) && (
-        <div style={{background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1", marginTop:16}}>
-          <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:12}}>{editingId ? "✏️ アカウント編集" : "＋ アカウント追加"}</div>
-          <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10}}>
-            {[["ユーザーID","id","例：tanaka"],["表示名","name","例：田中"],["パスワード","password","パスワード"],["メールアドレス","email","例：tanaka@example.com"]].map(([lbl, key, ph]) => (
-              <div key={key}>
-                <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>{lbl}{key==="password"&&editingId&&<span style={{fontWeight:400, color:"#9ca3af", marginLeft:4}}>（空欄のままにすると変更なし）</span>}</label>
-                <input value={form[key]||""} onChange={e => {
-                  const v = e.target.value;
-                  if (key==="email") { const prefix = v.includes("@") ? v.split("@")[0] : v; setForm(p => ({...p, email:v, id:prefix})); }
-                  else if (key!=="id") { setForm(p => ({...p, [key]:v})); }
-                }} placeholder={key==="password"&&editingId?"新しいパスワードを入力":ph} type={key==="email"?"email":"text"}
-                readOnly={key==="id"}
-                style={{...inp, background:key==="id"?"#f0f5f2":"#fff", color:key==="id"?"#6a9a7a":"#174f35", cursor:key==="id"?"not-allowed":"text"}} />
-              </div>
-            ))}
-            <div>
-              <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>権限</label>
-              <select value={form.role} onChange={e => setForm(p => ({...p, role:e.target.value}))} style={inp}>
-                <option value="member">メンバー</option>
-                <option value="admin">管理者</option>
-              </select>
-            </div>
-            <div style={{display:"flex", alignItems:"center", gap:8, paddingTop:18}}>
-              <input type="checkbox" id="isStaffCheck" checked={!!form.isStaff} onChange={e => setForm(p => ({...p, isStaff:e.target.checked}))} style={{width:16, height:16, accentColor:"#10b981", cursor:"pointer"}} />
-              <label htmlFor="isStaffCheck" style={{fontSize:12, color:"#174f35", cursor:"pointer", userSelect:"none"}}>IS担当の選択肢に表示する</label>
-            </div>
-          </div>
-          <div style={{marginBottom:10}}>
-            <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>✍️ メール署名</label>
-            <textarea value={form.signature||""} onChange={e => setForm(p => ({...p, signature:e.target.value}))}
-              placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
-              style={{...inp, resize:"vertical", minHeight:72, lineHeight:1.5}} />
-          </div>
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:5}}>アイコン色</label>
-            <div style={{display:"flex", flexWrap:"wrap", gap:6}}>
-              {PALETTE.map(c => (
-                <button key={c} onClick={() => setForm(p => ({...p, color:c}))}
-                  style={{width:24, height:24, borderRadius:"50%", background:c, border:form.color===c?"3px solid #174f35":"2px solid #fff", cursor:"pointer", boxShadow:form.color===c?"0 0 0 2px "+c:"none"}} />
-              ))}
-            </div>
-          </div>
-          {err && <div style={{fontSize:12, color:"#dc2626", marginBottom:8}}>⚠️ {err}</div>}
-          <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
-            <button onClick={cancelEdit} style={{padding:"7px 16px", borderRadius:7, border:"1px solid #c0dece", background:"#fff", color:"#6a9a7a", fontSize:12, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
-            <button onClick={handleSubmit} style={{padding:"7px 20px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
-              {editingId ? "更新" : "追加"}
-            </button>
-          </div>
-        </div>
-      )}
-    </>
+      </div>
+      {formPanel}
+    </div>
   );
 
-  if (inline) return <div>{content}</div>;
+  if (inline) return content;
   return (
     <div style={{position:"fixed", inset:0, background:"#0005", display:"flex", alignItems:"center", justifyContent:"center", zIndex:1000}}>
       <div style={{background:"#fff", borderRadius:16, padding:"28px 32px", width:"min(560px,95vw)", maxHeight:"85vh", overflowY:"auto", boxShadow:"0 8px 40px #0003", border:"1px solid #d8ede1"}}>

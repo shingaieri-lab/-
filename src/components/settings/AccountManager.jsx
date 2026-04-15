@@ -81,42 +81,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
         <div style={{fontSize:16, fontWeight:800, color:"#174f35"}}>👥 アカウント管理</div>
         {!inline && <button onClick={onClose} style={{background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#6a9a7a"}}>✕</button>}
       </div>
-      <div style={{marginBottom:16, padding:"12px 14px", background:"#f0faf5", borderRadius:9, border:"1px solid #c0dece"}}>
-        <div style={{fontSize:12, fontWeight:700, color:"#174f35", marginBottom:8}}>🔗 招待コード発行</div>
-        <div style={{fontSize:11, color:"#6a9a7a", marginBottom:8}}>コードは24時間有効・1回限り使用可能です</div>
-        <button onClick={handleGenerateInvite} disabled={inviteLoading} style={{padding:"6px 14px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:inviteLoading?0.6:1}}>
-          {inviteLoading ? "発行中..." : "招待コードを発行"}
-        </button>
-        {inviteCode && (
-          <div style={{marginTop:10, padding:"8px 12px", background:"#fff", borderRadius:7, border:"1px solid #10b981", display:"flex", alignItems:"center", gap:10}}>
-            <span style={{fontFamily:"monospace", fontSize:13, fontWeight:700, color:"#059669", letterSpacing:2}}>{inviteCode}</span>
-            <button onClick={() => { navigator.clipboard.writeText(inviteCode); alert("コピーしました"); }} style={{fontSize:11, padding:"3px 8px", borderRadius:5, border:"1px solid #c0dece", background:"#f0faf5", color:"#6a9a7a", cursor:"pointer", fontFamily:"inherit"}}>コピー</button>
-            <button onClick={() => setInviteCode(null)} style={{fontSize:11, padding:"3px 8px", borderRadius:5, border:"none", background:"none", color:"#9ca3af", cursor:"pointer"}}>✕</button>
-          </div>
-        )}
-      </div>
-      <div style={{marginBottom:20}}>
-        {accounts.map(a => (
-          <div key={a.id} style={{borderRadius:9, border:"1px solid #d8ede1", marginBottom:6, overflow:"hidden"}}>
-            <div style={{display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f0f5f2"}}>
-              <span style={{width:28, height:28, borderRadius:"50%", background:a.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0}}>{a.name[0]}</span>
-              <div style={{flex:1}}>
-                <div style={{fontSize:13, fontWeight:700, color:"#174f35", display:"flex", alignItems:"center", gap:5, flexWrap:"wrap"}}>
-                  {a.name}
-                  <span style={{fontSize:10, color:"#6a9a7a"}}>@{a.id}</span>
-                  {a.role==="admin" && <span style={{fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"1px 6px", fontWeight:700}}>管理者</span>}
-                  {a.isStaff && <span style={{fontSize:10, background:"#dcfce7", color:"#15803d", borderRadius:4, padding:"1px 6px", fontWeight:700}}>IS担当</span>}
-                </div>
-                {a.email && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>✉️ {a.email}</div>}
-              </div>
-              {lockedAccounts[a.id] && <button onClick={() => handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12, padding:"3px 10px", borderRadius:6, background:"#fef3c7", color:"#d97706", border:"1px solid #fcd34d", cursor:"pointer", fontFamily:"inherit"}}>🔓 解除</button>}
-              <button onClick={() => startEdit(a)} style={{padding:"3px 6px", borderRadius:6, background:"#f0fdf4", color:"#059669", border:"1px solid #86efac", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
-              <button onClick={() => deleteAccount(a.id)} style={{padding:"3px 6px", borderRadius:6, background:"#fef2f2", color:"#dc2626", border:"1px solid #fca5a5", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div style={{background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1"}}>
+      <div style={{background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1", marginBottom:20}}>
         <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:12}}>{editingId ? "✏️ アカウント編集" : "＋ アカウント追加"}</div>
         <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:10}}>
           {[["ユーザーID","id","例：tanaka"],["表示名","name","例：田中"],["パスワード","password","パスワード"],["メールアドレス","email","例：tanaka@example.com"]].map(([lbl, key, ph]) => (
@@ -165,6 +130,63 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
             {editingId ? "更新" : "追加"}
           </button>
         </div>
+      </div>
+      <div style={{marginBottom:16, padding:"12px 14px", background:"#f0faf5", borderRadius:9, border:"1px solid #c0dece"}}>
+        <div style={{fontSize:12, fontWeight:700, color:"#174f35", marginBottom:8}}>🔗 招待コード発行</div>
+        <div style={{fontSize:11, color:"#6a9a7a", marginBottom:8}}>コードは24時間有効・1回限り使用可能です</div>
+        <button onClick={handleGenerateInvite} disabled={inviteLoading} style={{padding:"6px 14px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:inviteLoading?0.6:1}}>
+          {inviteLoading ? "発行中..." : "招待コードを発行"}
+        </button>
+        {inviteCode && (
+          <div style={{marginTop:10, padding:"8px 12px", background:"#fff", borderRadius:7, border:"1px solid #10b981", display:"flex", alignItems:"center", gap:10}}>
+            <span style={{fontFamily:"monospace", fontSize:13, fontWeight:700, color:"#059669", letterSpacing:2}}>{inviteCode}</span>
+            <button onClick={() => { navigator.clipboard.writeText(inviteCode); alert("コピーしました"); }} style={{fontSize:11, padding:"3px 8px", borderRadius:5, border:"1px solid #c0dece", background:"#f0faf5", color:"#6a9a7a", cursor:"pointer", fontFamily:"inherit"}}>コピー</button>
+            <button onClick={() => setInviteCode(null)} style={{fontSize:11, padding:"3px 8px", borderRadius:5, border:"none", background:"none", color:"#9ca3af", cursor:"pointer"}}>✕</button>
+          </div>
+        )}
+      </div>
+      <div style={{marginBottom:20}}>
+        {accounts.map(a => (
+          <div key={a.id} style={{borderRadius:9, border:"1px solid #d8ede1", marginBottom:6, overflow:"hidden"}}>
+            <div style={{display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f0f5f2"}}>
+              <span style={{width:28, height:28, borderRadius:"50%", background:a.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0}}>{a.name[0]}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13, fontWeight:700, color:"#174f35", display:"flex", alignItems:"center", gap:5, flexWrap:"wrap"}}>
+                  {a.name}
+                  <span style={{fontSize:10, color:"#6a9a7a"}}>@{a.id}</span>
+                  {a.role==="admin" && <span style={{fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"1px 6px", fontWeight:700}}>管理者</span>}
+                  {a.isStaff && <span style={{fontSize:10, background:"#dcfce7", color:"#15803d", borderRadius:4, padding:"1px 6px", fontWeight:700}}>IS担当</span>}
+                </div>
+                {a.email && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>✉️ {a.email}</div>}
+              </div>
+              {lockedAccounts[a.id] && <button onClick={() => handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12, padding:"3px 10px", borderRadius:6, background:"#fef3c7", color:"#d97706", border:"1px solid #fcd34d", cursor:"pointer", fontFamily:"inherit"}}>🔓 解除</button>}
+              <button onClick={() => startEdit(a)} style={{padding:"3px 6px", borderRadius:6, background:"#f0fdf4", color:"#059669", border:"1px solid #86efac", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
+              <button onClick={() => deleteAccount(a.id)} style={{padding:"3px 6px", borderRadius:6, background:"#fef2f2", color:"#dc2626", border:"1px solid #fca5a5", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div>
+        <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:8}}>メンバー一覧</div>
+        {accounts.map(a => (
+          <div key={a.id} style={{borderRadius:9, border:"1px solid #d8ede1", marginBottom:6, overflow:"hidden"}}>
+            <div style={{display:"flex", alignItems:"center", gap:10, padding:"10px 12px", background:"#f0f5f2"}}>
+              <span style={{width:28, height:28, borderRadius:"50%", background:a.color, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:800, flexShrink:0}}>{a.name[0]}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13, fontWeight:700, color:"#174f35", display:"flex", alignItems:"center", gap:5, flexWrap:"wrap"}}>
+                  {a.name}
+                  <span style={{fontSize:10, color:"#6a9a7a"}}>@{a.id}</span>
+                  {a.role==="admin" && <span style={{fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"1px 6px", fontWeight:700}}>管理者</span>}
+                  {a.isStaff && <span style={{fontSize:10, background:"#dcfce7", color:"#15803d", borderRadius:4, padding:"1px 6px", fontWeight:700}}>IS担当</span>}
+                </div>
+                {a.email && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>✉️ {a.email}</div>}
+              </div>
+              {lockedAccounts[a.id] && <button onClick={() => handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12, padding:"3px 10px", borderRadius:6, background:"#fef3c7", color:"#d97706", border:"1px solid #fcd34d", cursor:"pointer", fontFamily:"inherit"}}>🔓 解除</button>}
+              <button onClick={() => startEdit(a)} style={{padding:"3px 6px", borderRadius:6, background:"#f0fdf4", color:"#059669", border:"1px solid #86efac", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
+              <button onClick={() => deleteAccount(a.id)} style={{padding:"3px 6px", borderRadius:6, background:"#fef2f2", color:"#dc2626", border:"1px solid #fca5a5", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
+            </div>
+          </div>
+        ))}
       </div>
     </>
   );

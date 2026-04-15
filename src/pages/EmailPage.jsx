@@ -188,8 +188,8 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
                 <span style={{fontSize:12,fontWeight:selTpl===t.id?700:400,color:"#174f35",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{t.name}</span>
               </span>
               <div style={{display:"flex",gap:3}}>
-                <button onClick={e=>{e.stopPropagation();setSelTpl(t.id);setEditTpl({...t});setEditMode(true);}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="編集"><PencilIcon size={16} color="#059669"/></button>
-                <button onClick={e=>{e.stopPropagation();deleteTpl(t.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={16} color="#ef4444"/></button>
+                <button onClick={e=>{e.stopPropagation();setSelTpl(t.id);setEditTpl({...t});setEditMode(true);}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
+                <button onClick={e=>{e.stopPropagation();deleteTpl(t.id);}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
               </div>
             </div>
           ))}

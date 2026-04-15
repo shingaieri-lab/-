@@ -129,8 +129,8 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                   ) : (
                     <>
                       <span style={{fontWeight:700,color:"#174f35",fontSize:13,flex:1}}>🏢 {site}</span>
-                      <button onClick={()=>{setEditSite(site);setEditSiteName(site)}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="編集"><PencilIcon size={16} color="#059669"/></button>
-                      <button onClick={()=>removeSite(site)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={16} color="#ef4444"/></button>
+                      <button onClick={()=>{setEditSite(site);setEditSiteName(site)}} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
+                      <button onClick={()=>removeSite(site)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
                     </>
                   )}
                 </div>
@@ -150,7 +150,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                       <input value={plan.label} onChange={e=>updatePlanLabel(site,idx,e.target.value)} style={{...inp,flex:1,padding:"4px 8px"}} />
                       <span style={{fontSize:11,color:"#6a9a7a"}}>¥</span>
                       <input type="number" value={plan.price} onChange={e=>updatePlanPrice(site,idx,e.target.value)} style={{...inp,width:100,padding:"4px 8px"}} />
-                      <button onClick={()=>removePlan(site,idx)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={16} color="#ef4444"/></button>
+                      <button onClick={()=>removePlan(site,idx)} style={{background:"none",border:"none",cursor:"pointer",padding:"4px",display:"flex",alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
                     </div>
                   ))}
                   <div style={{display:"flex",gap:6,marginTop:8}} onClick={()=>setSelSite(site)}>

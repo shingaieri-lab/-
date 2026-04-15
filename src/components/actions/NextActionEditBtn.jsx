@@ -1,7 +1,7 @@
 // ネクストアクション操作ボタン（編集トリガー + Google Tasks TODO作成 + 削除）
 import { useState } from 'react';
 import { S } from '../../styles/index.js';
-import { PencilIcon, TrashIcon } from '../ui/Icons.jsx';
+import { PencilIcon, TrashIcon, TaskIcon } from '../ui/Icons.jsx';
 import { isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../../lib/oauth.js';
 import { getEffectiveAiConfig } from '../../lib/accounts.js';
 
@@ -81,18 +81,20 @@ export function NextActionEditBtn({ nad, lead, onUpdate, currentUser, compact = 
     <div style={{ display: "flex", gap: 4, marginLeft: 4, flexShrink: 0 }}>
       {!compact && onEdit && (
         <button onClick={onEdit} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="編集">
-          <PencilIcon size={16} color="#059669" />
+          <PencilIcon size={18} color="#059669" />
         </button>
       )}
       {(currentUser?.gmailClientId || window.__appData?.aiConfig?.gmailClientId) && nad && (
         <button onClick={() => createCalTodo(nad, lead.next_action_time)} disabled={calSaving}
-          style={{ ...S.btnIconSm, fontSize: 11, opacity: calSaving ? 0.5 : 1, color: calSaved ? "#7c3aed" : "inherit" }}
-          title="GoogleタスクにTODO作成">{calSaved ? "✅" : "☑️"}</button>
+          style={{ background:"none", border:"none", cursor: calSaving ? "not-allowed" : "pointer", padding:"4px", display:"flex", alignItems:"center", opacity: calSaving ? 0.5 : 1 }}
+          title="GoogleタスクにTODO作成">
+          <TaskIcon size={18} color={calSaved ? "#059669" : "#3b82f6"} />
+        </button>
       )}
       {!compact && (
         <button onClick={() => onUpdate({ next_action: "", next_action_date: "", next_action_time: "" })}
           style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="削除">
-          <TrashIcon size={16} color="#ef4444" />
+          <TrashIcon size={18} color="#ef4444" />
         </button>
       )}
     </div>

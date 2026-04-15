@@ -121,13 +121,13 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             <button onClick={copyDealInfo} style={{ background: dealCopied ? "#10b981" : "none", border: `1px solid ${dealCopied ? "#10b981" : "#10b98166"}`, borderRadius: 6, cursor: "pointer", color: dealCopied ? "#fff" : "#059669", fontSize: 12, padding: "2px 8px", lineHeight: 1.4, fontWeight: 600, transition: "all 0.2s" }}>
               {dealCopied ? "✅ コピー済み" : "📋 商談共有用"}
             </button>
-            {!readOnly && <button onClick={onEdit} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="編集"><PencilIcon size={16} color="#059669" /></button>}
+            {!readOnly && <button onClick={onEdit} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="編集"><PencilIcon size={18} color="#059669" /></button>}
             {!readOnly && (confirmDelete
               ? <>
                   <button onClick={() => { onDelete(); onClose(); }} style={{ background: "#ef4444", border: "none", borderRadius: 6, cursor: "pointer", color: "#fff", fontSize: 12, padding: "2px 8px", lineHeight: 1.4, fontWeight: 700 }}>削除確認</button>
                   <button onClick={() => setConfirmDelete(false)} style={{ background: "none", border: "1px solid #6a9a7a66", borderRadius: 6, cursor: "pointer", color: "#6a9a7a", fontSize: 12, padding: "2px 8px", lineHeight: 1.4 }}>キャンセル</button>
                 </>
-              : <button onClick={() => setConfirmDelete(true)} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="削除"><TrashIcon size={16} color="#ef4444" /></button>
+              : <button onClick={() => setConfirmDelete(true)} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="削除"><TrashIcon size={18} color="#ef4444" /></button>
             )}
             <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "#6a9a7a", fontSize: 16, flexShrink: 0, lineHeight: 1, padding: 0, marginLeft: 2 }}>✕</button>
           </div>

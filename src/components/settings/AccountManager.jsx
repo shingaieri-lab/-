@@ -110,8 +110,8 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
                 {a.email && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>✉️ {a.email}</div>}
               </div>
               {lockedAccounts[a.id] && <button onClick={() => handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12, padding:"3px 10px", borderRadius:6, background:"#fef3c7", color:"#d97706", border:"1px solid #fcd34d", cursor:"pointer", fontFamily:"inherit"}}>🔓 解除</button>}
-              <button onClick={() => startEdit(a)} style={{padding:"3px 6px", borderRadius:6, background:"#f0fdf4", color:"#059669", border:"1px solid #86efac", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="編集"><PencilIcon size={16} color="#059669"/></button>
-              <button onClick={() => deleteAccount(a.id)} style={{padding:"3px 6px", borderRadius:6, background:"#fef2f2", color:"#dc2626", border:"1px solid #fca5a5", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="削除"><TrashIcon size={16} color="#ef4444"/></button>
+              <button onClick={() => startEdit(a)} style={{padding:"3px 6px", borderRadius:6, background:"#f0fdf4", color:"#059669", border:"1px solid #86efac", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
+              <button onClick={() => deleteAccount(a.id)} style={{padding:"3px 6px", borderRadius:6, background:"#fef2f2", color:"#dc2626", border:"1px solid #fca5a5", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
             </div>
           </div>
         ))}

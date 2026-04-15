@@ -251,7 +251,7 @@ export function LeadMgmtTab({ master, save, onLeadsChange }) {
       </div>
 
       {/* 営業担当 */}
-      <div>
+      <div style={{marginTop:24}}>
         <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:8}}>営業担当</div>
         <div style={{display:"flex",gap:8,marginBottom:12}}>
           <input value={newSales} onChange={e=>setNewSales(e.target.value)} placeholder="担当者名" style={{...inp,flex:1}} onKeyDown={e=>e.key==="Enter"&&addSales()} />

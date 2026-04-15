@@ -261,7 +261,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
           <div style={{maxWidth:720}}><ZohoCrmSettings /></div>
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
-          <div style={{maxWidth:860}}><AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} /></div>
+          <AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} />
         )}
         {tab === "myaccount" && (
           <div>

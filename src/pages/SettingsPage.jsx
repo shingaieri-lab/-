@@ -147,7 +147,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         </div>
       </div>
       {/* 右コンテンツ */}
-      <div style={{flex:1, overflowY:"auto", padding:"32px 36px"}}>
+      <div style={{flex:1, overflowY:"auto", padding:"32px 36px", background:"#fff"}}>
         {activeMenu && (
           <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:24, paddingBottom:16, borderBottom:"2px solid #e2f0e8"}}>
             <div style={{width:44, height:44, borderRadius:12, background:activeMenu.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
@@ -160,7 +160,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         )}
         {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
         {tab === "portal" && (
-          <div>
+          <div style={{maxWidth:720}}>
             <div style={{display:"flex", gap:8, marginBottom:16}}>
               <input value={newSite} onChange={e=>setNewSite(e.target.value)} placeholder="新しいポータルサイト名" style={{...inp, flex:1, maxWidth:320}} onKeyDown={e=>e.key==="Enter"&&addSite()} />
               <button onClick={addSite} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
@@ -245,7 +245,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
           </div>
         )}
         {tab === "apikey" && (
-          <div style={{maxWidth:600}}><ApiKeyTab
+          <div style={{maxWidth:720}}><ApiKeyTab
             currentUser={currentUser}
             profileForm={profileForm}
             setProfileForm={setProfileForm}
@@ -258,7 +258,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
           <div style={{maxWidth:720}}><LeadMgmtTab master={master} save={save} onLeadsChange={onLeadsChange} /></div>
         )}
         {tab === "zoho" && currentUser?.role==="admin" && (
-          <ZohoCrmSettings />
+          <div style={{maxWidth:720}}><ZohoCrmSettings /></div>
         )}
         {tab === "accounts" && currentUser?.role==="admin" && (
           <div style={{maxWidth:720}}><AccountManager currentUser={currentUser} onClose={null} inline={true} onUpdateProfile={onUpdateProfile} /></div>
@@ -266,7 +266,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         {tab === "myaccount" && (
           <div>
             <div style={{fontSize:14,fontWeight:700,color:"#174f35",marginBottom:16}}>👤 アカウント管理</div>
-            <div style={{maxWidth:520}}>
+            <div style={{maxWidth:720}}>
               <div style={{marginBottom:16}}>
                 <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>ID</label>
                 <input type="text" value={profileForm.id||""} readOnly

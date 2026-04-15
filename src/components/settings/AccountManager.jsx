@@ -131,7 +131,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
 
   const content = (
     <div style={{display:"flex", gap:24, alignItems:"flex-start"}}>
-      <div style={{flex:1, minWidth:0}}>
+      <div style={{width:860, flexShrink:0}}>
       {!inline && (
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}}>
           <div style={{fontSize:16, fontWeight:800, color:"#174f35"}}>👥 アカウント管理</div>

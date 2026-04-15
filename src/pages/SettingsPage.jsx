@@ -5,13 +5,12 @@ import { ZohoCrmSettings } from '../components/settings/ZohoCrmSettings.jsx';
 import { AccountManager } from '../components/settings/AccountManager.jsx';
 import { ApiKeyTab } from '../components/settings/ApiKeyTab.jsx';
 import { LeadMgmtTab } from '../components/settings/LeadMgmtTab.jsx';
-import { GeneralTab } from '../components/settings/GeneralTab.jsx';
 import { PALETTE } from '../constants/index.js';
 import { getMaster, saveMasterSettings } from '../lib/master.js';
 
 export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, initialTab, onLeadsChange, onMasterSave, onOpenWizard }) {
   const [master, setMaster] = useState(() => getMaster());
-  const [tab, setTab] = useState(initialTab || (currentUser?.role === "admin" ? "general" : "apikey"));
+  const [tab, setTab] = useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "apikey"));
   const [msg, setMsg] = useState("");
   const [profileForm, setProfileForm] = useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
   const [profileMsg, setProfileMsg] = useState("");
@@ -99,7 +98,6 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
       <div style={{fontSize:12,color:"#6a9a7a",marginBottom:20}}>{currentUser?.role === "admin" ? "リード管理・ポータルサイト・営業担当・API設定・アカウントを管理できます。" : "API設定・アカウントを管理できます。"}</div>
       {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
       <div className="settings-tabs" style={{display:"flex", flexWrap:"wrap", gap:0, marginBottom:0}}>
-        {currentUser?.role==="admin" && tabBtn("general","⚙️ 基本設定")}
         {currentUser?.role==="admin" && tabBtn("leadmgmt","📋 リード管理")}
         {currentUser?.role==="admin" && tabBtn("portal","🏢 ポータルサイト")}
         {tabBtn("apikey","🔑 API設定")}
@@ -164,9 +162,6 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
               </div>
             ))}
           </div>
-        )}
-        {tab === "general" && currentUser?.role==="admin" && (
-          <GeneralTab master={master} save={save} />
         )}
         {tab === "apikey" && (
           <ApiKeyTab

@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { LeadCombobox } from '../leads/LeadCombobox.jsx';
 import { isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../../lib/oauth.js';
-import { getMaster } from '../../lib/master.js';
+import { loadGCalConfig } from '../../lib/gcal.js';
 
 const lbl  = { display:"block", fontSize:11, color:"#6a9a7a", marginBottom:4, fontWeight:600 };
 const inp  = { width:"100%", background:"#f8fffe", border:"1px solid #99e6d8", borderRadius:7, padding:"9px 12px", color:"#1f5c40", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:8 };
@@ -12,14 +12,14 @@ const btnSec = { background:"#d8ede1", color:"#2d6b4a", border:"1px solid #c0dec
 export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots, leads, selectedMembers, currentUser, mergedCalendarIds }) {
   const [calRegLeadId, setCalRegLeadId] = useState("");
   const [calRegCompany, setCalRegCompany] = useState("");
-  const [calRegTitleTpl, setCalRegTitleTpl] = useState(() => getMaster().calRegTitleTpl || "仮WEB営1）【{{会社名}}様】");
+  const [calRegTitleTpl, setCalRegTitleTpl] = useState(() => loadGCalConfig().calRegTitleTpl || "仮WEB営1）【{{会社名}}様】");
   const [calRegLoading, setCalRegLoading] = useState(false);
   const [calRegToken, setCalRegToken] = useState(null);
   const [calRegResults, setCalRegResults] = useState([]);
 
   useEffect(() => {
     if (show) {
-      setCalRegTitleTpl(getMaster().calRegTitleTpl || "仮WEB営1）【{{会社名}}様】");
+      setCalRegTitleTpl(loadGCalConfig().calRegTitleTpl || "仮WEB営1）【{{会社名}}様】");
       setCalRegResults([]);
       setCalRegLeadId(initialLeadId || "");
       const lead = leads.find(l => l.id === initialLeadId);

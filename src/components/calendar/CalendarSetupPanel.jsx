@@ -48,6 +48,12 @@ export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, membe
         </div>
       ))}
 
+      <div style={{marginBottom:14,borderTop:"1px solid #fde68a",paddingTop:14}}>
+        <label style={lbl}>カレンダー登録タイトルテンプレート</label>
+        <input value={editCfg.calRegTitleTpl||""} onChange={e=>setEditCfg(p=>({...p,calRegTitleTpl:e.target.value}))} placeholder="例：仮WEB営1）【{{会社名}}様】" style={inp} />
+        <div style={{fontSize:11,color:"#92400e",marginTop:4}}><code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>{"{{会社名}}"}</code> は相手先の企業名に置き換わります</div>
+      </div>
+
       <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:12}}>
         <button onClick={onClose} style={btnSec}>閉じる</button>
         <button onClick={onSave} style={btnP}>保存</button>

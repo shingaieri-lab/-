@@ -25,6 +25,9 @@ export function EmailVariableForm({ leads, selLead, onLeadChange, vars, setVars,
         <div><label style={lblStyle}>{"{{"+"送信者名"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
           <input value={vars.送信者名||""} onChange={e=>setVars(v=>({...v,送信者名:e.target.value}))} style={inpStyle} />
         </div>
+        <div><label style={lblStyle}>{"{{"+"送信者会社名"+"}}"}</label>
+          <input value={vars.送信者会社名||""} onChange={e=>setVars(v=>({...v,送信者会社名:e.target.value}))} style={inpStyle} placeholder="例：株式会社〇〇" />
+        </div>
         <div style={{gridColumn:"1/-1"}}><label style={lblStyle}>宛先メールアドレス <span style={{color:"#9ca3af",fontSize:10}}>（Gmail下書き保存時のTo欄・任意）</span> <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
           <input value={vars.宛先メール||""} onChange={e=>setVars(v=>({...v,宛先メール:e.target.value}))} style={inpStyle} placeholder="例：yamada@example.com" type="email" />
         </div>

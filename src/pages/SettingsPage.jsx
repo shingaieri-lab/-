@@ -1,6 +1,6 @@
 // 設定ページ（基本設定・リード管理・ポータル・API設定・Zoho CRM・アカウント管理）
 import { useState } from 'react';
-import { PencilIcon, TrashIcon } from '../components/ui/Icons.jsx';
+import { PencilIcon, TrashIcon, LeadMgmtIcon, PortalIcon, ApiKeyIcon, ZohoIcon, AdminIcon, AccountIcon } from '../components/ui/Icons.jsx';
 import { ZohoCrmSettings } from '../components/settings/ZohoCrmSettings.jsx';
 import { AccountManager } from '../components/settings/AccountManager.jsx';
 import { ApiKeyTab } from '../components/settings/ApiKeyTab.jsx';
@@ -85,40 +85,54 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
   };
 
   const MENU = [
-    { key:"leadmgmt",  icon:"📋", label:"リード管理",    adminOnly:true  },
-    { key:"portal",    icon:"🏢", label:"ポータルサイト", adminOnly:true  },
-    { key:"apikey",    icon:"🔑", label:"API設定",        adminOnly:false },
-    { key:"zoho",      icon:"🔗", label:"Zoho CRM",       adminOnly:true  },
-    { key:"accounts",  icon:"👥", label:"管理者設定",     adminOnly:true  },
-    { key:"myaccount", icon:"👤", label:"アカウント",     adminOnly:false },
+    { key:"leadmgmt",  Icon:LeadMgmtIcon, color:"#10b981", label:"リード管理",    adminOnly:true  },
+    { key:"portal",    Icon:PortalIcon,   color:"#3b82f6", label:"ポータルサイト", adminOnly:true  },
+    { key:"apikey",    Icon:ApiKeyIcon,   color:"#f97316", label:"API設定",        adminOnly:false },
+    { key:"zoho",      Icon:ZohoIcon,     color:"#8b5cf6", label:"Zoho CRM",       adminOnly:true  },
+    { key:"accounts",  Icon:AdminIcon,    color:"#ef4444", label:"管理者設定",     adminOnly:true  },
+    { key:"myaccount", Icon:AccountIcon,  color:"#06b6d4", label:"アカウント",     adminOnly:false },
   ];
   const inp = { width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", fontSize:12, outline:"none", boxSizing:"border-box", fontFamily:"inherit", background:"#fff", color:"#174f35" };
   const addRow = { display:"flex", gap:8, marginBottom:12 };
+  const activeMenu = MENU.find(m => m.key === tab);
 
   return (
     <div className="settings-page" style={{display:"flex", height:"100%", overflow:"hidden"}}>
       {/* 左サイドバー */}
-      <div style={{width:220, flexShrink:0, borderRight:"1px solid #d8ede1", background:"#f8fbf9", overflowY:"auto", padding:"20px 12px"}}>
-        <div style={{fontSize:15, fontWeight:900, color:"#174f35", marginBottom:16, paddingLeft:4}}>⚙️ 設定</div>
-        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
-          {MENU.filter(m => !m.adminOnly || currentUser?.role==="admin").map(m => (
-            <button key={m.key} onClick={() => setTab(m.key)} style={{
+      <div style={{width:260, flexShrink:0, borderRight:"1px solid #d8ede1", background:"#f8fbf9", overflowY:"auto", padding:"24px 14px"}}>
+        <div style={{fontSize:15, fontWeight:900, color:"#174f35", marginBottom:20, paddingLeft:4}}>⚙️ 設定</div>
+        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+          {MENU.filter(m => !m.adminOnly || currentUser?.role==="admin").map(({ key, Icon, color, label }) => (
+            <button key={key} onClick={() => setTab(key)} style={{
               display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-              gap:6, padding:"14px 6px",
-              borderRadius:12,
-              border: tab===m.key ? "2px solid #10b981" : "1.5px solid #e2f0e8",
-              background: tab===m.key ? "#e8f5ef" : "#fff",
+              gap:8, padding:"18px 8px",
+              borderRadius:14,
+              border: tab===key ? `2px solid ${color}` : "1.5px solid #e2f0e8",
+              background: tab===key ? color + "18" : "#fff",
               cursor:"pointer", fontFamily:"inherit",
-              boxShadow: tab===m.key ? "0 2px 8px #10b98122" : "0 1px 3px #0000000a",
+              boxShadow: tab===key ? `0 2px 10px ${color}33` : "0 1px 4px #0000000d",
+              transition:"all 0.15s",
             }}>
-              <span style={{fontSize:22, lineHeight:1}}>{m.icon}</span>
-              <span style={{fontSize:10, color: tab===m.key ? "#059669" : "#6a9a7a", fontWeight: tab===m.key ? 700 : 400, textAlign:"center", lineHeight:1.3, wordBreak:"keep-all"}}>{m.label}</span>
+              <div style={{width:44, height:44, borderRadius:12, background: tab===key ? color + "22" : color + "14", display:"flex", alignItems:"center", justifyContent:"center"}}>
+                <Icon size={26} color={color} />
+              </div>
+              <span style={{fontSize:11, color: tab===key ? color : "#6a9a7a", fontWeight: tab===key ? 700 : 500, textAlign:"center", lineHeight:1.4, wordBreak:"keep-all"}}>{label}</span>
             </button>
           ))}
         </div>
       </div>
       {/* 右コンテンツ */}
-      <div style={{flex:1, overflowY:"auto", padding:"24px 28px", maxWidth:680}}>
+      <div style={{flex:1, overflowY:"auto", padding:"32px 36px", maxWidth:760}}>
+        {activeMenu && (
+          <div style={{display:"flex", alignItems:"center", gap:12, marginBottom:24, paddingBottom:16, borderBottom:"2px solid #e2f0e8"}}>
+            <div style={{width:44, height:44, borderRadius:12, background:activeMenu.color+"18", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0}}>
+              <activeMenu.Icon size={26} color={activeMenu.color} />
+            </div>
+            <div>
+              <div style={{fontSize:18, fontWeight:800, color:"#174f35"}}>{activeMenu.label}</div>
+            </div>
+          </div>
+        )}
         {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
         {tab === "portal" && (
           <div>

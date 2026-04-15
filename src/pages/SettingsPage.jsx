@@ -160,7 +160,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         )}
         {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
         {tab === "portal" && (
-          <div style={{maxWidth:720}}>
+          <div style={{maxWidth:860}}>
             <div style={{display:"flex", gap:8, marginBottom:16}}>
               <input value={newSite} onChange={e=>setNewSite(e.target.value)} placeholder="新しいポータルサイト名" style={{...inp, flex:1, maxWidth:320}} onKeyDown={e=>e.key==="Enter"&&addSite()} />
               <button onClick={addSite} style={{padding:"7px 16px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",flexShrink:0}}>追加</button>
@@ -245,7 +245,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
           </div>
         )}
         {tab === "apikey" && (
-          <div style={{maxWidth:720}}><ApiKeyTab
+          <div style={{maxWidth:860}}><ApiKeyTab
             currentUser={currentUser}
             profileForm={profileForm}
             setProfileForm={setProfileForm}

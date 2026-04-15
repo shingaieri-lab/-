@@ -1,9 +1,9 @@
 // メールテンプレートページ（差し込み変数・Gmail下書き保存・候補日スロット連携）
 import { useState, useEffect } from 'react';
 import { PencilIcon, TrashIcon } from '../components/ui/Icons.jsx';
-import { LeadCombobox } from '../components/leads/LeadCombobox.jsx';
-import { getSalesMembers, getMaster } from '../lib/master.js';
+import { getMaster } from '../lib/master.js';
 import { getEffectiveAiConfig } from '../lib/accounts.js';
+import { EmailVariableForm } from '../components/email/EmailVariableForm.jsx';
 import { acquireGmailToken, buildGmailDraftRaw, postGmailDraft } from '../lib/oauth.js';
 import { apiPost } from '../lib/api.js';
 import { TemplateEditor } from '../components/email/TemplateEditor.jsx';
@@ -165,8 +165,6 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
   const deleteTpl=(id)=>{ if(!window.confirm("削除しますか？")) return; const u=tpls.filter(t=>t.id!==id); setTpls(u); saveTpls(u); if(selTpl===id) setSelTpl(u[0]?.id||""); };
   const addTpl=()=>{ const n={id:"t"+Date.now(),name:"新テンプレート",useSlots:false,useMeeting:false,subject:"件名",body:"本文"}; const u=[...tpls,n]; setTpls(u); saveTpls(u); setSelTpl(n.id); setEditTpl(n); setEditMode(true); };
   const handleDrop=(toIdx)=>{ if(dragIdx===null||dragIdx===toIdx) return; const r=[...tpls]; const [moved]=r.splice(dragIdx,1); r.splice(toIdx,0,moved); setTpls(r); saveTpls(r); setDragIdx(null); setOverIdx(null); };
-  const inpStyle = {width:"100%",padding:"7px 10px",borderRadius:7,border:"1px solid #c0dece",fontSize:12,outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f8fffe"};
-  const lblStyle = {fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3};
   return (
     <div className="page-pad" style={{padding:"24px 28px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
@@ -206,83 +204,12 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
             />
           ) : (
             <div className="email-main-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,alignItems:"start",minHeight:"calc(100vh - 180px)"}}>
-              <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px"}}>
-                <div style={{fontSize:12,fontWeight:700,color:"#174f35",marginBottom:10}}>差し込み変数</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
-                  {/* リード選択 */}
-                  <div><label style={lblStyle}>リード選択</label>
-                    <LeadCombobox leads={leads} value={selLead} onChange={setSelLead} placeholder="会社名・担当者名で検索" inputStyle={inpStyle} darkMode={false} />
-                  </div>
-                  {/* 担当者苗字（自動抽出） */}
-                  <div><label style={lblStyle}>{"{{"+"担当者苗字"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>苗字のみ自動</span></label>
-                    <input value={vars.担当者苗字||""} onChange={e=>setVars(v=>({...v,担当者苗字:e.target.value}))} style={inpStyle} placeholder="例：山田" />
-                  </div>
-                  {/* 担当者名（フルネーム） */}
-                  <div><label style={lblStyle}>{"{{"+"担当者名"+"}}"}</label>
-                    <input value={vars.担当者名||""} onChange={e=>setVars(v=>({...v,担当者名:e.target.value}))} style={inpStyle} />
-                  </div>
-                  {/* 会社名 */}
-                  <div><label style={lblStyle}>{"{{"+"会社名"+"}}"}</label>
-                    <input value={vars.会社名||""} onChange={e=>setVars(v=>({...v,会社名:e.target.value}))} style={inpStyle} />
-                  </div>
-                  {/* 送信者名（ログインユーザー自動入力） */}
-                  <div><label style={lblStyle}>{"{{"+"送信者名"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
-                    <input value={vars.送信者名||""} onChange={e=>setVars(v=>({...v,送信者名:e.target.value}))} style={inpStyle} />
-                  </div>
-                  {/* 宛先メール */}
-                  <div style={{gridColumn:"1/-1"}}><label style={lblStyle}>宛先メールアドレス <span style={{color:"#9ca3af",fontSize:10}}>（Gmail下書き保存時のTo欄・任意）</span> <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動入力</span></label>
-                    <input value={vars.宛先メール||""} onChange={e=>setVars(v=>({...v,宛先メール:e.target.value}))} style={inpStyle} placeholder="例：yamada@example.com" type="email" />
-                  </div>
-                </div>
-                {/* 商談日時・担当者 - テンプレートのuseMeeting設定に従って表示 */}
-                {showMeeting && (
-                <div style={{marginTop:4}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#174f35",marginBottom:6,borderTop:"1px solid #e2f0e8",paddingTop:8}}>商談日時・担当者</div>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr 1fr 1fr",gap:6}}>
-                    <div><label style={lblStyle}>{"{{"+"商談月"+"}}"}</label>
-                      <select value={vars.商談月||""} onChange={e=>setVars(v=>({...v,商談月:e.target.value}))} style={inpStyle}>
-                        <option value="">--</option>
-                        {Array.from({length:12},(_,i)=><option key={i+1} value={String(i+1)}>{i+1}</option>)}
-                      </select>
-                    </div>
-                    <div><label style={lblStyle}>{"{{"+"商談日"+"}}"}</label>
-                      <select value={vars.商談日||""} onChange={e=>setVars(v=>({...v,商談日:e.target.value}))} style={inpStyle}>
-                        <option value="">--</option>
-                        {Array.from({length:31},(_,i)=><option key={i+1} value={String(i+1)}>{i+1}</option>)}
-                      </select>
-                    </div>
-                    <div><label style={lblStyle}>{"{{"+"商談曜日"+"}}"} <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>自動</span></label>
-                      <input value={vars.商談曜日||""} readOnly style={{...inpStyle,background:"#f0f5f2",color:"#3d7a5e",cursor:"default"}} placeholder="自動" />
-                    </div>
-                    <div><label style={lblStyle}>{"{{"+"商談時"+"}}"}</label>
-                      <select value={vars.商談時||""} onChange={e=>setVars(v=>({...v,商談時:e.target.value}))} style={inpStyle}>
-                        <option value="">--</option>
-                        {Array.from({length:24},(_,i)=><option key={i} value={String(i)}>{i}</option>)}
-                      </select>
-                    </div>
-                    <div><label style={lblStyle}>{"{{"+"商談分"+"}}"}</label>
-                      <select value={vars.商談分||""} onChange={e=>setVars(v=>({...v,商談分:e.target.value}))} style={inpStyle}>
-                        <option value="">--</option>
-                        {["00","15","30","45"].map(m=><option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                    <div><label style={lblStyle}>{"{{"+"商談担当"+"}}"}</label>
-                      <select value={vars.商談担当||""} onChange={e=>setVars(v=>({...v,商談担当:e.target.value}))} style={inpStyle}>
-                        <option value="">--</option>
-                        {getSalesMembers().map(m=><option key={m} value={m}>{m}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                </div>
-                )}
-                {/* 候補日時 - テンプレートのuseSlots設定に従って表示 */}
-                {showSlots && (
-                <div>
-                  <label style={lblStyle}>{"{{"+"候補日時"+"}}"} {candidateSlots.length > 0 && <span style={{color:"#10b981",fontSize:10,fontWeight:600}}>📅 候補日ツールから自動入力済</span>}</label>
-                  <textarea value={vars.候補日時||""} onChange={e=>setVars(v=>({...v,候補日時:e.target.value}))} rows={4} placeholder={"例：2026年3月20日（金）10:00〜11:00"} style={{...inpStyle,resize:"vertical",lineHeight:1.6}} />
-                </div>
-                )}
-              </div>
+              <EmailVariableForm
+                leads={leads} selLead={selLead} onLeadChange={setSelLead}
+                vars={vars} setVars={setVars}
+                showSlots={showSlots} showMeeting={showMeeting}
+                candidateSlots={candidateSlots}
+              />
               {tpl&&(
                 <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px",display:"flex",flexDirection:"column",height:"calc(100vh - 180px)",boxSizing:"border-box",position:"sticky",top:16}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>

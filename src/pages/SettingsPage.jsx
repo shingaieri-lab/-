@@ -84,40 +84,41 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
     save({ ...master, portalTypes: { ...master.portalTypes, [site]: plans } });
   };
 
-  const menuItem = (key, label) => (
-    <button key={key} onClick={() => setTab(key)} style={{
-      display:"block", width:"100%", textAlign:"left",
-      padding:"10px 20px", border:"none", borderLeft: tab===key ? "3px solid #10b981" : "3px solid transparent",
-      background: tab===key ? "#e8f5ef" : "none",
-      color: tab===key ? "#059669" : "#6a9a7a",
-      fontWeight: tab===key ? 700 : 400,
-      fontSize:13, cursor:"pointer", fontFamily:"inherit",
-    }}>
-      {label}
-    </button>
-  );
+  const MENU = [
+    { key:"leadmgmt",  icon:"📋", label:"リード管理",    adminOnly:true  },
+    { key:"portal",    icon:"🏢", label:"ポータルサイト", adminOnly:true  },
+    { key:"apikey",    icon:"🔑", label:"API設定",        adminOnly:false },
+    { key:"zoho",      icon:"🔗", label:"Zoho CRM",       adminOnly:true  },
+    { key:"accounts",  icon:"👥", label:"管理者設定",     adminOnly:true  },
+    { key:"myaccount", icon:"👤", label:"アカウント",     adminOnly:false },
+  ];
   const inp = { width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", fontSize:12, outline:"none", boxSizing:"border-box", fontFamily:"inherit", background:"#fff", color:"#174f35" };
   const addRow = { display:"flex", gap:8, marginBottom:12 };
 
   return (
     <div className="settings-page" style={{display:"flex", height:"100%", overflow:"hidden"}}>
       {/* 左サイドバー */}
-      <div style={{width:200, flexShrink:0, borderRight:"1px solid #d8ede1", background:"#f8fbf9", overflowY:"auto", display:"flex", flexDirection:"column"}}>
-        <div style={{padding:"24px 20px 16px", fontSize:16, fontWeight:900, color:"#174f35"}}>⚙️ 設定</div>
-        <div style={{fontSize:11, color:"#6a9a7a", padding:"0 20px 16px", lineHeight:1.5}}>
-          {currentUser?.role === "admin" ? "リード管理・ポータルサイト・API設定・アカウントを管理できます。" : "API設定・アカウントを管理できます。"}
+      <div style={{width:220, flexShrink:0, borderRight:"1px solid #d8ede1", background:"#f8fbf9", overflowY:"auto", padding:"20px 12px"}}>
+        <div style={{fontSize:15, fontWeight:900, color:"#174f35", marginBottom:16, paddingLeft:4}}>⚙️ 設定</div>
+        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:8}}>
+          {MENU.filter(m => !m.adminOnly || currentUser?.role==="admin").map(m => (
+            <button key={m.key} onClick={() => setTab(m.key)} style={{
+              display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+              gap:6, padding:"14px 6px",
+              borderRadius:12,
+              border: tab===m.key ? "2px solid #10b981" : "1.5px solid #e2f0e8",
+              background: tab===m.key ? "#e8f5ef" : "#fff",
+              cursor:"pointer", fontFamily:"inherit",
+              boxShadow: tab===m.key ? "0 2px 8px #10b98122" : "0 1px 3px #0000000a",
+            }}>
+              <span style={{fontSize:22, lineHeight:1}}>{m.icon}</span>
+              <span style={{fontSize:10, color: tab===m.key ? "#059669" : "#6a9a7a", fontWeight: tab===m.key ? 700 : 400, textAlign:"center", lineHeight:1.3, wordBreak:"keep-all"}}>{m.label}</span>
+            </button>
+          ))}
         </div>
-        <nav style={{flex:1}}>
-          {currentUser?.role==="admin" && menuItem("leadmgmt","📋 リード管理")}
-          {currentUser?.role==="admin" && menuItem("portal","🏢 ポータルサイト")}
-          {menuItem("apikey","🔑 API設定")}
-          {currentUser?.role==="admin" && menuItem("zoho","🔗 Zoho CRM連携")}
-          {currentUser?.role==="admin" && menuItem("accounts","👥 アカウント管理（管理者）")}
-          {menuItem("myaccount","👤 アカウント管理")}
-        </nav>
       </div>
       {/* 右コンテンツ */}
-      <div style={{flex:1, overflowY:"auto", padding:"24px 28px"}}>
+      <div style={{flex:1, overflowY:"auto", padding:"24px 28px", maxWidth:680}}>
         {msg && <div style={{background:"#d1fae5",color:"#059669",border:"1px solid #6ee7b7",borderRadius:8,padding:"8px 16px",marginBottom:16,fontSize:12,fontWeight:700}}>{msg}</div>}
         {tab === "portal" && (
           <div>

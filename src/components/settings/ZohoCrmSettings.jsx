@@ -104,7 +104,7 @@ export function ZohoCrmSettings() {
   };
 
   return (
-    <div style={{maxWidth:600}}>
+    <div style={{width:"100%"}}>
       <div style={{fontSize:14,fontWeight:700,color:'#174f35',marginBottom:4}}>🔗 Zoho CRM 連携設定</div>
       <div style={{fontSize:11,color:'#6a9a7a',marginBottom:16}}>Zoho CRMとのAPI連携に必要な情報を設定します。設定後「保存」→「Zoho認証」の順に実行してください。</div>
 

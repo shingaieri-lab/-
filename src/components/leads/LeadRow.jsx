@@ -130,7 +130,7 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
                 {lead.next_action && <span style={{color:"#174f35",fontSize:12}}>{lead.next_action}</span>}
               </div>
             )}
-            {(nad || lead.next_action) && <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} currentUser={currentUser} />}
+            {(nad || lead.next_action) && <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} currentUser={currentUser} compact />}
           </div>
         );
       })()}

@@ -77,7 +77,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
   const inp = { width:"100%", padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", background:"#fff", fontSize:12, color:"#174f35", outline:"none", boxSizing:"border-box", fontFamily:"inherit" };
 
   const formPanel = (showAddForm || editingId) && (
-    <div style={{flex:"0 0 360px", background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1", alignSelf:"flex-start"}}>
+    <div style={{flex:1, minWidth:360, background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1", alignSelf:"flex-start"}}>
       <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:12}}>{editingId ? "✏️ アカウント編集" : "＋ アカウント追加"}</div>
       <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:10}}>
         {[["ユーザーID","id","例：tanaka"],["表示名","name","例：田中"],["パスワード","password","パスワード"],["メールアドレス","email","例：tanaka@example.com"]].map(([lbl, key, ph]) => (

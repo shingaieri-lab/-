@@ -1,6 +1,6 @@
 # IS進捗管理ツール レビュー記録
 
-レビュー開始：2026-03-23　／　最終更新：2026-04-14（Vite移行完了・デッドコード削除）
+レビュー開始：2026-03-23　／　最終更新：2026-04-15（ファイル分割フェーズ5完了）
 
 ---
 
@@ -88,7 +88,7 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 
 ---
 
-### 🟢 リファクタリング（2026-04-08〜14）
+### 🟢 リファクタリング（2026-04-08〜15）
 
 | 対応内容 |
 |---------|
@@ -97,29 +97,27 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 | **コンポーネント分割完了**（`feature/component-split`）：`src/main.jsx` 4,885行 → 192行に削減。19コンポーネントを `src/components/` に、ビジネスロジックを `src/lib/` に分離。41モジュール、ビルドエラーゼロ |
 | **API分離完了**（`feature/api-separation`）：7コンポーネントに直書きされていたfetch呼び出しを `src/lib/` に切り出し。`ai.js`, `account.js`, `zoho.js`, `authApi.js`, `gcal.js` に集約 |
 | **デッドコード削除完了**（`chore/remove-dead-components`、PR #130、2026-04-14）：Vite移行後に残存していた旧フラット構造コンポーネント20本（5,295行）を削除。ビルドエラーゼロ確認済み |
+| **ファイル分割フェーズ5完了**（`feature/file-split-phase5`、PR #140、2026-04-15）：`src/pages/` 内の300行超3ファイルを分割。CalendarSearchForm・CalendarSlotResults・AIInputPanel・EmailVariableForm を新規作成。300行超ファイルゼロを達成。71モジュール、ビルドエラーゼロ |
 
 ---
 
 ## ❌ 未対応・今後の課題
 
-### 🔴 コード品質（CLAUDE.md違反）― 2026-04-14 時点
+### 🔴 コード品質（CLAUDE.md違反）― 全件対応済み（2026-04-15）
 
 #### ~~デッドコード残存~~ ✅ 対応済み（2026-04-14、PR #130）
 
 旧フラット構造コンポーネント20本（5,295行）を削除済み。
 
-#### ファイル肥大化（300行超）― アクティブファイル
+#### ~~ファイル肥大化（300行超）~~ ✅ 対応済み（2026-04-15、PR #140）
 
-`src/pages/` に移行済みのファイルで、まだ300行超のものが残っている。
+`src/pages/` 内の300行超ファイルをすべて分割済み。現在300行超のファイルはゼロ。
 
-| ファイル | 行数 | 分割案 |
-|------|------|------|
-| `src/pages/SettingsPage.jsx` | 705行 | タブ別にコンポーネント分割（PortalSettings, SalesSettings, ApiKeySettings 等） |
-| `src/pages/CalendarPage.jsx` | 623行 | カレンダー登録UIを別コンポーネントに分割 |
-| `src/components/wizard/SetupWizard.jsx` | 408行 | ステップ別コンポーネントに分割 |
-| `src/pages/AIPage.jsx` | 435行 | AIPage内のUI部分をさらに分割 |
-| `src/pages/EmailPage.jsx` | 334行 | テンプレート編集UIを別コンポーネントに |
-| `src/pages/LeadsPage.jsx` | 319行 | フィルター・テーブルUIを別コンポーネントに |
+| ファイル | 対応内容 |
+|------|------|
+| `src/pages/CalendarPage.jsx` | CalendarSearchForm / CalendarSlotResults に分割（187行） |
+| `src/pages/AIPage.jsx` | AIInputPanel に左パネルを抽出（294行） |
+| `src/pages/EmailPage.jsx` | EmailVariableForm に差し込み変数フォームを抽出（239行） |
 
 #### ~~API呼び出しのコンポーネント直書き~~ ✅ 対応済み（2026-04-09）
 

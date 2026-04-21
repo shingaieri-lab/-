@@ -104,7 +104,8 @@ export const acquireCalendarToken = async (clientId, currentTokenObj) => {
   return new Promise((res, rej) => {
     const client = window.google.accounts.oauth2.initTokenClient({
       client_id: clientId,
-      scope: 'https://www.googleapis.com/auth/calendar.events',
+      // freeBusy照会に calendar.readonly、予定登録に calendar.events が必要
+      scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
       callback: (resp) => {
         if (resp.error) {
           handleOAuthCallbackError(resp, rej);

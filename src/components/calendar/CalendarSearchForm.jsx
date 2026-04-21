@@ -1,5 +1,5 @@
 // 商談候補日検索フォームUI（検索条件の入力）
-import { TrashIcon } from '../ui/Icons.jsx';
+import { TrashIcon, SearchIcon, LightbulbIcon, AlertIcon, BanIcon } from '../ui/Icons.jsx';
 
 const S = {
   card:  { background:"#ffffff", border:"1px solid #e2f0e8", borderRadius:14, padding:"18px 20px", marginBottom:14, boxShadow:"0 2px 10px #0569690a" },
@@ -22,7 +22,7 @@ export function CalendarSearchForm({
   const inp2 = { ...S.inp, marginBottom:0 };
   return (
     <div style={S.card}>
-      <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12}}>🔍 空き時間を検索</div>
+      <div style={{fontSize:13,fontWeight:700,color:"#174f35",marginBottom:12,display:"flex",alignItems:"center",gap:5}}><SearchIcon size={14} color="#174f35" /> 空き時間を検索</div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
         <div>
           <label style={S.lbl}>期間（開始）</label>
@@ -73,7 +73,7 @@ export function CalendarSearchForm({
       </div>
       {(bufferBefore > 0 || bufferAfter > 0) && (
         <div style={{fontSize:11,color:"#6a9a7a",marginBottom:10,background:"#f0f5f2",borderRadius:6,padding:"6px 10px"}}>
-          💡 前後バッファON：既存予定の前{bufferBefore}分・後{bufferAfter}分も空きとして確保します（移動・準備時間）
+          <span style={{display:"flex",alignItems:"center",gap:4}}><LightbulbIcon size={11} color="#6a9a7a" /> 前後バッファON：既存予定の前{bufferBefore}分・後{bufferAfter}分も空きとして確保します（移動・準備時間）</span>
         </div>
       )}
       <div style={{marginBottom:12}}>
@@ -89,11 +89,11 @@ export function CalendarSearchForm({
             祝日
           </button>
         </div>
-        {activeDays.length===0&&<div style={{fontSize:11,color:"#ef4444",marginTop:4}}>⚠️ 曜日を1つ以上選択</div>}
+        {activeDays.length===0&&<div style={{fontSize:11,color:"#ef4444",marginTop:4,display:"flex",alignItems:"center",gap:3}}><AlertIcon size={11} color="#ef4444" /> 曜日を1つ以上選択</div>}
       </div>
       <div style={{marginBottom:12}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-          <label style={{...S.lbl,marginBottom:0}}>🚫 対象外時間帯</label>
+          <label style={{...S.lbl,marginBottom:0,display:"flex",alignItems:"center",gap:4}}><BanIcon size={11} color="#6a9a7a" /> 対象外時間帯</label>
           <button onClick={()=>setExcludeTimes(prev=>[...prev,{from:"12:00",to:"13:00"}])} style={{fontSize:11,padding:"4px 10px",borderRadius:7,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>＋ 追加</button>
         </div>
         {excludeTimes.length===0&&<div style={{fontSize:11,color:"#9ca3af",padding:"6px 10px",background:"#f9fafb",borderRadius:6,border:"1px dashed #d1d5db"}}>対象外時間帯なし</div>}
@@ -123,18 +123,18 @@ export function CalendarSearchForm({
                 fontWeight: active ? 700 : 400,
                 opacity: hasId ? 1 : 0.5,
               }}>
-                {m}{!hasId && " ⚠️"}
+                {m}{!hasId && <AlertIcon size={10} color="#f59e0b" />}
               </button>
             );
           })}
         </div>
         {selectedMembers.some(m=>!mergedCalendarIds[m]) && (
-          <div style={{fontSize:11,color:"#f59e0b",marginTop:4}}>⚠️ カレンダーID未設定のメンバーは除外されます</div>
+          <div style={{fontSize:11,color:"#f59e0b",marginTop:4,display:"flex",alignItems:"center",gap:3}}><AlertIcon size={11} color="#f59e0b" /> カレンダーID未設定のメンバーは除外されます</div>
         )}
       </div>
       <button onClick={onSearch} disabled={loading}
         style={{...S.btnP, width:"100%", opacity:loading?0.6:1}}>
-        {loading ? "🔍 検索中..." : "🔍 空き時間を検索"}
+        {loading ? <span style={{display:"flex",alignItems:"center",gap:5,justifyContent:"center"}}><SearchIcon size={14} color="#fff" /> 検索中...</span> : <span style={{display:"flex",alignItems:"center",gap:5,justifyContent:"center"}}><SearchIcon size={14} color="#fff" /> 空き時間を検索</span>}
       </button>
       {error && <div style={{color:"#ef4444",fontSize:12,marginTop:8}}>{error}</div>}
     </div>

@@ -1,6 +1,7 @@
 // Gmail連携設定ウィザード（5ステップ）
 import { useState } from 'react';
 import { WizardOverlay, WizardStepBar } from './WizardParts.jsx';
+import { MailIcon, CheckCircleIcon, UserIcon, WrenchIcon, ExternalLinkIcon, ClipboardIcon, AlertIcon, KeyIcon, LightbulbIcon } from '../ui/Icons.jsx';
 
 const cardStyle = { background: "#fff", borderRadius: 12, padding: "28px 32px", maxWidth: 520, width: "100%", boxShadow: "0 8px 32px #0002", maxHeight: "90vh", overflowY: "auto" };
 const btnP = { padding: "10px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
@@ -17,15 +18,15 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
     <WizardOverlay onDismiss={onBack}>
       <div style={cardStyle}>
         <WizardStepBar current={0} labels={labels} />
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12 }}>📧 Gmail連携の設定</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12, display:"flex", alignItems:"center", gap:7 }}><MailIcon size={16} color="#174f35" /> Gmail連携の設定</div>
         <div style={{ background: "#f0f5f2", borderRadius: 8, padding: "14px 16px", marginBottom: 14, fontSize: 12, lineHeight: 1.9, color: "#3d7a5e" }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>設定すると使えること</div>
-          <div>✅ 商談後のお礼メールをワンクリックで下書き作成</div>
-          <div>✅ テンプレートに会社名・担当者名を自動差し込み</div>
-          <div>✅ GoogleタスクにTODOを自動登録</div>
+          <div style={{display:"flex",alignItems:"center",gap:5}}><CheckCircleIcon size={11} color="#3d7a5e" /> 商談後のお礼メールをワンクリックで下書き作成</div>
+          <div style={{display:"flex",alignItems:"center",gap:5}}><CheckCircleIcon size={11} color="#3d7a5e" /> テンプレートに会社名・担当者名を自動差し込み</div>
+          <div style={{display:"flex",alignItems:"center",gap:5}}><CheckCircleIcon size={11} color="#3d7a5e" /> GoogleタスクにTODOを自動登録</div>
         </div>
         <div style={{ background: "#fff7ed", borderRadius: 8, padding: "12px 14px", marginBottom: 16, fontSize: 12, color: "#92400e", border: "1px solid #fde68a", lineHeight: 1.8 }}>
-          <b>👤 管理者のみ設定が必要です。</b><br />
+          <b style={{display:"flex",alignItems:"center",gap:4}}><UserIcon size={12} color="#92400e" /> 管理者のみ設定が必要です。</b><br />
           設定後、各メンバーは初回利用時にポップアップで「許可」を押すだけでOKです。<br />所要時間：約15〜20分
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
@@ -40,7 +41,7 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
     <WizardOverlay onDismiss={onBack}>
       <div style={cardStyle}>
         <WizardStepBar current={1} labels={labels} />
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12 }}>🔧 APIを有効にする</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12, display:"flex", alignItems:"center", gap:7 }}><WrenchIcon size={16} color="#174f35" /> APIを有効にする</div>
         <div style={{ background: "#f0f5f2", borderRadius: 8, padding: "14px 16px", marginBottom: 14, fontSize: 12, lineHeight: 2, color: "#3d7a5e" }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>手順</div>
           <div>1. 下のボタンをクリック → Google Cloud Console が開きます</div>
@@ -50,7 +51,7 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
           <div>5. <b>「Google Tasks API」</b>も同様に有効にする</div>
         </div>
         <div style={{ marginBottom: 16 }}>
-          <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", padding: "8px 16px", borderRadius: 8, background: "#eff6ff", color: "#2563eb", fontSize: 12, fontWeight: 600, border: "1px solid #bfdbfe", textDecoration: "none" }}>🔗 Google Cloud Console を開く（別タブ）</a>
+          <a href="https://console.cloud.google.com/apis/library" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems:"center", gap:5, padding: "8px 16px", borderRadius: 8, background: "#eff6ff", color: "#2563eb", fontSize: 12, fontWeight: 600, border: "1px solid #bfdbfe", textDecoration: "none" }}><ExternalLinkIcon size={12} color="#2563eb" /> Google Cloud Console を開く（別タブ）</a>
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
           <button onClick={() => setStep(0)} style={btnS}>← 戻る</button>
@@ -64,7 +65,7 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
     <WizardOverlay onDismiss={onBack}>
       <div style={cardStyle}>
         <WizardStepBar current={2} labels={labels} />
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12 }}>📋 OAuth同意画面を設定する</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12, display:"flex", alignItems:"center", gap:7 }}><ClipboardIcon size={16} color="#174f35" /> OAuth同意画面を設定する</div>
         <div style={{ background: "#f0f5f2", borderRadius: 8, padding: "14px 16px", marginBottom: 14, fontSize: 12, lineHeight: 2, color: "#3d7a5e" }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>手順</div>
           <div>1. 「APIとサービス」→「OAuth同意画面」を開く</div>
@@ -75,7 +76,7 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
           <div>6. 「保存して次へ」を繰り返して完了</div>
         </div>
         <div style={{ background: "#fef3c7", borderRadius: 8, padding: "10px 12px", fontSize: 11, color: "#92400e", marginBottom: 16, border: "1px solid #fde68a" }}>
-          ⚠️ 「外部」を選ぶと審査が必要になります。社内利用は必ず「内部」を選んでください。
+          <span style={{display:"flex",alignItems:"center",gap:4}}><AlertIcon size={11} color="#92400e" /> 「外部」を選ぶと審査が必要になります。社内利用は必ず「内部」を選んでください。</span>
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
           <button onClick={() => setStep(1)} style={btnS}>← 戻る</button>
@@ -89,7 +90,7 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
     <WizardOverlay onDismiss={onBack}>
       <div style={cardStyle}>
         <WizardStepBar current={3} labels={labels} />
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12 }}>🔑 クライアントIDを取得する</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12, display:"flex", alignItems:"center", gap:7 }}><KeyIcon size={16} color="#174f35" /> クライアントIDを取得する</div>
         <div style={{ background: "#f0f5f2", borderRadius: 8, padding: "14px 16px", marginBottom: 14, fontSize: 12, lineHeight: 2, color: "#3d7a5e" }}>
           <div style={{ fontWeight: 700, marginBottom: 4 }}>手順</div>
           <div>1. 「認証情報」→「認証情報を作成」→「OAuthクライアントID」</div>
@@ -105,7 +106,7 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
               } else {
                 prompt("以下のURLをコピーしてください：", window.location.origin);
               }
-            }} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "1px solid #c0dece", background: "#fff", color: "#059669", cursor: "pointer", fontFamily: "inherit" }}>📋 コピー</button>
+            }} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "1px solid #c0dece", background: "#fff", color: "#059669", cursor: "pointer", fontFamily: "inherit", display:"flex", alignItems:"center", gap:3 }}><ClipboardIcon size={10} color="#059669" /> コピー</button>
           </div>
           <div>4. 「作成」→ クライアントIDをコピー</div>
         </div>
@@ -125,13 +126,13 @@ export function GmailWizard({ currentUser, onUpdateProfile, onSave, aiConfig, on
     <WizardOverlay onDismiss={onBack}>
       <div style={cardStyle}>
         <WizardStepBar current={4} labels={labels} />
-        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12 }}>✅ Gmail連携の設定完了！</div>
+        <div style={{ fontSize: 15, fontWeight: 800, color: "#174f35", marginBottom: 12, display:"flex", alignItems:"center", gap:7 }}><CheckCircleIcon size={16} color="#174f35" /> Gmail連携の設定完了！</div>
         <div style={{ background: "#d1fae5", borderRadius: 8, padding: "16px", marginBottom: 14, fontSize: 12, color: "#059669" }}>
-          <div style={{ fontWeight: 700 }}>✅ 以下のクライアントIDを保存します</div>
+          <div style={{ fontWeight: 700, display:"flex", alignItems:"center", gap:5 }}><CheckCircleIcon size={12} color="#059669" /> 以下のクライアントIDを保存します</div>
           <div style={{ fontSize: 11, marginTop: 4, color: "#3d7a5e", fontFamily: "monospace", wordBreak: "break-all" }}>{gmailClientId.trim()}</div>
         </div>
         <div style={{ background: "#eff6ff", borderRadius: 8, padding: "12px 14px", fontSize: 12, color: "#1e40af", marginBottom: 20, border: "1px solid #bfdbfe" }}>
-          💡 各メンバーは初めてメール送信するとき、Googleのポップアップが出ます。「許可」を押すだけでOKです。
+          <span style={{display:"flex",alignItems:"center",gap:4}}><LightbulbIcon size={11} color="#1e40af" /> 各メンバーは初めてメール送信するとき、Googleのポップアップが出ます。「許可」を押すだけでOKです。</span>
         </div>
         <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
           <button onClick={() => setStep(3)} style={btnS}>← 戻る</button>

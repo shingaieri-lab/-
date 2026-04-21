@@ -1,8 +1,10 @@
 // メールテンプレート編集フォーム
+import { PencilIcon } from '../ui/Icons.jsx';
+
 export function TemplateEditor({ tpl, onChange, onSave, onCancel }) {
   return (
     <div style={{background:"#fff",borderRadius:12,border:"1px solid #fde68a",padding:"16px",display:"flex",flexDirection:"column",minHeight:"calc(100vh - 180px)"}}>
-      <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12}}>✏️ テンプレート編集</div>
+      <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12,display:"flex",alignItems:"center",gap:5}}><PencilIcon size={13} color="#d97706" /> テンプレート編集</div>
       {[["テンプレート名","name"],["件名","subject"]].map(([l,k])=>(
         <div key={k} style={{marginBottom:8}}>
           <label style={{fontSize:11,color:"#6a9a7a",display:"block",marginBottom:3}}>{l}</label>

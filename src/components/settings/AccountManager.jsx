@@ -1,6 +1,6 @@
 // アカウント管理（管理者向け）- 招待コード発行・アカウントCRUD
 import { useState, useEffect } from 'react';
-import { PencilIcon, TrashIcon } from '../ui/Icons.jsx';
+import { PencilIcon, TrashIcon, AlertIcon, UsersIcon, ExternalLinkIcon, MailIcon, LockOpenIcon } from '../ui/Icons.jsx';
 import { PALETTE } from '../../constants/index.js';
 import { loadAccounts, saveAccounts } from '../../lib/accounts.js';
 
@@ -78,7 +78,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
 
   const formPanel = (showAddForm || editingId) && (
     <div style={{flex:1, minWidth:360, background:"#f0f5f2", borderRadius:10, padding:"16px", border:"1px solid #d8ede1", alignSelf:"flex-start"}}>
-      <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:12}}>{editingId ? "✏️ アカウント編集" : "＋ アカウント追加"}</div>
+      <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:12, display:"flex", alignItems:"center", gap:5}}>{editingId ? <><PencilIcon size={13} color="#174f35" /> アカウント編集</> : "＋ アカウント追加"}</div>
       <div style={{display:"flex", flexDirection:"column", gap:10, marginBottom:10}}>
         {[["ユーザーID","id","例：tanaka"],["表示名","name","例：田中"],["パスワード","password","パスワード"],["メールアドレス","email","例：tanaka@example.com"]].map(([lbl, key, ph]) => (
           <div key={key}>
@@ -105,7 +105,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
         </div>
       </div>
       <div style={{marginBottom:10}}>
-        <label style={{fontSize:11, color:"#6a9a7a", display:"block", marginBottom:3}}>✍️ メール署名</label>
+        <label style={{fontSize:11, color:"#6a9a7a", display:"flex", alignItems:"center", gap:4, marginBottom:3}}><PencilIcon size={11} color="#6a9a7a" /> メール署名</label>
         <textarea value={form.signature||""} onChange={e => setForm(p => ({...p, signature:e.target.value}))}
           placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
           style={{...inp, resize:"vertical", minHeight:72, lineHeight:1.5}} />
@@ -119,7 +119,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
           ))}
         </div>
       </div>
-      {err && <div style={{fontSize:12, color:"#dc2626", marginBottom:8}}>⚠️ {err}</div>}
+      {err && <div style={{fontSize:12, color:"#dc2626", marginBottom:8, display:"flex", alignItems:"center", gap:4}}><AlertIcon size={12} color="#dc2626" /> {err}</div>}
       <div style={{display:"flex", gap:8, justifyContent:"flex-end"}}>
         <button onClick={cancelEdit} style={{padding:"7px 16px", borderRadius:7, border:"1px solid #c0dece", background:"#fff", color:"#6a9a7a", fontSize:12, cursor:"pointer", fontFamily:"inherit"}}>キャンセル</button>
         <button onClick={handleSubmit} style={{padding:"7px 20px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>
@@ -134,12 +134,12 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
       <div style={{width:860, flexShrink:0}}>
       {!inline && (
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12}}>
-          <div style={{fontSize:16, fontWeight:800, color:"#174f35"}}>👥 アカウント管理</div>
+          <div style={{fontSize:16, fontWeight:800, color:"#174f35", display:"flex", alignItems:"center", gap:6}}><UsersIcon size={17} color="#174f35" /> アカウント管理</div>
           <button onClick={onClose} style={{background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#6a9a7a"}}>✕</button>
         </div>
       )}
       <div style={{marginBottom:16, padding:"12px 14px", background:"#f0faf5", borderRadius:9, border:"1px solid #c0dece"}}>
-        <div style={{fontSize:12, fontWeight:700, color:"#174f35", marginBottom:8}}>🔗 招待コード発行</div>
+        <div style={{fontSize:12, fontWeight:700, color:"#174f35", marginBottom:8, display:"flex", alignItems:"center", gap:5}}><ExternalLinkIcon size={12} color="#174f35" /> 招待コード発行</div>
         <div style={{fontSize:11, color:"#6a9a7a", marginBottom:8}}>コードは24時間有効・1回限り使用可能です</div>
         <button onClick={handleGenerateInvite} disabled={inviteLoading} style={{padding:"6px 14px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit", opacity:inviteLoading?0.6:1}}>
           {inviteLoading ? "発行中..." : "招待コードを発行"}
@@ -170,9 +170,9 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
                   {a.role==="admin" && <span style={{fontSize:10, background:"#f3f4f6", color:"#6b7280", borderRadius:4, padding:"1px 6px", fontWeight:700}}>管理者</span>}
                   {a.isStaff && <span style={{fontSize:10, background:"#dcfce7", color:"#15803d", borderRadius:4, padding:"1px 6px", fontWeight:700}}>IS担当</span>}
                 </div>
-                {a.email && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>✉️ {a.email}</div>}
+                {a.email && <div style={{fontSize:11, color:"#6a9a7a", marginTop:2, display:"flex", alignItems:"center", gap:3}}><MailIcon size={11} color="#6a9a7a" /> {a.email}</div>}
               </div>
-              {lockedAccounts[a.id] && <button onClick={() => handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12, padding:"3px 10px", borderRadius:6, background:"#fef3c7", color:"#d97706", border:"1px solid #fcd34d", cursor:"pointer", fontFamily:"inherit"}}>🔓 解除</button>}
+              {lockedAccounts[a.id] && <button onClick={() => handleUnlock(a.id)} title="ログインロックを解除" style={{fontSize:12, padding:"3px 10px", borderRadius:6, background:"#fef3c7", color:"#d97706", border:"1px solid #fcd34d", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center", gap:4}}><LockOpenIcon size={12} color="#d97706" /> 解除</button>}
               <button onClick={() => startEdit(a)} style={{padding:"3px 6px", borderRadius:6, background:"#f0fdf4", color:"#059669", border:"1px solid #86efac", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="編集"><PencilIcon size={18} color="#059669"/></button>
               <button onClick={() => deleteAccount(a.id)} style={{padding:"3px 6px", borderRadius:6, background:"#fef2f2", color:"#dc2626", border:"1px solid #fca5a5", cursor:"pointer", fontFamily:"inherit", display:"flex", alignItems:"center"}} title="削除"><TrashIcon size={18} color="#ef4444"/></button>
             </div>

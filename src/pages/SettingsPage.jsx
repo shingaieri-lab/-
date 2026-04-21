@@ -1,6 +1,6 @@
 // 設定ページ（基本設定・リード管理・ポータル・API設定・Zoho CRM・アカウント管理）
 import { useState } from 'react';
-import { PencilIcon, TrashIcon, LeadMgmtIcon, PortalIcon, ApiKeyIcon, ZohoIcon, AdminIcon, AccountIcon, EyeIcon, EyeOffIcon } from '../components/ui/Icons.jsx';
+import { PencilIcon, TrashIcon, LeadMgmtIcon, PortalIcon, ApiKeyIcon, ZohoIcon, AdminIcon, AccountIcon, EyeIcon, EyeOffIcon, GearIcon, BuildingIcon, UserIcon } from '../components/ui/Icons.jsx';
 import { ZohoCrmSettings } from '../components/settings/ZohoCrmSettings.jsx';
 import { AccountManager } from '../components/settings/AccountManager.jsx';
 import { ApiKeyTab } from '../components/settings/ApiKeyTab.jsx';
@@ -126,7 +126,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
     <div className="settings-page" style={{display:"flex", height:"100%", overflow:"hidden"}}>
       {/* 左サイドバー */}
       <div style={{width:260, flexShrink:0, borderRight:"1px solid #d8ede1", background:"#f8fbf9", overflowY:"auto", padding:"24px 14px"}}>
-        <div style={{fontSize:15, fontWeight:900, color:"#174f35", marginBottom:20, paddingLeft:4}}>⚙️ 設定</div>
+        <div style={{fontSize:15, fontWeight:900, color:"#174f35", marginBottom:20, paddingLeft:4, display:"flex", alignItems:"center", gap:7}}><GearIcon size={16} color="#174f35" /> 設定</div>
         <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
           {MENU.filter(m => !m.adminOnly || currentUser?.role==="admin").map(({ key, Icon, color, label }) => (
             <button key={key} onClick={() => setTab(key)} style={{
@@ -230,7 +230,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                     ) : (
                       <div style={{display:"grid", gridTemplateColumns:"28px 1fr 160px 1fr 72px", padding:"10px 12px", gap:12, alignItems:"center"}}>
                         <span title="ドラッグして並び替え" style={{cursor:"grab",color:"#c0dece",fontSize:16,lineHeight:1,userSelect:"none"}}>⠿</span>
-                        <span style={{fontSize:13, fontWeight:600, color:"#174f35"}}>🏢 {site}</span>
+                        <span style={{fontSize:13, fontWeight:600, color:"#174f35", display:"flex", alignItems:"center", gap:4}}><BuildingIcon size={13} color="#174f35" /> {site}</span>
                         <span style={{fontSize:12, color: srcLabel?"#174f35":"#c0dece"}}>{srcLabel||"未設定"}</span>
                         <span style={{fontSize:12, color:"#6a9a7a"}}>{plans.length===0?"—":plans.map(p=>`${p.label} ¥${p.price.toLocaleString()}`).join("  /  ")}</span>
                         <div style={{display:"flex", gap:4, justifyContent:"flex-end"}}>
@@ -266,7 +266,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
         )}
         {tab === "myaccount" && (
           <div>
-            <div style={{fontSize:14,fontWeight:700,color:"#174f35",marginBottom:16}}>👤 アカウント管理</div>
+            <div style={{fontSize:14,fontWeight:700,color:"#174f35",marginBottom:16,display:"flex",alignItems:"center",gap:6}}><UserIcon size={15} color="#174f35" /> アカウント管理</div>
             <div style={{maxWidth:720}}>
               <div style={{marginBottom:16}}>
                 <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>ID</label>
@@ -292,7 +292,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                 </div>
               ))}
               <div style={{marginBottom:16}}>
-                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>🎨 アイコン色</label>
+                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:6}}>アイコン色</label>
                 <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                   {PALETTE.map(c => (
                     <button key={c} onClick={()=>setProfileForm(p=>({...p,color:c}))}
@@ -301,7 +301,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                 </div>
               </div>
               <div style={{marginBottom:16}}>
-                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>✍️ メール署名</label>
+                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"flex",alignItems:"center",gap:4,marginBottom:4}}><PencilIcon size={11} color="#6a9a7a" /> メール署名</label>
                 <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
                   placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
                   style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",minHeight:100,lineHeight:1.5}} />

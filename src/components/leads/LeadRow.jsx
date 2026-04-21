@@ -1,7 +1,7 @@
 // リード一覧の1行表示コンポーネント
 import { useState } from 'react';
 import { S } from '../../styles/index.js';
-import { PencilIcon, TrashIcon, ExternalLinkIcon, GlobeIcon } from '../ui/Icons.jsx';
+import { PencilIcon, TrashIcon, ExternalLinkIcon, GlobeIcon, FileTextIcon, CalendarNavIcon } from '../ui/Icons.jsx';
 import { SourceIconSVG } from '../ui/SourceIconSVG.jsx';
 import { NextActionEditBtn } from '../actions/NextActionEditBtn.jsx';
 import { ActionHistoryPanel } from '../actions/ActionHistoryPanel.jsx';
@@ -120,7 +120,7 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
       {/* Always-visible: メモ */}
       {lead.memo && (
         <div style={{display:"flex",alignItems:"flex-start",gap:6,padding:"5px 14px",borderTop:"1px solid #bae6fd",background:"#e0f2fe"}} onClick={e=>e.stopPropagation()}>
-          <span style={{fontSize:12,color:"#0369a1",flexShrink:0,marginTop:1}}>📝</span>
+          <span style={{flexShrink:0,marginTop:1}}><FileTextIcon size={13} color="#0369a1" /></span>
           <span style={{fontSize:12,color:"#1e3a5f",lineHeight:1.5,wordBreak:"break-word"}}>{lead.memo}</span>
         </div>
       )}
@@ -128,7 +128,7 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
       {/* Always-visible: 商談情報 */}
       {(lead.meeting_date || lead.sales_member || lead.is_accuracy) && (
         <div style={{...S.meetingBar,padding:"5px 16px", borderTop:"1px solid #e8f5ee"}} onClick={e=>e.stopPropagation()}>
-          <span style={{fontSize:11,color:"#10b981",fontWeight:700,flexShrink:0}}>🤝 商談</span>
+          <span style={{fontSize:11,color:"#10b981",fontWeight:700,flexShrink:0,display:"flex",alignItems:"center",gap:4}}><CalendarNavIcon size={12} color="#10b981" /> 商談</span>
           {lead.meeting_date && (
             <span style={{fontSize:11,color:"#6b7280"}}>
               {lead.meeting_date}{lead.meeting_time ? " " + lead.meeting_time : ""}

@@ -46,7 +46,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
             </div>
             <button onClick={() => { setSettingsTab("myaccount"); setPage("settings"); setShowUserMenu(false); }}
               style={{ width:"100%", fontSize:11, padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", background:"#f0f5f2", color:"#174f35", cursor:"pointer", fontFamily:"inherit", textAlign:"left", marginBottom:6 }}>
-              ⚙️ 設定
+              設定
             </button>
             <button onClick={() => { onLogout(); setShowUserMenu(false); }}
               style={{ width:"100%", fontSize:11, padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", background:"#f0f5f2", color:"#6a9a7a", cursor:"pointer", fontFamily:"inherit", textAlign:"left" }}>
@@ -118,7 +118,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
             </div>
             <button onClick={() => { setSettingsTab("myaccount"); setPage("settings"); setShowUserMenu(false); }}
               style={{ width:"100%", fontSize:11, padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", background:"#f0f5f2", color:"#174f35", cursor:"pointer", fontFamily:"inherit", textAlign:"left", marginBottom:6 }}>
-              ⚙️ 設定
+              設定
             </button>
             <button onClick={() => { onLogout(); setShowUserMenu(false); }}
               style={{ width:"100%", fontSize:11, padding:"7px 10px", borderRadius:7, border:"1px solid #c0dece", background:"#f0f5f2", color:"#6a9a7a", cursor:"pointer", fontFamily:"inherit", textAlign:"left" }}>

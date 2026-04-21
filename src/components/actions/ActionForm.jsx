@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { S } from '../../styles/index.js';
 import { ACTION_TYPES, ACTION_RESULTS, uid } from '../../constants/index.js';
 import { TODAY, isBusinessDay } from '../../lib/holidays.js';
+import { AlertIcon } from '../ui/Icons.jsx';
 import { VoiceButton } from './VoiceButton.jsx';
 
 export function ActionForm({ onSave, onClose, initial }) {
@@ -59,7 +60,7 @@ export function ActionForm({ onSave, onClose, initial }) {
           <VoiceButton onResult={t => setSummary(prev => prev ? prev + "　" + t : t)} style={{ padding: "3px 8px", fontSize: 13 }} />
         </div>
         <textarea value={summary} onChange={e => setSummary(e.target.value)} rows={2}
-          placeholder="内容を簡単にメモ… （🎤で音声入力）"
+          placeholder="内容を簡単にメモ…"
           style={{ ...S.inp, resize: "vertical", minHeight: 52, lineHeight: 1.6, fontFamily: "inherit" }} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
@@ -68,7 +69,7 @@ export function ActionForm({ onSave, onClose, initial }) {
           <input type="date" value={nextDate} onChange={e => setNextDate(e.target.value)}
             style={{ ...S.inp, borderColor: nextDate && !isBusinessDay(nextDate) ? "#ef4444" : "#c0dece" }} />
           {nextDate && !isBusinessDay(nextDate) && (
-            <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3 }}>⚠️ 土日祝です</div>
+            <div style={{ fontSize: 11, color: "#ef4444", marginTop: 3, display:"flex", alignItems:"center", gap:3 }}><AlertIcon size={11} color="#ef4444" /> 土日祝です</div>
           )}
         </div>
         <div>

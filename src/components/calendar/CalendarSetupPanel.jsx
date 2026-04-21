@@ -1,4 +1,6 @@
 // Googleカレンダー API 設定パネル
+import { GearIcon, ClipboardIcon, CalendarNavIcon, CheckCircleIcon, LightbulbIcon, ExternalLinkIcon } from '../ui/Icons.jsx';
+
 export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, members }) {
   const card   = { background:"#ffffff", border:"1px solid #e2f0e8", borderRadius:14, padding:"18px 20px", marginBottom:14, boxShadow:"0 2px 10px #0569690a" };
   const lbl    = { display:"block", fontSize:11, color:"#6a9a7a", marginBottom:4, fontWeight:600 };
@@ -8,20 +10,20 @@ export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, membe
 
   return (
     <div style={{...card, border:"1px solid #fde68a", background:"#fffbeb", marginBottom:16}}>
-      <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12}}>⚙️ Google Calendar API 設定</div>
+      <div style={{fontSize:13,fontWeight:700,color:"#d97706",marginBottom:12,display:"flex",alignItems:"center",gap:5}}><GearIcon size={14} color="#d97706" /> Google Calendar API 設定</div>
 
       <div style={{background:"#fff",border:"1px solid #fde68a",borderRadius:8,padding:"12px 14px",marginBottom:14,fontSize:12,color:"#92400e",lineHeight:1.8}}>
-        <div style={{fontWeight:700,marginBottom:6}}>📋 管理者の設定手順</div>
+        <div style={{fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}><ClipboardIcon size={12} color="#92400e" /> 管理者の設定手順</div>
         <div>① <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{color:"#0284c7"}}>Google Cloud Console</a> でプロジェクトを作成</div>
         <div>② 「APIとサービス」→「ライブラリ」→ <b>Google Calendar API</b> を有効化</div>
         <div>③ 「認証情報」→「APIキーを作成」→ APIキーをコピーして下の欄に入力</div>
-        <div style={{marginTop:8,fontWeight:700}}>📋 候補日の対象メンバーがやること</div>
+        <div style={{marginTop:8,fontWeight:700,display:"flex",alignItems:"center",gap:4}}><ClipboardIcon size={12} color="#92400e" /> 候補日の対象メンバーがやること</div>
         <div>④ Googleカレンダー →「設定と共有」→「カレンダーの統合」→ <b>カレンダーID</b> をコピーして管理者に伝える<br/>　　（例：<code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>tanaka@gmail.com</code> または <code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>xxx@group.calendar.google.com</code>）</div>
         <div>⑤ Googleカレンダー →「設定と共有」→「アクセス権限」→ <b>「[会社名] で利用できるようにする」</b> にチェック → <b>「予定の表示（時間枠のみ、詳細は非表示）」</b> 以上を選択<br/>　　※ 一般公開は不要です。候補日検索・カレンダー登録ともにOAuth認証（⑥〜⑧の設定）を使用します。</div>
       </div>
 
       <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"12px 14px",marginBottom:14,fontSize:12,color:"#1e40af",lineHeight:1.9}}>
-        <div style={{fontWeight:700,marginBottom:6}}>📅 候補日検索・カレンダー登録 OAuth設定（管理者が1回だけ実施）</div>
+        <div style={{fontWeight:700,marginBottom:6,display:"flex",alignItems:"center",gap:4}}><CalendarNavIcon size={12} color="#1e40af" /> 候補日検索・カレンダー登録 OAuth設定（管理者が1回だけ実施）</div>
         <div>⑥ 「認証情報」→「OAuthクライアントID」を作成（種類：<b>ウェブアプリケーション</b>）</div>
         <div>　　→ 「承認済みJavaScriptオリジン」に <code style={{background:"#dbeafe",padding:"1px 4px",borderRadius:3}}>{window.location.origin}</code> を追加</div>
         <div style={{marginTop:4}}>⑦ Googleカレンダーへのアクセス許可（スコープ）を2つ追加する</div>
@@ -32,14 +34,14 @@ export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, membe
           <div>3. 検索欄に <b>「calendar」</b> と入力</div>
           <div>4. 以下の2つにチェックを入れる：</div>
           <div style={{marginLeft:16}}>
-            ✅ <code style={{background:"#bfdbfe",padding:"1px 4px",borderRadius:3}}>.../auth/calendar.readonly</code>　← <b>空き時間の検索</b>に必要<br/>
-            ✅ <code style={{background:"#bfdbfe",padding:"1px 4px",borderRadius:3}}>.../auth/calendar.events</code>　← <b>予定の登録</b>に必要
+            <span style={{display:"flex",alignItems:"center",gap:4}}><CheckCircleIcon size={11} color="#1e40af" /> <code style={{background:"#bfdbfe",padding:"1px 4px",borderRadius:3}}>.../auth/calendar.readonly</code>　← <b>空き時間の検索</b>に必要</span>
+            <span style={{display:"flex",alignItems:"center",gap:4}}><CheckCircleIcon size={11} color="#1e40af" /> <code style={{background:"#bfdbfe",padding:"1px 4px",borderRadius:3}}>.../auth/calendar.events</code>　← <b>予定の登録</b>に必要</span>
           </div>
           <div>5.「更新」→「保存して次へ」をクリックして完了</div>
         </div>
-        <div style={{marginTop:8}}>⑧ 作成した <b>クライアントID</b> を ⚙️設定 &gt; APIキー設定 の「Gmail Client ID」欄に入力すれば全員が使用可能になります</div>
+        <div style={{marginTop:8}}>⑧ 作成した <b>クライアントID</b> を 設定 &gt; APIキー設定 の「Gmail Client ID」欄に入力すれば全員が使用可能になります</div>
         <div style={{marginTop:8,padding:"6px 10px",background:"#dbeafe",borderRadius:6,color:"#1e40af"}}>
-          💡 各メンバーは初回の候補日検索時にGoogleの認証ポップアップが表示されます。「許可」を押すだけでOKです。個別の追加設定は不要です。
+          <span style={{display:"flex",alignItems:"center",gap:4}}><LightbulbIcon size={11} color="#1e40af" /> 各メンバーは初回の候補日検索時にGoogleの認証ポップアップが表示されます。「許可」を押すだけでOKです。個別の追加設定は不要です。</span>
         </div>
       </div>
 

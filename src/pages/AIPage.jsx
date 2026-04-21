@@ -69,7 +69,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
 
   const analyze=async()=>{
     if(!memo.trim()) return;
-    if(!geminiConfigured){setError("APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。");return;}
+    if(!geminiConfigured){setError("APIキーが未設定です。設定画面の「APIキー設定」タブから入力してください。");return;}
     setLoading(true);setError("");setResult(null);setSaved(false);
     const senderName=currentUser?.name||"";
     const senderSig=currentUser?.signature||"";

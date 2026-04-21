@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { S } from '../styles/index.js';
 import { PALETTE, USER_COLORS } from '../lib/accounts.js';
 import { IS_COLORS } from '../lib/master.js';
-import { EyeIcon, EyeOffIcon } from '../components/ui/Icons.jsx';
+import { EyeIcon, EyeOffIcon, CheckCircleIcon, AlertIcon, WrenchIcon } from '../components/ui/Icons.jsx';
 
 export function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -78,7 +78,7 @@ export function LoginScreen({ onLogin }) {
         <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>ユーザーIDと新しいパスワードを入力してください</div>
         {rOk ? (
           <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
+            <div style={{ fontSize:32, marginBottom:8, display:"flex", justifyContent:"center" }}><CheckCircleIcon size={40} color="#059669" /></div>
             <div style={{ fontWeight:700, color:"#059669", marginBottom:4 }}>パスワードを更新しました</div>
             <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>新しいパスワードでログインしてください</div>
             <button onClick={() => { setMode("login"); setROk(false); setRForm({id:"",code:"",password:"",confirm:""}); }} style={{ ...S.btnP, width:"100%" }}>ログインへ</button>
@@ -98,7 +98,7 @@ export function LoginScreen({ onLogin }) {
               <label style={{ ...S.lbl, display:"block", marginBottom:2 }}>新しいパスワード（確認）</label>
               <input type="password" value={rForm.confirm} onChange={e => setRForm(p => ({...p, confirm:e.target.value}))} onKeyDown={e => e.key === "Enter" && handleResetWithCode()} style={inp2} />
             </div>
-            {rErr && <div style={{ color:"#ef4444", fontSize:12, marginBottom:10 }}>⚠️ {rErr}</div>}
+            {rErr && <div style={{ color:"#ef4444", fontSize:12, marginBottom:10, display:"flex", alignItems:"center", gap:4 }}><AlertIcon size={12} color="#ef4444" /> {rErr}</div>}
             <button onClick={handleResetWithCode} disabled={rLoading} style={{ ...S.btnP, width:"100%", marginBottom:10, opacity:rLoading?0.6:1 }}>{rLoading ? "更新中..." : "パスワードを更新"}</button>
             <button onClick={() => { setMode("login"); setRErr(""); }} style={{ width:"100%", background:"none", border:"none", color:"#6a9a7a", cursor:"pointer", fontSize:12, fontFamily:"inherit" }}>← ログインに戻る</button>
           </>
@@ -114,7 +114,7 @@ export function LoginScreen({ onLogin }) {
         <div style={{ fontSize:12, color:"#6a9a7a", marginBottom:20 }}>招待コードを受け取った管理者のみ作成できます</div>
         {sOk ? (
           <div style={{ textAlign:"center" }}>
-            <div style={{ fontSize:32, marginBottom:8 }}>✅</div>
+            <div style={{ fontSize:32, marginBottom:8, display:"flex", justifyContent:"center" }}><CheckCircleIcon size={40} color="#059669" /></div>
             <div style={{ fontWeight:700, color:"#059669", marginBottom:16 }}>アカウントを作成しました</div>
             <button onClick={() => { setMode("login"); setSOk(false); setSForm({id:"",name:"",password:"",password2:"",color:PALETTE[0],email:""}); }} style={{ ...S.btnP, width:"100%" }}>ログインへ</button>
           </div>
@@ -167,7 +167,7 @@ export function LoginScreen({ onLogin }) {
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"linear-gradient(135deg,#f0faf5,#e8f5ee)" }}>
       <div style={card}>
         <div style={{ textAlign:"center", marginBottom:24 }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>🏗️</div>
+          <div style={{ fontSize:32, marginBottom:8, display:"flex", justifyContent:"center" }}><WrenchIcon size={36} color="#10b981" /></div>
           <div style={{ fontSize:22, fontWeight:900, color:"#174f35" }}>IS進捗管理</div>
           <div style={{ fontSize:12, color:"#6a9a7a", marginTop:4 }}>IS進捗管理 インサイドセールス</div>
         </div>

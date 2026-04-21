@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { S } from '../../styles/index.js';
+import { InboxIcon, DownloadIcon, AlertIcon, CheckCircleIcon, SparkleIcon, FolderOpenIcon } from '../ui/Icons.jsx';
 import { parseCSV } from '../../lib/csv.js';
 import { getStatusColor } from '../../lib/master.js';
 
@@ -58,11 +59,11 @@ export function CSVImport({ onImport, onClose, result }) {
   return (
     <div style={S.importPanel}>
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-        <div style={{ fontWeight:700, fontSize:14, color:"#174f35" }}>📥 CSVインポート</div>
+        <div style={{ fontWeight:700, fontSize:14, color:"#174f35", display:"flex", alignItems:"center", gap:5 }}><InboxIcon size={15} color="#174f35" /> CSVインポート</div>
         <div style={{ display:"flex", gap:8, alignItems:"center" }}>
           <button onClick={downloadTemplate}
             style={{ fontSize:11, padding:"5px 12px", borderRadius:7, border:"1px solid #10b98155", background:"#ecfdf5", color:"#059669", cursor:"pointer", fontFamily:"inherit", fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
-            ⬇️ テンプレDL
+            <DownloadIcon size={12} color="#059669" /> テンプレDL
           </button>
           <button onClick={onClose} style={S.closeX}>✕</button>
         </div>
@@ -75,7 +76,7 @@ export function CSVImport({ onImport, onClose, result }) {
           onDrop={e => { e.preventDefault(); setDragging(false); handleFile(e.dataTransfer.files[0]); }}
           style={{ border:`2px dashed ${dragging ? "#10b981" : "#c0dece"}`, borderRadius:10, padding:"32px 20px", textAlign:"center", background: dragging ? "#d1fae522" : "transparent", cursor:"pointer", transition:"all 0.15s" }}
           onClick={() => document.getElementById("csv-input").click()}>
-          <div style={{ fontSize:32, marginBottom:8 }}>📂</div>
+          <div style={{ fontSize:32, marginBottom:8, display:"flex", justifyContent:"center" }}><FolderOpenIcon size={36} color="#6a9a7a" /></div>
           <div style={{ fontSize:14, color:"#2d6b4a" }}>CSVファイルをドロップ</div>
           <div style={{ fontSize:12, color:"#3d7a5e", marginTop:4 }}>またはクリックしてファイルを選択</div>
           <input id="csv-input" type="file" accept=".csv" style={{ display:"none" }}
@@ -85,13 +86,13 @@ export function CSVImport({ onImport, onClose, result }) {
 
       {encoding && (
         <div style={{ fontSize:11, color: encoding === "Shift-JIS" ? "#f59e0b" : "#10b981", marginTop:6 }}>
-          {encoding === "Shift-JIS" ? "⚠️ Shift-JIS形式を自動変換しました" : "✅ UTF-8形式で読み込みました"}
+          {encoding === "Shift-JIS" ? <><AlertIcon size={11} color="#f59e0b" /> Shift-JIS形式を自動変換しました</> : <><CheckCircleIcon size={11} color="#10b981" /> UTF-8形式で読み込みました</>}
         </div>
       )}
 
       {errors.length > 0 && (
         <div style={{ marginTop:10, background:"#fef2f2", border:"1px solid #ef444433", borderRadius:7, padding:"10px 12px" }}>
-          <div style={{ fontSize:12, color:"#ef4444", fontWeight:700, marginBottom:4 }}>⚠️ 警告（スキップされた行）</div>
+          <div style={{ fontSize:12, color:"#ef4444", fontWeight:700, marginBottom:4, display:"flex", alignItems:"center", gap:4 }}><AlertIcon size={12} color="#ef4444" /> 警告（スキップされた行）</div>
           {errors.map((e, i) => <div key={i} style={{ fontSize:12, color:"#f87171" }}>{e}</div>)}
         </div>
       )}
@@ -127,8 +128,8 @@ export function CSVImport({ onImport, onClose, result }) {
           </div>
           <div style={{ display:"flex", gap:8, justifyContent:"flex-end" }}>
             <button onClick={() => { setPreview(null); setErrors([]); }} style={S.btnSec}>やり直す</button>
-            <button onClick={() => onImport(preview)} style={S.btnP}>
-              ✅ {preview.length}件をインポートする
+            <button onClick={() => onImport(preview)} style={{ ...S.btnP, display:"flex", alignItems:"center", gap:5 }}>
+              <CheckCircleIcon size={13} color="#fff" /> {preview.length}件をインポートする
             </button>
           </div>
         </div>
@@ -136,7 +137,7 @@ export function CSVImport({ onImport, onClose, result }) {
 
       {result && (
         <div style={{ textAlign:"center", padding:"20px 0" }}>
-          <div style={{ fontSize:32, marginBottom:8 }}>🎉</div>
+          <div style={{ fontSize:32, marginBottom:8, display:"flex", justifyContent:"center" }}><SparkleIcon size={36} color="#10b981" /></div>
           <div style={{ fontSize:15, fontWeight:700, color:"#10b981" }}>{result.count}件のインポート完了！</div>
           <button onClick={onClose} style={{ ...S.btnSec, marginTop:12 }}>閉じる</button>
         </div>

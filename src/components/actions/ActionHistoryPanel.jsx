@@ -1,7 +1,7 @@
 // アクション履歴パネル（リード詳細 + アクション一覧 + Zoho連携）
 import { useState } from 'react';
 import { S } from '../../styles/index.js';
-import { PencilIcon, TrashIcon } from '../ui/Icons.jsx';
+import { PencilIcon, TrashIcon, MailIcon, ExternalLinkIcon, ClipboardIcon, CheckIcon, CheckCircleIcon, XCircleIcon, InfoIcon, MapPinIcon, InboxIcon, CalendarNavIcon, FileTextIcon } from '../ui/Icons.jsx';
 import { NextActionEditBtn } from './NextActionEditBtn.jsx';
 import { ActionForm } from './ActionForm.jsx';
 import { ActEntry } from './ActEntry.jsx';
@@ -18,7 +18,7 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [dealCopied, setDealCopied] = useState(false);
   const [zohoCreating, setZohoCreating] = useState(false);
-  const [zohoMsg, setZohoMsg] = useState('');
+  const [zohoMsg, setZohoMsg] = useState(null);
   const [zohoPushingId, setZohoPushingId] = useState(null);
   const actions = lead.actions || [];
 
@@ -38,21 +38,21 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
       if (res.ok && data.ok) {
         onUpdate({ zoho_account_id: data.accountId, zoho_contact_id: data.contactId, zoho_deal_id: data.dealId });
         if (data.warn === 'kv_save_failed') {
-          setZohoMsg('✅ Zohoへの作成は完了しました。ページを再読み込みして「Zoho商談済」になっているか確認してください。');
+          setZohoMsg({ text: 'Zohoへの作成は完了しました。ページを再読み込みして「Zoho商談済」になっているか確認してください。', ok: true });
         } else {
-          setZohoMsg('✅ Zohoに取引先・取引先責任者・商談を作成しました');
+          setZohoMsg({ text: 'Zohoに取引先・取引先責任者・商談を作成しました', ok: true });
         }
       } else if (res.status === 409) {
         onUpdate({ zoho_account_id: data.zoho_account_id, zoho_contact_id: data.zoho_contact_id, zoho_deal_id: data.zoho_deal_id });
-        setZohoMsg('ℹ️ この商談はすでにZohoに作成済みです');
+        setZohoMsg({ text: 'この商談はすでにZohoに作成済みです', ok: null });
       } else {
-        setZohoMsg('❌ 作成失敗: ' + (data.error || '不明なエラー'));
+        setZohoMsg({ text: '作成失敗: ' + (data.error || '不明なエラー'), ok: false });
       }
     } catch (e) {
-      setZohoMsg('❌ 通信エラー: ' + e.message);
+      setZohoMsg({ text: '通信エラー: ' + e.message, ok: false });
     } finally {
       setZohoCreating(false);
-      setTimeout(() => setZohoMsg(''), 5000);
+      setTimeout(() => setZohoMsg(null), 5000);
     }
   };
 
@@ -68,15 +68,15 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
       });
       const data = await res.json();
       if (res.ok && data.ok) {
-        setZohoMsg('✅ アクション履歴をZohoに同期しました');
+        setZohoMsg({ text: 'アクション履歴をZohoに同期しました', ok: true });
       } else {
-        setZohoMsg('❌ 同期失敗: ' + (data.error || '不明なエラー'));
+        setZohoMsg({ text: '同期失敗: ' + (data.error || '不明なエラー'), ok: false });
       }
     } catch (e) {
-      setZohoMsg('❌ 通信エラー: ' + e.message);
+      setZohoMsg({ text: '通信エラー: ' + e.message, ok: false });
     } finally {
       setZohoPushingId(null);
-      setTimeout(() => setZohoMsg(''), 4000);
+      setTimeout(() => setZohoMsg(null), 4000);
     }
   };
 
@@ -104,7 +104,7 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             {(lead.contact || lead.email) && (
               <div style={{ fontSize: 11, color: "#6a9a7a", marginTop: 2, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {lead.contact && <span>{lead.contact}</span>}
-                {lead.email && <a href={`mailto:${lead.email}`} style={{ color: "#0ea5e9", textDecoration: "none" }}>✉️ {lead.email}</a>}
+                {lead.email && <a href={`mailto:${lead.email}`} style={{ color: "#0ea5e9", textDecoration: "none", display:"flex", alignItems:"center", gap:3 }}><MailIcon size={11} color="#0ea5e9" /> {lead.email}</a>}
               </div>
             )}
           </div>
@@ -112,14 +112,14 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             {!readOnly && lead.status === "商談確定" && zohoAuthenticated && !lead.zoho_deal_id && (
               <button onClick={createZohoDeal} disabled={zohoCreating}
                 style={{ background: zohoCreating ? "#9ca3af" : "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 6, cursor: zohoCreating ? "default" : "pointer", color: "#fff", fontSize: 11, padding: "3px 9px", fontWeight: 700, lineHeight: 1.4 }}>
-                {zohoCreating ? "作成中..." : "🔗 Zoho商談作成"}
+                {zohoCreating ? "作成中..." : <><ExternalLinkIcon size={11} color="#fff" /> Zoho商談作成</>}
               </button>
             )}
             {!readOnly && lead.status === "商談確定" && lead.zoho_deal_id && (
-              <span style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 700, padding: "3px 8px", background: "#e0f2fe", border: "1px solid #7dd3fc", borderRadius: 6 }}>✅ Zoho商談済</span>
+              <span style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 700, padding: "3px 8px", background: "#e0f2fe", border: "1px solid #7dd3fc", borderRadius: 6, display:"flex", alignItems:"center", gap:3 }}><CheckCircleIcon size={11} color="#0ea5e9" /> Zoho商談済</span>
             )}
             <button onClick={copyDealInfo} style={{ background: dealCopied ? "#10b981" : "none", border: `1px solid ${dealCopied ? "#10b981" : "#10b98166"}`, borderRadius: 6, cursor: "pointer", color: dealCopied ? "#fff" : "#059669", fontSize: 12, padding: "2px 8px", lineHeight: 1.4, fontWeight: 600, transition: "all 0.2s" }}>
-              {dealCopied ? "✅ コピー済み" : "📋 商談共有用"}
+              {dealCopied ? <><CheckIcon size={12} color={dealCopied ? "#fff" : "#059669"} /> コピー済み</> : <><ClipboardIcon size={12} color="#059669" /> 商談共有用</>}
             </button>
             {!readOnly && <button onClick={onEdit} style={{ background:"none", border:"none", cursor:"pointer", padding:"4px", display:"flex", alignItems:"center" }} title="編集"><PencilIcon size={18} color="#059669" /></button>}
             {!readOnly && (confirmDelete
@@ -136,14 +136,14 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8, alignItems: "center" }}>
           <span style={{ fontSize: 11, fontWeight: 700, color: sc, background: sc + "15", border: `1px solid ${sc}44`, borderRadius: 8, padding: "2px 8px" }}>{lead.status || "新規"}</span>
           {lead.date && <span style={{ fontSize: 11, color: "#6a9a7a" }}>反響日：{lead.date}</span>}
-          {lead.address && <span style={{ fontSize: 11, color: "#6a9a7a" }}>📍 {lead.address}</span>}
+          {lead.address && <span style={{ fontSize: 11, color: "#6a9a7a", display:"flex", alignItems:"center", gap:3 }}><MapPinIcon size={11} color="#6a9a7a" /> {lead.address}</span>}
           {actions[0] && <span style={{ fontSize: 11, color: "#6a9a7a" }}>最終：{actions[0].date}{actions[0].time ? " " + actions[0].time : ""}</span>}
           {lead.source && (() => {
             const srcColor = getSourceColor(lead.source, 0);
-            return <span style={{ fontSize: 11, color: srcColor, background: srcColor + "1a", border: `1px solid ${srcColor}33`, borderRadius: 6, padding: "1px 7px", fontWeight: 600 }}>📥 {lead.source}{lead.portal_site ? " / " + lead.portal_site : ""}</span>;
+            return <span style={{ fontSize: 11, color: srcColor, background: srcColor + "1a", border: `1px solid ${srcColor}33`, borderRadius: 6, padding: "1px 7px", fontWeight: 600, display:"flex", alignItems:"center", gap:3 }}><InboxIcon size={11} color={srcColor} /> {lead.source}{lead.portal_site ? " / " + lead.portal_site : ""}</span>;
           })()}
-          {lead.meeting_date && <span style={{ fontSize: 11, color: "#10b981", fontWeight: 600 }}>🤝 {lead.meeting_date}</span>}
-          {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{ ...S.zohoLinkSmall, fontSize: 10, padding: "2px 8px" }}>🔗 Zoho</a>}
+          {lead.meeting_date && <span style={{ fontSize: 11, color: "#10b981", fontWeight: 600, display:"flex", alignItems:"center", gap:3 }}><CalendarNavIcon size={11} color="#10b981" /> {lead.meeting_date}</span>}
+          {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{ ...S.zohoLinkSmall, fontSize: 10, padding: "2px 8px", display:"flex", alignItems:"center", gap:3 }}><ExternalLinkIcon size={10} color="#0284c7" /> Zoho</a>}
         </div>
         {/* ネクストアクション */}
         {(nad || lead.next_action) && (
@@ -202,15 +202,16 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
 
       {/* Zoho操作メッセージ */}
       {zohoMsg && (
-        <div style={{ padding: "6px 16px", background: zohoMsg.startsWith('✅') ? "#d1fae5" : "#fef2f2", borderBottom: "1px solid #e2f0e8", fontSize: 12, fontWeight: 700, color: zohoMsg.startsWith('✅') ? "#059669" : "#dc2626" }}>
-          {zohoMsg}
+        <div style={{ padding: "6px 16px", background: zohoMsg.ok === true ? "#d1fae5" : zohoMsg.ok === null ? "#f0f9ff" : "#fef2f2", borderBottom: "1px solid #e2f0e8", fontSize: 12, fontWeight: 700, color: zohoMsg.ok === true ? "#059669" : zohoMsg.ok === null ? "#0284c7" : "#dc2626", display:"flex", alignItems:"center", gap:5 }}>
+          {zohoMsg.ok === true ? <CheckCircleIcon size={12} color="#059669" /> : zohoMsg.ok === null ? <InfoIcon size={12} color="#0284c7" /> : <XCircleIcon size={12} color="#dc2626" />}
+          {zohoMsg.text}
         </div>
       )}
 
       {/* メモ */}
       {lead.memo && (
         <div style={{ padding: "8px 16px", borderBottom: "1px solid #bae6fd", background: "#e0f2fe", display: "flex", alignItems: "flex-start", gap: 6 }}>
-          <span style={{ fontSize: 12, color: "#0369a1", flexShrink: 0, marginTop: 1 }}>📝</span>
+          <span style={{ flexShrink: 0, marginTop: 1 }}><FileTextIcon size={13} color="#0369a1" /></span>
           <span style={{ fontSize: 12, color: "#1e3a5f", lineHeight: 1.6, wordBreak: "break-word" }}>{lead.memo}</span>
         </div>
       )}
@@ -218,7 +219,7 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
       {/* アクション履歴本体 */}
       <div style={{ padding: "12px 16px" }}>
         <div style={S.histHeader}>
-          <span style={S.sectionLabel}>📋 アクション履歴（{actions.length}件）</span>
+          <span style={{...S.sectionLabel, display:"flex", alignItems:"center", gap:5}}><ClipboardIcon size={12} color="#6a9a7a" /> アクション履歴（{actions.length}件）</span>
           {!readOnly && (
             <button onClick={() => { setShowAF(v => !v); setEditingAction(null); }} style={S.btnAddAct}>
               {showAF ? "✕ 閉じる" : "＋ 記録する"}

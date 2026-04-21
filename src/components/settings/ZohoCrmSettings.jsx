@@ -1,6 +1,7 @@
 // Zoho CRM連携設定（認証・マッピング・Webhook情報）
 import { useState } from 'react';
 import { getSalesMembers, getStatuses } from '../../lib/master.js';
+import { ExternalLinkIcon, CheckCircleIcon, AlertIcon, InboxIcon, UploadIcon, PinIcon } from '../ui/Icons.jsx';
 
 export function ZohoCrmSettings() {
   const stored = window.__appData?.zohoConfig || {};
@@ -105,7 +106,7 @@ export function ZohoCrmSettings() {
 
   return (
     <div style={{width:"100%"}}>
-      <div style={{fontSize:14,fontWeight:700,color:'#174f35',marginBottom:4}}>🔗 Zoho CRM 連携設定</div>
+      <div style={{fontSize:14,fontWeight:700,color:'#174f35',marginBottom:4,display:"flex",alignItems:"center",gap:5}}><ExternalLinkIcon size={14} color="#174f35" /> Zoho CRM 連携設定</div>
       <div style={{fontSize:11,color:'#6a9a7a',marginBottom:16}}>Zoho CRMとのAPI連携に必要な情報を設定します。設定後「保存」→「Zoho認証」の順に実行してください。</div>
 
       {msg && <div style={{background:'#d1fae5',color:'#059669',border:'1px solid #6ee7b7',borderRadius:8,padding:'8px 14px',marginBottom:12,fontSize:12,fontWeight:700}}>{msg}</div>}
@@ -114,7 +115,7 @@ export function ZohoCrmSettings() {
       {/* 認証状態 */}
       <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:16,padding:'10px 14px',background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8}}>
         <span style={{fontSize:13,fontWeight:700,color: authenticated ? '#059669' : '#d97706'}}>
-          {authenticated ? '✅ Zoho認証済み' : '⚠️ 未認証'}
+          {authenticated ? <span style={{display:"flex",alignItems:"center",gap:4}}><CheckCircleIcon size={13} color="#059669" /> Zoho認証済み</span> : <span style={{display:"flex",alignItems:"center",gap:4}}><AlertIcon size={13} color="#d97706" /> 未認証</span>}
         </span>
         <button onClick={startAuth} style={{...btnP, padding:'5px 14px', fontSize:11}}>
           {authenticated ? '再認証' : 'Zoho認証を開始'}
@@ -187,7 +188,7 @@ export function ZohoCrmSettings() {
 
         {/* Zoho → 本ツール（取込時） */}
         <div style={{marginBottom:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:'#6a9a7a',marginBottom:6}}>📥 Zoho → 本ツール（リード取込・Webhook受信時）</div>
+          <div style={{fontSize:11,fontWeight:700,color:'#6a9a7a',marginBottom:6,display:"flex",alignItems:"center",gap:4}}><InboxIcon size={11} color="#6a9a7a" /> Zoho → 本ツール（リード取込・Webhook受信時）</div>
           {Object.entries(cfg.statusMap).length > 0 && (
             <div style={{marginBottom:8}}>
               {Object.entries(cfg.statusMap).map(([zohoSt, localSt]) => (
@@ -212,7 +213,7 @@ export function ZohoCrmSettings() {
         </div>
 
         <div style={{borderTop:'1px solid #e2f0e8',paddingTop:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:'#6a9a7a',marginBottom:6}}>📤 本ツール → Zoho（ステータス変更時に自動反映）</div>
+          <div style={{fontSize:11,fontWeight:700,color:'#6a9a7a',marginBottom:6,display:"flex",alignItems:"center",gap:4}}><UploadIcon size={11} color="#6a9a7a" /> 本ツール → Zoho（ステータス変更時に自動反映）</div>
           {Object.entries(cfg.reverseStatusMap).length > 0 && (
             <div style={{marginBottom:8}}>
               {Object.entries(cfg.reverseStatusMap).map(([localSt, zohoSt]) => (
@@ -244,7 +245,7 @@ export function ZohoCrmSettings() {
 
       {/* Webhook情報 */}
       <div style={{marginTop:16,padding:'12px 14px',background:'#fffbeb',border:'1px solid #fde68a',borderRadius:8}}>
-        <div style={{fontSize:12,fontWeight:700,color:'#92400e',marginBottom:6}}>📌 Zoho Webhook設定（オプション）</div>
+        <div style={{fontSize:12,fontWeight:700,color:'#92400e',marginBottom:6,display:"flex",alignItems:"center",gap:5}}><PinIcon size={12} color="#92400e" /> Zoho Webhook設定（オプション）</div>
         <div style={{fontSize:11,color:'#92400e',lineHeight:1.7}}>
           ZohoからリアルタイムでリードをPushする場合、<br/>
           Zoho CRM → 設定 → ワークフロー → Webhook に以下のURLを登録してください：<br/>

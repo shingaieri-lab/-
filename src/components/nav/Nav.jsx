@@ -1,14 +1,15 @@
 // ナビゲーションコンポーネント（デスクトップ：左サイドバー / モバイル：下部タブバー）
 import { useState } from 'react';
+import { LeafIcon, DashboardIcon, TrendIcon, UsersIcon, SparkleIcon, CalendarNavIcon, MailIcon, GearIcon } from '../ui/Icons.jsx';
 
 const NAV_ITEMS = [
-  { id: "dashboard", icon: "📊", label: "ダッシュボード" },
-  { id: "trend",     icon: "📈", label: "月別推移" },
-  { id: "leads",     icon: "👥", label: "リード管理" },
-  { id: "ai",        icon: "🤖", label: "AI" },
-  { id: "calendar",  icon: "📅", label: "候補日" },
-  { id: "email",     icon: "📧", label: "メール" },
-  { id: "settings",  icon: "⚙️", label: "設定" },
+  { id: "dashboard", Icon: DashboardIcon,   label: "ダッシュボード" },
+  { id: "trend",     Icon: TrendIcon,       label: "月別推移" },
+  { id: "leads",     Icon: UsersIcon,       label: "リード管理" },
+  { id: "ai",        Icon: SparkleIcon,     label: "AI" },
+  { id: "calendar",  Icon: CalendarNavIcon, label: "候補日" },
+  { id: "email",     Icon: MailIcon,        label: "メール" },
+  { id: "settings",  Icon: GearIcon,        label: "設定" },
 ];
 
 export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogout, onUpdateProfile, isMobile }) {
@@ -22,7 +23,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
       {NAV_ITEMS.map(item => (
         <button key={item.id} onClick={() => goPage(item.id)}
           style={{ flex:1, height:"100%", border:"none", cursor:"pointer", fontFamily:"inherit", background: page===item.id ? "#10b98122" : "transparent", borderTop: page===item.id ? "2px solid #10b981" : "2px solid transparent", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:2, padding:"6px 2px" }}>
-          <span style={{ fontSize:20, lineHeight:1 }}>{item.icon}</span>
+          <item.Icon size={20} color={page===item.id ? "#6ee7b7" : "#a7d9be"} />
           <span style={{ fontSize:10, color: page===item.id ? "#6ee7b7" : "#a7d9be", fontWeight: page===item.id ? 700 : 400, fontFamily:"inherit" }}>{item.label}</span>
         </button>
       ))}
@@ -58,7 +59,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
 
   return (
     <nav style={{ width:120, background:"#134e3a", display:"flex", flexDirection:"column", alignItems:"center", padding:"14px 0 12px", flexShrink:0, zIndex:10 }}>
-      <div style={{ fontSize:22, marginBottom:12, lineHeight:1 }}>🌿</div>
+      <div style={{ marginBottom:12, lineHeight:1 }}><LeafIcon size={22} color="#6ee7b7" /></div>
       <div style={{ width:36, height:1, background:"#ffffff22", marginBottom:8 }} />
       <div style={{ display:"flex", flexDirection:"column", gap:1, width:"100%", alignItems:"center", flex:1 }}>
         {NAV_ITEMS.map(item => (
@@ -66,7 +67,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
             onMouseEnter={() => setTooltip(item.id)} onMouseLeave={() => setTooltip(null)}>
             <button onClick={() => goPage(item.id)}
               style={{ width:"100%", padding:"9px 0", border:"none", cursor:"pointer", fontFamily:"inherit", background: page===item.id ? "#10b98122" : "transparent", borderLeft: page===item.id ? "3px solid #10b981" : "3px solid transparent", display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
-              <span style={{ fontSize:19, lineHeight:1 }}>{item.icon}</span>
+              <item.Icon size={20} color={page===item.id ? "#ffffff" : "#a7d9be"} />
               <span style={{ fontSize:10, color: page===item.id ? "#ffffff" : "#a7d9be", fontWeight: page===item.id ? 700 : 400, fontFamily:"inherit" }}>{item.label}</span>
             </button>
             {tooltip === item.id && (

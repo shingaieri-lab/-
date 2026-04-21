@@ -58,20 +58,28 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
   );
 
   return (
-    <nav style={{ width:120, background:"#134e3a", display:"flex", flexDirection:"column", alignItems:"center", padding:"14px 0 12px", flexShrink:0, zIndex:10 }}>
-      <div style={{ marginBottom:12, lineHeight:1 }}><img src="/mokumoku.png" alt="もくもくさん" style={{ width:60, height:60, objectFit:"contain", display:"block" }} /></div>
-      <div style={{ width:36, height:1, background:"#ffffff22", marginBottom:8 }} />
-      <div style={{ display:"flex", flexDirection:"column", gap:1, width:"100%", alignItems:"center", flex:1 }}>
+    <nav style={{ width:96, background:"#0f3d2a", display:"flex", flexDirection:"column", alignItems:"center", padding:"12px 0 10px", flexShrink:0, zIndex:10 }}>
+      <div style={{ marginBottom:10 }}><img src="/mokumoku.png" alt="もくもくさん" style={{ width:64, height:64, objectFit:"contain", display:"block" }} /></div>
+      <div style={{ width:48, height:1, background:"#ffffff18", marginBottom:6 }} />
+      <div style={{ display:"flex", flexDirection:"column", gap:2, width:"100%", padding:"0 8px", alignItems:"center", flex:1, boxSizing:"border-box" }}>
         {NAV_ITEMS.map(item => (
           <div key={item.id} style={{ position:"relative", width:"100%" }}
             onMouseEnter={() => setTooltip(item.id)} onMouseLeave={() => setTooltip(null)}>
             <button onClick={() => goPage(item.id)}
-              style={{ width:"100%", padding:"9px 0", border:"none", cursor:"pointer", fontFamily:"inherit", background: page===item.id ? "#10b98122" : "transparent", borderLeft: page===item.id ? "3px solid #10b981" : "3px solid transparent", display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
-              <item.Icon size={20} color={page===item.id ? "#ffffff" : "#a7d9be"} />
-              <span style={{ fontSize:10, color: page===item.id ? "#ffffff" : "#a7d9be", fontWeight: page===item.id ? 700 : 400, fontFamily:"inherit" }}>{item.label}</span>
+              style={{ width:"100%", padding:"7px 0", border:"none", cursor:"pointer", fontFamily:"inherit",
+                background: page===item.id ? "#10b98130" : "transparent",
+                borderRadius: 10,
+                display:"flex", flexDirection:"column", alignItems:"center", gap:3,
+                transition:"background 0.15s",
+              }}>
+              {page===item.id && (
+                <div style={{ position:"absolute", left:0, top:"50%", transform:"translateY(-50%)", width:3, height:28, background:"#10b981", borderRadius:"0 3px 3px 0" }} />
+              )}
+              <item.Icon size={22} color={page===item.id ? "#6ee7b7" : "#7db89a"} />
+              <span style={{ fontSize:9.5, color: page===item.id ? "#d1fae5" : "#7db89a", fontWeight: page===item.id ? 700 : 400, fontFamily:"inherit", letterSpacing:"0.02em" }}>{item.label}</span>
             </button>
             {tooltip === item.id && (
-              <div style={{ position:"absolute", left:124, top:"50%", transform:"translateY(-50%)", background:"#0d3d2b", color:"#fff", fontSize:12, fontWeight:600, padding:"5px 10px", borderRadius:7, whiteSpace:"nowrap", zIndex:300, pointerEvents:"none", boxShadow:"0 4px 14px #0005", border:"1px solid #10b98133" }}>
+              <div style={{ position:"absolute", left:100, top:"50%", transform:"translateY(-50%)", background:"#0d3d2b", color:"#fff", fontSize:12, fontWeight:600, padding:"5px 10px", borderRadius:7, whiteSpace:"nowrap", zIndex:300, pointerEvents:"none", boxShadow:"0 4px 14px #0005", border:"1px solid #10b98133" }}>
                 {item.label}
                 <div style={{ position:"absolute", left:-4, top:"50%", transform:"translateY(-50%)", borderTop:"4px solid transparent", borderBottom:"4px solid transparent", borderRight:"4px solid #0d3d2b", width:0, height:0 }} />
               </div>
@@ -79,11 +87,11 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
           </div>
         ))}
       </div>
-      <div style={{ textAlign:"center", marginBottom:10 }}>
-        <div style={{ fontSize:14, fontWeight:900, color:"#6ee7b7" }}>{count}</div>
+      <div style={{ textAlign:"center", marginBottom:8 }}>
+        <div style={{ fontSize:13, fontWeight:900, color:"#6ee7b7" }}>{count}</div>
         <div style={{ fontSize:7.5, color:"#6ee7b755" }}>件</div>
       </div>
-      <div style={{ width:36, height:1, background:"#ffffff22", marginBottom:10 }} />
+      <div style={{ width:48, height:1, background:"#ffffff18", marginBottom:8 }} />
       <div style={{ position:"relative" }}
         onMouseEnter={() => { if (!showUserMenu) setTooltip("user"); }}
         onMouseLeave={() => setTooltip(null)}>

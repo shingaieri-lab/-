@@ -7,9 +7,11 @@ const dataRoutes = require('./routes/data');
 const aiRoutes   = require('./routes/ai');
 const zohoRoutes = require('./routes/zoho');
 
+const path = require('path');
 const app = express();
 app.use(express.json({ limit: '20mb' }));
 app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));
 
 // ルート登録

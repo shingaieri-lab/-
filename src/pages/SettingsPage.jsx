@@ -1,6 +1,6 @@
 // 設定ページ（基本設定・リード管理・ポータル・API設定・Zoho CRM・アカウント管理）
 import { useState } from 'react';
-import { PencilIcon, TrashIcon, LeadMgmtIcon, PortalIcon, ApiKeyIcon, ZohoIcon, AdminIcon, AccountIcon } from '../components/ui/Icons.jsx';
+import { PencilIcon, TrashIcon, LeadMgmtIcon, PortalIcon, ApiKeyIcon, ZohoIcon, AdminIcon, AccountIcon, EyeIcon, EyeOffIcon } from '../components/ui/Icons.jsx';
 import { ZohoCrmSettings } from '../components/settings/ZohoCrmSettings.jsx';
 import { AccountManager } from '../components/settings/AccountManager.jsx';
 import { ApiKeyTab } from '../components/settings/ApiKeyTab.jsx';
@@ -13,6 +13,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
   const [tab, setTab] = useState(initialTab || (currentUser?.role === "admin" ? "leadmgmt" : "apikey"));
   const [msg, setMsg] = useState("");
   const [profileForm, setProfileForm] = useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
+  const [showPassword, setShowPassword] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
 
   const saveProfile = () => {
@@ -272,7 +273,18 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                 <input type="text" value={profileForm.id||""} readOnly
                   style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#3d7a5e",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#f0f5f2",cursor:"not-allowed"}} />
               </div>
-              {[["パスワード","password","password"],["表示名","name","text"],["メールアドレス","email","email"]].map(([lbl,key,type])=>(
+              <div style={{marginBottom:16}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>パスワード</label>
+                <div style={{position:"relative"}}>
+                  <input type={showPassword ? "text" : "password"} value={profileForm.password||""} onChange={e=>setProfileForm(p=>({...p,password:e.target.value}))}
+                    style={{width:"100%",padding:"10px 40px 10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"}} />
+                  <button type="button" onClick={()=>setShowPassword(v=>!v)}
+                    style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",padding:0}}>
+                    {showPassword ? <EyeOffIcon size={18} color="#6a9a7a" /> : <EyeIcon size={18} color="#6a9a7a" />}
+                  </button>
+                </div>
+              </div>
+              {[["表示名","name","text"],["メールアドレス","email","email"]].map(([lbl,key,type])=>(
                 <div key={key} style={{marginBottom:16}}>
                   <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"block",marginBottom:4}}>{lbl}</label>
                   <input type={type} value={profileForm[key]||""} onChange={e=>{ const v=e.target.value; if(key==="email"){ const prefix=v.includes("@")?v.split("@")[0]:v; setProfileForm(p=>({...p,email:v,id:prefix})); } else { setProfileForm(p=>({...p,[key]:v})); } }}

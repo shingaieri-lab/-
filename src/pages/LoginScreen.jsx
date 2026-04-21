@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { S } from '../styles/index.js';
 import { PALETTE, USER_COLORS } from '../lib/accounts.js';
 import { IS_COLORS } from '../lib/master.js';
+import { EyeIcon, EyeOffIcon } from '../components/ui/Icons.jsx';
 
 export function LoginScreen({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -136,7 +137,7 @@ export function LoginScreen({ onLogin }) {
               <div style={{ fontSize:11, color:"#6a9a7a", marginBottom:3 }}>8文字以上・英字と数字を含む</div>
               <div style={{ position:"relative" }}>
                 <input type={showSPw?"text":"password"} value={sForm.password} onChange={e => setSForm(p => ({...p, password:e.target.value}))} style={{ ...inp2, paddingRight:36 }} />
-                <button onClick={() => setShowSPw(v => !v)} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:14 }}>{showSPw ? "🙈" : "👁️"}</button>
+                <button onClick={() => setShowSPw(v => !v)} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center" }}>{showSPw ? <EyeOffIcon size={18} color="#6a9a7a" /> : <EyeIcon size={18} color="#6a9a7a" />}</button>
               </div>
             </div>
             <div style={{ marginBottom:12 }}>
@@ -178,7 +179,7 @@ export function LoginScreen({ onLogin }) {
           <label style={{ ...S.lbl, display:"block", marginBottom:3 }}>パスワード</label>
           <div style={{ position:"relative" }}>
             <input type={showPw?"text":"password"} value={password} onChange={e => setPassword(e.target.value)} style={{ ...inp2, paddingRight:36 }} onKeyDown={e => e.key === "Enter" && handleLogin()} />
-            <button onClick={() => setShowPw(v => !v)} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:14 }}>{showPw ? "🙈" : "👁️"}</button>
+            <button onClick={() => setShowPw(v => !v)} style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", display:"flex", alignItems:"center" }}>{showPw ? <EyeOffIcon size={18} color="#6a9a7a" /> : <EyeIcon size={18} color="#6a9a7a" />}</button>
           </div>
         </div>
         {err && <div style={{ color:"#ef4444", fontSize:12, marginBottom:12 }}>{err}</div>}

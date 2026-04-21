@@ -85,6 +85,40 @@ export const buildGmailDraftRaw = (to, subject, body) => {
   return btoa(lines.join('\r\n')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 };
 
+// Google Calendarトークン（freeBusy検索・予定登録に使う）を取得する共通関数
+// calendar.events スコープ：freeBusy読み取り＋予定登録の両方に対応
+export const acquireCalendarToken = async (clientId, currentTokenObj) => {
+  if (isTokenValid(currentTokenObj)) return currentTokenObj;
+
+  if (!window.google?.accounts?.oauth2) {
+    await new Promise((res, rej) => {
+      if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  return new Promise((res, rej) => {
+    const client = window.google.accounts.oauth2.initTokenClient({
+      client_id: clientId,
+      // freeBusy照会に calendar.readonly、予定登録に calendar.events が必要
+      scope: 'https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events',
+      callback: (resp) => {
+        if (resp.error) {
+          handleOAuthCallbackError(resp, rej);
+        } else {
+          res({ token: resp.access_token, expiresAt: Date.now() + 55 * 60 * 1000 });
+        }
+      },
+      error_callback: (err) => handleOAuthPopupError(err, rej),
+    });
+    client.requestAccessToken();
+  });
+};
+
 // Gmail APIに下書きを送信する共通関数
 // 認証切れ（401）の場合は isUnauthenticated フラグ付きエラーをスローする
 export const postGmailDraft = async (token, raw) => {

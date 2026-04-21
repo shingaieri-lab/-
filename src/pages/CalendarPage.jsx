@@ -2,6 +2,7 @@
 import { useState, useMemo } from 'react';
 import { Header } from '../components/ui/Layout.jsx';
 import { loadGCalConfig, saveGCalConfig } from '../lib/gcal.js';
+import { acquireCalendarToken, isTokenValid } from '../lib/oauth.js';
 import { loadAccounts } from '../lib/accounts.js';
 import { JP_HOLIDAYS, TODAY } from '../lib/holidays.js';
 import { getSalesMembers } from '../lib/master.js';
@@ -57,6 +58,7 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
   const [searched, setSearched] = useState(false);
   const [showCalReg, setShowCalReg] = useState(false);
   const [emailLeadId, setEmailLeadId] = useState("");
+  const [oauthToken, setOauthToken] = useState(null);
 
   const isConfigured = cfg.apiKey && Object.keys(mergedCalendarIds).length > 0;
 
@@ -64,13 +66,24 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
     if (!isConfigured) { setShowSetup(true); return; }
     setLoading(true); setError(""); setSlots([]); setSearched(false);
     try {
+      const aiCfg = window.__appData?.aiConfig || {};
+      const clientId = currentUser?.gmailClientId || aiCfg.gmailClientId || "";
+      if (!clientId) {
+        setError(currentUser?.role === "admin"
+          ? "設定 > APIキー設定 で Gmail Client ID を入力してください"
+          : "管理者にGmail OAuth Client IDの設定を依頼してください");
+        setLoading(false); return;
+      }
+      const tokenObj = await acquireCalendarToken(clientId, oauthToken);
+      setOauthToken(tokenObj);
+
       const timeMin = dateFrom + "T00:00:00+09:00";
       const timeMax = dateTo   + "T23:59:59+09:00";
       const items = selectedMembers.map(m => mergedCalendarIds[m]).filter(Boolean).map(id => ({ id }));
       if (items.length === 0) { setError("選択したメンバーのカレンダーIDが設定されていません"); setLoading(false); return; }
       const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/freeBusy?key=${cfg.apiKey}`,
-        { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ timeMin, timeMax, items }) }
+        `https://www.googleapis.com/calendar/v3/freeBusy`,
+        { method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${tokenObj.token}`}, body:JSON.stringify({ timeMin, timeMax, items }) }
       );
       if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || "APIエラー"); }
       const data = await res.json();
@@ -185,6 +198,7 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
         initialLeadId={emailLeadId} candidateSlots={candidateSlots}
         leads={leads} selectedMembers={selectedMembers}
         currentUser={currentUser} mergedCalendarIds={mergedCalendarIds}
+        oauthToken={oauthToken} setOauthToken={setOauthToken}
       />
     </div>
   );

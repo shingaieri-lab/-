@@ -1,7 +1,7 @@
 // Googleカレンダー登録モーダル（候補日の一括登録）
 import { useState, useEffect } from 'react';
 import { LeadCombobox } from '../leads/LeadCombobox.jsx';
-import { isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../../lib/oauth.js';
+import { acquireCalendarToken, isTokenValid } from '../../lib/oauth.js';
 import { loadGCalConfig } from '../../lib/gcal.js';
 
 const lbl  = { display:"block", fontSize:11, color:"#6a9a7a", marginBottom:4, fontWeight:600 };
@@ -9,12 +9,11 @@ const inp  = { width:"100%", background:"#f8fffe", border:"1px solid #99e6d8", b
 const btnP = { background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", border:"none", borderRadius:8, padding:"10px 18px", fontSize:13.5, fontWeight:700, cursor:"pointer", fontFamily:"inherit" };
 const btnSec = { background:"#d8ede1", color:"#2d6b4a", border:"1px solid #c0dece", borderRadius:8, padding:"9px 16px", fontSize:13, cursor:"pointer", fontFamily:"inherit" };
 
-export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots, leads, selectedMembers, currentUser, mergedCalendarIds }) {
+export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots, leads, selectedMembers, currentUser, mergedCalendarIds, oauthToken, setOauthToken }) {
   const [calRegLeadId, setCalRegLeadId] = useState("");
   const [calRegCompany, setCalRegCompany] = useState("");
   const [calRegTitleTpl, setCalRegTitleTpl] = useState(() => loadGCalConfig().calRegTitleTpl || "仮WEB営1）【{{会社名}}様】");
   const [calRegLoading, setCalRegLoading] = useState(false);
-  const [calRegToken, setCalRegToken] = useState(null);
   const [calRegResults, setCalRegResults] = useState([]);
 
   useEffect(() => {
@@ -38,33 +37,9 @@ export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots,
     if (candidateSlots.length === 0) return;
     setCalRegLoading(true); setCalRegResults([]);
     try {
-      let tokenObj = calRegToken;
-      if (!isTokenValid(tokenObj)) {
-        if (!window.google?.accounts?.oauth2) {
-          await new Promise((res, rej) => {
-            if (document.querySelector('script[src*="accounts.google.com/gsi/client"]')) { res(); return; }
-            const s = document.createElement('script');
-            s.src = 'https://accounts.google.com/gsi/client';
-            s.onload = res; s.onerror = rej;
-            document.head.appendChild(s);
-          });
-          await new Promise(r => setTimeout(r, 500));
-        }
-        const rawToken = await new Promise((res, rej) => {
-          const client = window.google.accounts.oauth2.initTokenClient({
-            client_id: clientId,
-            scope: 'https://www.googleapis.com/auth/calendar.events',
-            callback: (resp) => {
-              if (resp.error) { handleOAuthCallbackError(resp, rej); }
-              else { res(resp.access_token); }
-            },
-            error_callback: (err) => handleOAuthPopupError(err, rej)
-          });
-          client.requestAccessToken();
-        });
-        tokenObj = { token: rawToken, expiresAt: Date.now() + 55 * 60 * 1000 };
-        setCalRegToken(tokenObj);
-      }
+      // 検索時に取得済みのトークンを使い回す。期限切れなら再取得する
+      const tokenObj = await acquireCalendarToken(clientId, oauthToken);
+      if (setOauthToken) setOauthToken(tokenObj);
       const token = tokenObj.token;
       const title = resolvedCalTitle;
       const results = [];
@@ -85,7 +60,7 @@ export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots,
           );
           if (!resp.ok) {
             const err = await resp.json();
-            if (err.error?.code === 401) { setCalRegToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+            if (err.error?.code === 401) { if (setOauthToken) setOauthToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
             slotMembers.forEach(member => results.push({ slot, member, success: false, error: err.error?.message || "登録失敗" }));
           } else {
             slotMembers.forEach(member => results.push({ slot, member, success: true }));
@@ -94,7 +69,7 @@ export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots,
       }
       setCalRegResults(results);
     } catch(e) {
-      setCalRegToken(null);
+      if (setOauthToken) setOauthToken(null);
       alert("エラー：" + e.message);
     } finally {
       setCalRegLoading(false);

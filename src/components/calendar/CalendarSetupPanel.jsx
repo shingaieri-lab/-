@@ -17,7 +17,7 @@ export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, membe
         <div>③ 「認証情報」→「APIキーを作成」→ APIキーをコピーして下の欄に入力</div>
         <div style={{marginTop:8,fontWeight:700}}>📋 候補日の対象メンバーがやること</div>
         <div>④ Googleカレンダー →「設定と共有」→「カレンダーの統合」→ <b>カレンダーID</b> をコピーして管理者に伝える<br/>　　（例：<code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>tanaka@gmail.com</code> または <code style={{background:"#fef9c3",padding:"1px 4px",borderRadius:3}}>xxx@group.calendar.google.com</code>）</div>
-        <div>⑤ Googleカレンダー →「設定と共有」→「アクセス権限」→ <b>「[会社名] で利用できるようにする」</b> にチェック → <b>「予定の表示（時間枠のみ、詳細は非表示）」</b> を選択<br/>　　※ 一般公開は不要です。同じ Google Workspace 内であればこの設定だけでOKです。</div>
+        <div>⑤ Googleカレンダー →「設定と共有」→「アクセス権限」→ <b>「[会社名] で利用できるようにする」</b> にチェック → <b>「予定の表示（時間枠のみ、詳細は非表示）」</b> 以上を選択<br/>　　※ 一般公開は不要です。候補日検索・カレンダー登録ともにOAuth認証（⑥〜⑧の設定）を使用します。</div>
       </div>
 
       <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"12px 14px",marginBottom:14,fontSize:12,color:"#1e40af",lineHeight:1.9}}>
@@ -29,7 +29,7 @@ export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, membe
         <div style={{marginTop:8,padding:"6px 10px",background:"#dbeafe",borderRadius:6,color:"#1e40af"}}>
           💡 各営業は初回のみGoogleの認証ポップアップで「許可」を押すだけです。個別の設定は不要です。
         </div>
-        <div style={{marginTop:6,color:"#1d4ed8",fontWeight:600}}>※ 空き時間の検索（freeBusy）は APIキーのみで動作します。カレンダーへの予定登録にはOAuth認証（Client ID）が必要です。</div>
+        <div style={{marginTop:6,color:"#1d4ed8",fontWeight:600}}>※ 空き時間の検索（候補日検索）・カレンダーへの予定登録ともにOAuth認証（Client ID）が必要です。初回の検索時にGoogleの認証ポップアップが表示されます。</div>
       </div>
 
       <div style={{marginBottom:10}}>

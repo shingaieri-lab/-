@@ -13,6 +13,7 @@ import {
   getSources, getStatuses, getStatusColor, getISMembers,
   getPortalSitesForSource, sourceHasPortal,
 } from '../lib/master.js';
+import { FlameIcon, ExternalLinkIcon, UploadIcon, InboxIcon } from '../components/ui/Icons.jsx';
 
 export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile }) {
   const [showForm, setShowForm]     = useState(false);
@@ -126,10 +127,10 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
       <div className="page-pad" style={{flexShrink:0, background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
         <Header title="リード一覧" sub={`${leads.length}件 / 表示 ${list.length}件`}>
           <div className="lead-header-actions" style={{display:"flex", gap:8}}>
-            <button onClick={exportCSV} style={S.btnSec}>📤 CSVエクスポート</button>
-            {!readOnly && <button onClick={() => { setShowImport(v=>!v); setImportResult(null); }} style={S.btnSec}>📥 CSVインポート</button>}
+            <button onClick={exportCSV} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><UploadIcon size={12} color="#6a9a7a" /> CSVエクスポート</button>
+            {!readOnly && <button onClick={() => { setShowImport(v=>!v); setImportResult(null); }} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><InboxIcon size={12} color="#6a9a7a" /> CSVインポート</button>}
             {!readOnly && window.__appData?.zohoAuthenticated && (
-              <button onClick={() => setShowZohoImport(v=>!v)} style={S.btnSec}>🔗 Zohoから取込</button>
+              <button onClick={() => setShowZohoImport(v=>!v)} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><ExternalLinkIcon size={12} color="#6a9a7a" /> Zohoから取込</button>
             )}
             {!readOnly && <button onClick={() => { setEditing(null); setShowForm(true); }} style={{...S.btnP, background:"linear-gradient(135deg,#f97316,#ea580c)"}}>＋ 新規追加</button>}
           </div>
@@ -185,8 +186,8 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           ))}
           <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
           <button onClick={() => setFNextAction(v => v==="today" ? "" : "today")}
-            style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:fNextAction==="today"?"#ea580c33":"transparent", color:fNextAction==="today"?"#ea580c":"#3d7a5e", border:`1px solid ${fNextAction==="today"?"#ea580c66":"#c0dece"}`, fontWeight:fNextAction==="today"?700:400}}>
-            🔥 本日追客
+            style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:fNextAction==="today"?"#ea580c33":"transparent", color:fNextAction==="today"?"#ea580c":"#3d7a5e", border:`1px solid ${fNextAction==="today"?"#ea580c66":"#c0dece"}`, fontWeight:fNextAction==="today"?700:400, display:"flex", alignItems:"center", gap:4}}>
+            <FlameIcon size={12} color={fNextAction==="today"?"#ea580c":"#3d7a5e"} /> 本日追客
           </button>
           <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
           <span style={{fontSize:11, color:"#6a9a7a", flexShrink:0}}>ステータス:</span>

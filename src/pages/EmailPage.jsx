@@ -1,6 +1,6 @@
 // メールテンプレートページ（差し込み変数・Gmail下書き保存・候補日スロット連携）
 import { useState, useEffect } from 'react';
-import { PencilIcon, TrashIcon } from '../components/ui/Icons.jsx';
+import { PencilIcon, TrashIcon, MailIcon, FileTextIcon, SendIcon, ClipboardIcon, CheckIcon, CheckCircleIcon } from '../components/ui/Icons.jsx';
 import { getMaster } from '../lib/master.js';
 import { getEffectiveAiConfig } from '../lib/accounts.js';
 import { EmailVariableForm } from '../components/email/EmailVariableForm.jsx';
@@ -168,7 +168,7 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
   return (
     <div className="page-pad" style={{padding:"24px 28px"}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div style={{fontSize:17,fontWeight:900,color:"#174f35"}}>📧 メールテンプレート</div>
+        <div style={{fontSize:17,fontWeight:900,color:"#174f35",display:"flex",alignItems:"center",gap:7}}><MailIcon size={18} color="#174f35" /> メールテンプレート</div>
         <button onClick={addTpl} style={{padding:"7px 16px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>＋ テンプレート追加</button>
       </div>
       <div className="email-grid" style={{display:"grid",gridTemplateColumns:"260px 1fr",gap:16}}>
@@ -213,11 +213,15 @@ export function EmailPage({ leads, onUpdate, currentUser, candidateSlots = [], i
               {tpl&&(
                 <div style={{background:"#fff",borderRadius:12,border:"1px solid #e2f0e8",padding:"14px",display:"flex",flexDirection:"column",height:"calc(100vh - 180px)",boxSizing:"border-box",position:"sticky",top:16}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#174f35"}}>📝 メール本文（直接編集可）</div>
+                    <div style={{fontSize:12,fontWeight:700,color:"#174f35",display:"flex",alignItems:"center",gap:5}}><FileTextIcon size={13} color="#174f35" /> メール本文（直接編集可）</div>
                     <div style={{display:"flex",gap:6}}>
                       <button onClick={()=>{setPreviewSubj(subj);setPreviewBody(body);}} style={{padding:"5px 12px",borderRadius:7,border:"1px solid #c0dece",background:"#f0f5f2",color:"#3d7a5e",fontSize:11,cursor:"pointer",fontFamily:"inherit"}}>↩ リセット</button>
-                      <button onClick={saveGmailDraft} disabled={gmailSaving} style={{padding:"5px 14px",borderRadius:7,border:"none",background:gmailSaved?"#2563eb":gmailSaving?"#93c5fd":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",fontSize:12,fontWeight:700,cursor:gmailSaving?"not-allowed":"pointer",fontFamily:"inherit",opacity:gmailSaving?0.7:1}}>{gmailSaving?"保存中...":gmailSaved?"✅ 下書き保存済":"📨 Gmailに下書き保存"}</button>
-                      <button onClick={()=>copy(previewSubj+"\n\n"+previewBody)} style={{padding:"5px 14px",borderRadius:7,border:"none",background:copied?"#059669":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{copied?"✅ コピー済み":"📋 全文コピー"}</button>
+                      <button onClick={saveGmailDraft} disabled={gmailSaving} style={{padding:"5px 14px",borderRadius:7,border:"none",background:gmailSaved?"#2563eb":gmailSaving?"#93c5fd":"linear-gradient(135deg,#3b82f6,#2563eb)",color:"#fff",fontSize:12,fontWeight:700,cursor:gmailSaving?"not-allowed":"pointer",fontFamily:"inherit",opacity:gmailSaving?0.7:1,display:"flex",alignItems:"center",gap:5}}>
+                        {gmailSaving ? "保存中..." : gmailSaved ? <><CheckCircleIcon size={12} color="#fff" /> 下書き保存済</> : <><SendIcon size={12} color="#fff" /> Gmailに下書き保存</>}
+                      </button>
+                      <button onClick={()=>copy(previewSubj+"\n\n"+previewBody)} style={{padding:"5px 14px",borderRadius:7,border:"none",background:copied?"#059669":"linear-gradient(135deg,#10b981,#059669)",color:"#fff",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",display:"flex",alignItems:"center",gap:5}}>
+                        {copied ? <><CheckIcon size={12} color="#fff" /> コピー済み</> : <><ClipboardIcon size={12} color="#fff" /> 全文コピー</>}
+                      </button>
                     </div>
                   </div>
                   <div style={{marginBottom:8}}>

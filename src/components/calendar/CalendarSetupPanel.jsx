@@ -21,17 +21,26 @@ export function CalendarSetupPanel({ editCfg, setEditCfg, onSave, onClose, membe
       </div>
 
       <div style={{background:"#eff6ff",border:"1px solid #bfdbfe",borderRadius:8,padding:"12px 14px",marginBottom:14,fontSize:12,color:"#1e40af",lineHeight:1.9}}>
-        <div style={{fontWeight:700,marginBottom:6}}>📅 「カレンダーに登録」機能を使う場合の追加設定（管理者が1回だけ実施）</div>
+        <div style={{fontWeight:700,marginBottom:6}}>📅 候補日検索・カレンダー登録 OAuth設定（管理者が1回だけ実施）</div>
         <div>⑥ 「認証情報」→「OAuthクライアントID」を作成（種類：<b>ウェブアプリケーション</b>）</div>
         <div>　　→ 「承認済みJavaScriptオリジン」に <code style={{background:"#dbeafe",padding:"1px 4px",borderRadius:3}}>{window.location.origin}</code> を追加</div>
-        <div>⑦ 「OAuthの同意画面」でスコープに以下の2つを追加<br/>
-          　　<code style={{background:"#dbeafe",padding:"1px 4px",borderRadius:3}}>https://www.googleapis.com/auth/calendar.readonly</code>（空き時間の検索に必要）<br/>
-          　　<code style={{background:"#dbeafe",padding:"1px 4px",borderRadius:3}}>https://www.googleapis.com/auth/calendar.events</code>（予定の登録に必要）</div>
-        <div>⑧ 作成した <b>クライアントID</b> を ⚙️設定 &gt; APIキー設定 の「Gmail Client ID」欄に入力すれば全員が使用可能になります</div>
-        <div style={{marginTop:8,padding:"6px 10px",background:"#dbeafe",borderRadius:6,color:"#1e40af"}}>
-          💡 各営業は初回のみGoogleの認証ポップアップで「許可」を押すだけです。個別の設定は不要です。
+        <div style={{marginTop:4}}>⑦ Googleカレンダーへのアクセス許可（スコープ）を2つ追加する</div>
+        <div style={{marginLeft:16,marginTop:4,background:"#dbeafe",borderRadius:8,padding:"10px 12px",lineHeight:2}}>
+          <div style={{fontWeight:700,marginBottom:4}}>手順：</div>
+          <div>1. <a href="https://console.cloud.google.com/apis/credentials/consent" target="_blank" rel="noopener noreferrer" style={{color:"#1d4ed8"}}>Google Cloud Console → OAuth同意画面</a> を開く</div>
+          <div>2.「スコープを追加または削除」ボタンをクリック</div>
+          <div>3. 検索欄に <b>「calendar」</b> と入力</div>
+          <div>4. 以下の2つにチェックを入れる：</div>
+          <div style={{marginLeft:16}}>
+            ✅ <code style={{background:"#bfdbfe",padding:"1px 4px",borderRadius:3}}>.../auth/calendar.readonly</code>　← <b>空き時間の検索</b>に必要<br/>
+            ✅ <code style={{background:"#bfdbfe",padding:"1px 4px",borderRadius:3}}>.../auth/calendar.events</code>　← <b>予定の登録</b>に必要
+          </div>
+          <div>5.「更新」→「保存して次へ」をクリックして完了</div>
         </div>
-        <div style={{marginTop:6,color:"#1d4ed8",fontWeight:600}}>※ 空き時間の検索（候補日検索）・カレンダーへの予定登録ともにOAuth認証（Client ID）が必要です。初回の検索時にGoogleの認証ポップアップが表示されます。</div>
+        <div style={{marginTop:8}}>⑧ 作成した <b>クライアントID</b> を ⚙️設定 &gt; APIキー設定 の「Gmail Client ID」欄に入力すれば全員が使用可能になります</div>
+        <div style={{marginTop:8,padding:"6px 10px",background:"#dbeafe",borderRadius:6,color:"#1e40af"}}>
+          💡 各メンバーは初回の候補日検索時にGoogleの認証ポップアップが表示されます。「許可」を押すだけでOKです。個別の追加設定は不要です。
+        </div>
       </div>
 
       <div style={{marginBottom:10}}>

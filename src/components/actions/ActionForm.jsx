@@ -60,7 +60,7 @@ export function ActionForm({ onSave, onClose, initial }) {
         </div>
         <textarea value={summary} onChange={e => setSummary(e.target.value)} rows={2}
           placeholder="内容を簡単にメモ… （🎤で音声入力）"
-          style={{ ...S.inp, resize: "none", lineHeight: 1.6, fontFamily: "inherit" }} />
+          style={{ ...S.inp, resize: "vertical", minHeight: 52, lineHeight: 1.6, fontFamily: "inherit" }} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
         <div>

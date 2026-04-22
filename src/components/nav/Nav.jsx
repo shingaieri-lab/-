@@ -2,6 +2,15 @@
 import { useState } from 'react';
 import { DashboardIcon, TrendIcon, UsersIcon, SparkleIcon, CalendarNavIcon, MailIcon, GearIcon } from '../ui/Icons.jsx';
 import mokumokuImg from '../../assets/mokumoku.png';
+import mokumokuMorningImg from '../../assets/mokumoku-morning.png';
+import mokumokuEveningImg from '../../assets/mokumoku-evening.png';
+
+function getMokumokuImg() {
+  const hour = parseInt(new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', hour: 'numeric', hour12: false }).format(new Date()));
+  if (hour >= 9 && hour < 10) return mokumokuMorningImg;
+  if (hour >= 16) return mokumokuEveningImg;
+  return mokumokuImg;
+}
 
 const NAV_ITEMS = [
   { id: "dashboard", Icon: DashboardIcon,   label: "ダッシュボード" },
@@ -60,7 +69,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
 
   return (
     <nav style={{ width:96, background:"#0f3d2a", display:"flex", flexDirection:"column", alignItems:"center", padding:"12px 0 10px", flexShrink:0, zIndex:10 }}>
-      <div style={{ marginBottom:10 }}><img src={mokumokuImg} alt="もくもくさん" style={{ width:64, height:64, objectFit:"contain", display:"block" }} /></div>
+      <div style={{ marginBottom:10 }}><img src={getMokumokuImg()} alt="もくもくさん" style={{ width:64, height:64, objectFit:"contain", display:"block" }} /></div>
       <div style={{ width:48, height:1, background:"#ffffff18", marginBottom:6 }} />
       <div style={{ display:"flex", flexDirection:"column", gap:2, width:"100%", padding:"0 8px", alignItems:"center", flex:1, boxSizing:"border-box" }}>
         {NAV_ITEMS.map(item => (

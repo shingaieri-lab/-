@@ -74,7 +74,7 @@ export function Nav({ page, setPage, setSettingsTab, count, currentUser, onLogou
 
   return (
     <nav style={{ width:110, background:"#0f3d2a", display:"flex", flexDirection:"column", alignItems:"center", padding:"12px 0 10px", flexShrink:0, zIndex:10 }}>
-      <div style={{ marginBottom:10 }}><img src={currentMokumokuImg} alt="もくもくさん" style={{ width:70, height:70, objectFit:"contain", display:"block" }} /></div>
+      <div style={{ marginBottom:10, flexShrink:0 }}><img src={currentMokumokuImg} alt="もくもくさん" style={{ width:70, height:70, objectFit:"contain", display:"block" }} /></div>
       <div style={{ width:48, height:1, background:"#ffffff18", marginBottom:6 }} />
       <div style={{ display:"flex", flexDirection:"column", gap:2, width:"100%", padding:"0 8px", alignItems:"center", flex:1, boxSizing:"border-box" }}>
         {NAV_ITEMS.map(item => (

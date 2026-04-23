@@ -164,8 +164,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
               <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0, flex: 1 }}>
                 {!editNA && overdue && <span style={{ fontSize: 10, background: "#ef4444", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>期限切れ</span>}
                 {!editNA && today   && <span style={{ fontSize: 10, background: "#f97316", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>本日</span>}
-                {!editNA && soon && !today && !overdue && <span style={{ fontSize: 10, background: "#f97316", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>まもなく</span>}
-                <span style={{ color: overdue ? "#dc2626" : today ? "#ea580c" : "#059669" }}>→</span>
+                {!editNA && soon && !today && !overdue && <span style={{ fontSize: 10, background: "#8b5cf6", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>まもなく</span>}
+                <span style={{ color: overdue ? "#dc2626" : today ? "#ea580c" : soon ? "#7c3aed" : "#059669" }}>→</span>
                 {editNA ? (
                   <>
                     <input type="date" value={naDate} onChange={e => setNADate(e.target.value)}
@@ -181,7 +181,7 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
                     </select>
                   </>
                 ) : (
-                  nad && <span style={{ fontWeight: 700, color: overdue ? "#dc2626" : today ? "#ea580c" : "#059669" }}>{nad}{lead.next_action_time ? " " + lead.next_action_time : ""}</span>
+                  nad && <span style={{ fontWeight: 700, color: overdue ? "#dc2626" : today ? "#ea580c" : soon ? "#7c3aed" : "#059669" }}>{nad}{lead.next_action_time ? " " + lead.next_action_time : ""}</span>
                 )}
               </div>
               {!readOnly && (

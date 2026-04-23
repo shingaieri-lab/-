@@ -88,7 +88,7 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
         const overdue  = isOverdue(nad);
         const today    = isDueToday(nad);
         const soon     = isDueSoon(nad);
-        const dateColor = overdue ? "#dc2626" : today ? "#ea580c" : "#059669";
+        const dateColor = overdue ? "#dc2626" : today ? "#ea580c" : soon ? "#7c3aed" : "#059669";
         return (
           <div style={{...S.leadQuick,background:"transparent", borderTop:"1px solid #e8f5ee",padding:"5px 14px"}} onClick={e=>e.stopPropagation()}>
             {lead.zoho_url && (
@@ -107,7 +107,7 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
               <div style={{...S.nextActInline, flex:1}}>
                 {overdue && <span style={{fontSize:11,background:"#ef4444",color:"#fff",borderRadius:4,padding:"1px 6px", marginRight:6,fontWeight:700}}>期限切れ</span>}
                 {today   && <span style={{fontSize:11,background:"#f97316",color:"#fff",borderRadius:4,padding:"1px 6px", marginRight:6,fontWeight:700}}>本日</span>}
-                {soon && !today && !overdue && <span style={{fontSize:11,background:"#f97316",color:"#fff",borderRadius:4,padding:"1px 6px", marginRight:6,fontWeight:700}}>まもなく</span>}
+                {soon && !today && !overdue && <span style={{fontSize:11,background:"#8b5cf6",color:"#fff",borderRadius:4,padding:"1px 6px", marginRight:6,fontWeight:700}}>まもなく</span>}
                 <span style={{color:dateColor, marginRight:4}}>→</span>
                 {nad && <span style={{fontWeight:700, marginRight:4,color:dateColor}}>{nad}{lead.next_action_time ? " "+lead.next_action_time : ""}</span>}
               </div>

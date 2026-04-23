@@ -107,7 +107,7 @@ export function AIResultPanel({
               <div style={{background:"#fff",borderRadius:8,padding:"10px 16px",flex:1,minWidth:100}}>
                 <div style={{fontSize:11,color:"#6a9a7a",marginBottom:3}}>実施タイミング</div>
                 <div style={{fontSize:17,fontWeight:700,color:natAccent}}>{result.next_action_date_offset?`${result.next_action_date_offset}営業日後`:"—"}</div>
-                {result.next_action_date_offset&&<div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>{addBizDays(actionDate,result.next_action_date_offset)}</div>}
+                {(result.next_action_date||result.next_action_date_offset)&&<div style={{fontSize:11,color:"#6a9a7a",marginTop:2}}>{result.next_action_date||addBizDays(actionDate,result.next_action_date_offset)}</div>}
               </div>
               <div style={{background:"#fff",borderRadius:8,padding:"10px 16px",flex:1,minWidth:80}}>
                 <div style={{fontSize:11,color:"#6a9a7a",marginBottom:3}}>推奨時間</div>
@@ -116,8 +116,8 @@ export function AIResultPanel({
             </div>
             {result.next_action_memo&&<div style={{background:"#fff",borderRadius:8,padding:"10px 14px",fontSize:13,color:"#059669",fontWeight:600,lineHeight:1.6}}>{result.next_action_memo}</div>}
             <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",paddingTop:4}}>
-              <button onClick={onSaveCalTodo} disabled={aiCalSaving||!selLead||!result?.next_action_date_offset}
-                style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"#7c3aed22",color:aiCalSaved?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:7,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:(aiCalSaving||!selLead||!result?.next_action_date_offset)?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||!result?.next_action_date_offset)?0.5:1,display:"flex",alignItems:"center",gap:5}}>
+              <button onClick={onSaveCalTodo} disabled={aiCalSaving||!selLead||(!result?.next_action_date&&!result?.next_action_date_offset)}
+                style={{background:aiCalSaved?"#7c3aed":aiCalSaving?"#4c1d9566":"#7c3aed22",color:aiCalSaved?"#fff":"#7c3aed",border:"1px solid #c4b5fd",borderRadius:7,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:(aiCalSaving||!selLead||(!result?.next_action_date&&!result?.next_action_date_offset))?"not-allowed":"pointer",fontFamily:"inherit",opacity:(aiCalSaving||!selLead||(!result?.next_action_date&&!result?.next_action_date_offset))?0.5:1,display:"flex",alignItems:"center",gap:5}}>
                 {aiCalSaving ? "作成中..." : aiCalSaved
                   ? <><CheckCircleIcon size={13} color="#fff" /> タスク作成済</>
                   : <><CheckIcon size={13} color="#7c3aed" /> GoogleタスクTODO</>}

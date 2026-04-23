@@ -155,9 +155,7 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
       <div>
         <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
           <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a"}}>メンバー一覧</div>
-          {!editingId && !showAddForm && (
-            <button onClick={() => setShowAddForm(true)} style={{padding:"6px 14px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>＋ アカウントを追加</button>
-          )}
+          <button onClick={() => { setEditingId(null); setShowAddForm(true); setForm({ id:"", name:"", password:"", role:"member", color:PALETTE[0], email:"", signature:"", isStaff:false }); setErr(""); }} style={{padding:"6px 14px", borderRadius:7, border:"none", background:"linear-gradient(135deg,#10b981,#059669)", color:"#fff", fontSize:12, fontWeight:700, cursor:"pointer", fontFamily:"inherit"}}>＋ アカウントを追加</button>
         </div>
         {accounts.map(a => (
           <div key={a.id} style={{borderRadius:9, border:"1px solid #d8ede1", marginBottom:6, overflow:"hidden"}}>

@@ -88,7 +88,7 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
         const overdue  = isOverdue(nad);
         const today    = isDueToday(nad);
         const soon     = isDueSoon(nad);
-        const dateColor = overdue ? "#dc2626" : today ? "#ea580c" : soon ? "#9061f9" : "#059669";
+        const dateColor = overdue ? "#dc2626" : today ? "#ea580c" : "#059669";
         return (
           <div style={{...S.leadQuick,background:"transparent", borderTop:"1px solid #e8f5ee",padding:"5px 14px"}} onClick={e=>e.stopPropagation()}>
             {lead.zoho_url && (

@@ -8,7 +8,7 @@ import { VoiceButton } from './VoiceButton.jsx';
 
 export function ActionForm({ onSave, onClose, initial }) {
   const [type,      setType]      = useState(initial?.type      || "call");
-  const [result,    setResult]    = useState(initial?.result    || "繋がった");
+  const [result,    setResult]    = useState(initial?.result && ACTION_RESULTS.includes(initial.result) ? initial.result : ACTION_RESULTS[0]);
   const [summary,   setSummary]   = useState(initial?.summary   || "");
   const [date,      setDate]      = useState(initial?.date      || TODAY);
   const [time,      setTime]      = useState(() => {

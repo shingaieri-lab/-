@@ -66,11 +66,12 @@ export const PALETTE = ["#7c3aed","#0369a1","#059669","#d97706","#dc2626","#0891
 
 // アクション結果に基づく次アクション自動提案ルール
 export const NEXT_ACTION_RULES = [
-  { result:"繋がった",  type:"call",    days:7,  memo:"状況確認の架電",      label:"1週間後に状況確認" },
-  { result:"不在",      type:"call",    days:3,  memo:"再架電",              label:"3営業日後に再架電" },
-  { result:"不通",      type:"call",    days:5,  memo:"再架電（別時間帯）",   label:"5営業日後に別時間帯で架電" },
-  { result:"送信済",    type:"email",   days:2,  memo:"開封・返信確認",       label:"2日後に開封確認" },
-  { result:"その他",    type:"call",    days:5,  memo:"フォローアップ",       label:"5営業日後にフォロー" },
+  { result:"取次",   type:"call",    days:7,  memo:"状況確認の架電",      label:"1週間後に状況確認" },
+  { result:"不在",   type:"call",    days:3,  memo:"再架電",              label:"3営業日後に再架電" },
+  { result:"不通",   type:"call",    days:5,  memo:"再架電（別時間帯）",   label:"5営業日後に別時間帯で架電" },
+  { result:"折電",   type:"call",    days:1,  memo:"折り返し架電",        label:"翌営業日に折り返し" },
+  { result:"送信済", type:"email",   days:2,  memo:"開封・返信確認",       label:"2日後に開封確認" },
+  { result:"その他", type:"call",    days:5,  memo:"フォローアップ",       label:"5営業日後にフォロー" },
 ];
 
 // ACTION_TYPES からアクション種別を検索するヘルパー

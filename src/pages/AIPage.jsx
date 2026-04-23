@@ -4,6 +4,7 @@ import { AIResultPanel } from '../components/ai/AIResultPanel.jsx';
 import { AIInputPanel } from '../components/ai/AIInputPanel.jsx';
 import { SparkleIcon, CheckCircleIcon, AlertIcon } from '../components/ui/Icons.jsx';
 import { JP_HOLIDAYS, addBizDays } from '../lib/holidays.js';
+import { ACTION_RESULTS } from '../lib/constants.js';
 import { getEffectiveAiConfig } from '../lib/accounts.js';
 import { acquireGmailToken, buildGmailDraftRaw, postGmailDraft, isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../lib/oauth.js';
 
@@ -122,6 +123,16 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
         const jsonMatch=cleaned.match(/\{[\s\S]*\}/);
         if(!jsonMatch) throw new Error("レスポンスからJSONを抽出できませんでした。AIの返答: "+cleaned.slice(0,200));
         parsed=JSON.parse(jsonMatch[0]);
+      }
+      // action_result を選択肢の6値に正規化（AIが独自表現で返した場合のフォールバック）
+      if(parsed.action_result && !ACTION_RESULTS.includes(parsed.action_result)){
+        const r = parsed.action_result;
+        if(/繋がった|取り次|取次|接続|出た|担当者と話/.test(r)) parsed.action_result="取次";
+        else if(/不在|留守|いない|外出/.test(r)) parsed.action_result="不在";
+        else if(/不通|繋がらない|出ない|呼び出し|話し中|電源|圏外/.test(r)) parsed.action_result="不通";
+        else if(/折電|折り返し|コールバック/.test(r)) parsed.action_result="折電";
+        else if(/送信|送付|メール|SMS/.test(r)) parsed.action_result="送信済";
+        else parsed.action_result="その他";
       }
       // next_action_timeを営業時間（9〜18時、12〜13時除外）に補正
       if(parsed.next_action_time) parsed.next_action_time=clampToBusinessTime(parsed.next_action_time);

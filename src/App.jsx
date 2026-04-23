@@ -139,7 +139,7 @@ export function App() {
       <style>{CSS}</style>
       <Nav page={page} setPage={navigate} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} isMobile={isMobile} />
       {showWizard && <SetupWizard currentUser={currentUser} onUpdateProfile={updateMyProfile} onSave={saveAiConfig} aiConfig={effectiveAiConfig} onClose={() => setShowWizard(false)} />}
-      <main style={{...mainStyle, paddingBottom: isMobile ? 65 : 0}}>
+      <main style={{...mainStyle, paddingBottom: isMobile ? 65 : 0, ...(page === "trend" ? { overflow: "hidden", display: "flex", flexDirection: "column" } : {})}}>
         {page === "dashboard" && <DashboardPage leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); navigate("leads"); }} masterVer={masterVer} isMobile={isMobile} />}
         {page === "trend"     && <Trend leads={leads} />}
         {page === "leads"     && <LeadsPage leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} initialOpenId={aiOpenLeadId} onOpenIdConsumed={()=>setAiOpenLeadId(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={false}

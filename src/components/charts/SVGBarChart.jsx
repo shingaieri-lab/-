@@ -16,7 +16,7 @@ export function SVGBarChart({ data, keys, colors, height = 200 }) {
 
   return (
     <div style={{ position: "relative", width: "100%" }}>
-      <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: H, display: "block" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: H, display: "block" }}>
         {yTicks.map((v, i) => {
           const y = padT + chartH - (v / maxVal) * chartH;
           return (

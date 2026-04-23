@@ -56,6 +56,20 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
     sessionStorage.removeItem(SS_KEY);
   };
 
+  // 1日あたりのネクストアクション登録上限（これを超える日は翌営業日へずらす）
+  const NEXT_ACTION_DAILY_LIMIT = 4;
+
+  // 上限に達していない最も近い営業日を返す（最大60営業日先まで探す）
+  const findAvailableNextDate = (proposedDate) => {
+    let date = proposedDate;
+    for (let i = 0; i < 60; i++) {
+      const count = leads.filter(l => l.next_action_date === date).length;
+      if (count < NEXT_ACTION_DAILY_LIMIT) return date;
+      date = addBizDays(date, 1);
+    }
+    return proposedDate;
+  };
+
   // AIが提案する時間を営業時間（9〜18時、12〜13時除外）に補正する
   const clampToBusinessTime=(timeStr)=>{
     if(!timeStr) return "10:00";
@@ -111,6 +125,11 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
       }
       // next_action_timeを営業時間（9〜18時、12〜13時除外）に補正
       if(parsed.next_action_time) parsed.next_action_time=clampToBusinessTime(parsed.next_action_time);
+      // 1日上限（4件）を超える日はずらして確定日を next_action_date に格納
+      if(parsed.next_action_date_offset!=null){
+        const proposed=addBizDays(actionDate,parsed.next_action_date_offset);
+        parsed.next_action_date=findAvailableNextDate(proposed);
+      }
       // AI生成後：リード選択・ログイン情報から会社名・担当者名・署名・送信者名を自動反映
       const leadContact=lead?.contact||lead?.company||"";
       const leadSurname=leadContact.split(/[ \u3000]/)[0]||leadContact;
@@ -129,7 +148,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
 
   const saveToLead=()=>{
     if(!result||!selLead) return;
-    const nextDate=result.next_action_date_offset?addBizDays(actionDate,result.next_action_date_offset):"";
+    const nextDate=result.next_action_date||(result.next_action_date_offset?addBizDays(actionDate,result.next_action_date_offset):"");
     if(savedActId){
       const updatedActs=(lead.actions||[]).map(a=>a.id===savedActId?{...a,type:result.action_type||manualType,result:result.action_result||manualResult,summary:memo,date:actionDate,time:actionTime,nextDate,nextTime:result.next_action_time||"",next:result.next_action_memo||"",talkPoints:(result.followup_talk_points||[]).slice(0,4),ts:new Date().toISOString(),recorded_by:currentUser?.name||""}:a);
       onUpdate(lead.id,{actions:updatedActs,next_action_date:nextDate,next_action_time:result.next_action_time||lead.next_action_time||"",next_action:result.next_action_memo||lead.next_action||""});
@@ -156,7 +175,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
       setTimeout(() => setAiGmailSaved(false), 3000);
       // メール送信後の追客をネクストアクションとして自動設定（AIの分析結果を使用）
       if (selLead && lead && result) {
-        const followUpDate = result.next_action_date_offset ? addBizDays(actionDate, result.next_action_date_offset) : "";
+        const followUpDate = result.next_action_date || (result.next_action_date_offset ? addBizDays(actionDate, result.next_action_date_offset) : "");
         if (followUpDate) {
           onUpdate(lead.id, {
             next_action_date: followUpDate,
@@ -178,7 +197,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
     const clientId = cfg.gmailClientId;
     if (!clientId) { alert(currentUser?.role === "admin" ? "設定 > APIキー設定 で Gmail Client ID を入力してください" : "管理者にGmail OAuth Client IDの設定を依頼してください"); return; }
     if (!selLead || !lead) { alert("リードを選択してください"); return; }
-    const nextDate = result?.next_action_date_offset ? addBizDays(actionDate, result.next_action_date_offset) : "";
+    const nextDate = result?.next_action_date || (result?.next_action_date_offset ? addBizDays(actionDate, result.next_action_date_offset) : "");
     const nextTime = result?.next_action_time || "";
     if (!nextDate) { alert("ネクストアクション日が設定されていません"); return; }
     setAiCalSaving(true);

@@ -57,6 +57,10 @@
 - コード品質・React → `docs/CODE_RULES.md`
 - 同時実行・競合状態 → `docs/CONCURRENCY_RULES.md`
 
+# 積み残しタスク
+
+- 【Zoho行動同期の記録者名】`push-action` はシステム共通のOAuthトークンで実行されるため、Zoho上の行動の作成者が常に管理者名になる。`field2`（アクション履歴）に `記録者: {is_member名}` を含めることで対応可能。要実装。
+
 # Claudeの回答スタイル
 
 初めてツール開発に取り組む人にもわかりやすく説明する。

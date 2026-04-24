@@ -166,11 +166,13 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
   if (!zohoLeadId || !action) return res.status(400).json({ error: 'パラメータ不足' });
 
   try {
+    const leads = (await readData('leads')) || [];
+    const storedLead = leads.find(l => l.zoho_lead_id === zohoLeadId);
+    const contactName = storedLead?.contact || '';
+
     const dateStr = action.date || new Date().toISOString().slice(0, 10);
     const timeStr = action.time || '09:00';
     const callStartTime = `${dateStr}T${timeStr}:00+09:00`;
-
-    const typeLabels = { call: '電話', email: 'メール', sms: 'SMS', other: 'その他' };
 
     const lines = [action.summary || ''];
     if (action.result) lines.push(`結果: ${action.result}`);
@@ -185,7 +187,7 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
         Call_Start_Time: callStartTime,
         Call_Purpose: '追客',
         Description: description,
-        Who_Id: { id: zohoLeadId },
+        Who_Id: { id: zohoLeadId, name: contactName },
         $se_module: 'Leads',
       }],
     });

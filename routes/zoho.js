@@ -111,6 +111,7 @@ router.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) =>
 
     const zohoIsValue = zl[isField] || '';
     const today = new Date().toISOString().slice(0, 10);
+    const zohoDomain = getZohoDomain(cfg?.dataCenter);
     const lead = {
       id: 'zoho-' + zohoLeadId + '-' + Date.now(),
       date: today,
@@ -124,6 +125,7 @@ router.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) =>
       hp_url: zl.Website || '',
       status: statusMap[zl.Lead_Status] || zl.Lead_Status || '',
       zoho_lead_id: zl.id,
+      zoho_url: `https://crm.${zohoDomain}/crm/tab/Leads/${zl.id}`,
       zoho_lead_type: zl.Lead_Type || '',
       zoho_synced_at: new Date().toISOString(),
     };
@@ -335,6 +337,7 @@ router.post('/api/zoho/webhook', async (req, res) => {
           hp_url: zl.Website || '',
           status: statusMap[zl.Lead_Status] || zl.Lead_Status || '',
           zoho_lead_id: zohoId,
+          zoho_url: `https://crm.${getZohoDomain(cfg?.dataCenter)}/crm/tab/Leads/${zohoId}`,
           zoho_lead_type: zl.Lead_Type || '',
           zoho_synced_at: new Date().toISOString(),
         };

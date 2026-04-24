@@ -182,13 +182,11 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
 
     const data = await zohoApi('POST', '/Calls', {
       data: [{
-        Subject: '電話）インバウンド',
+        Subject: `電話）インバウンド${contactName ? `（${contactName}）` : ''}`,
         Call_Type: 'Inbound',
         Call_Start_Time: callStartTime,
         Call_Purpose: '追客',
         Description: description,
-        Who_Id: zohoLeadId,
-        $se_module: 'Leads',
       }],
     });
 

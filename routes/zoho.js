@@ -182,7 +182,7 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
 
     const data = await zohoApi('POST', '/Event', {
       data: [{
-        Event_Title: '電話）インバウンド',
+        Name: '電話）インバウンド',
         Start_DateTime: startDateTime,
         End_DateTime: endDateTime,
         field: '追客',

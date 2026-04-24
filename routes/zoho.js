@@ -160,7 +160,7 @@ router.post('/api/zoho/update-lead-status', requireAuth, rateLimit, async (req, 
   }
 });
 
-// アクション履歴をZohoに行動（Calls）として登録
+// アクション履歴をZohoに行動（Events）として登録
 router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) => {
   const { zohoLeadId, action } = req.body;
   if (!zohoLeadId || !action) return res.status(400).json({ error: 'パラメータ不足' });
@@ -172,7 +172,7 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
 
     const dateStr = action.date || new Date().toISOString().slice(0, 10);
     const timeStr = action.time || '09:00';
-    const callStartTime = `${dateStr}T${timeStr}:00+09:00`;
+    const startDateTime = `${dateStr}T${timeStr}:00+09:00`;
 
     const lines = [action.summary || ''];
     if (action.result) lines.push(`結果: ${action.result}`);
@@ -180,13 +180,14 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     if (action.nextDate) lines.push(`次回日時: ${action.nextDate}${action.nextTime ? ' ' + action.nextTime : ''}`);
     const description = lines.filter(Boolean).join('\n') || '（内容なし）';
 
-    const data = await zohoApi('POST', '/Calls', {
+    const data = await zohoApi('POST', '/Events', {
       data: [{
-        Subject: `電話）インバウンド${contactName ? `（${contactName}）` : ''}`,
-        Call_Type: 'Inbound',
-        Call_Start_Time: callStartTime,
-        Call_Purpose: '追客',
+        Event_Title: '電話）インバウンド',
+        Start_DateTime: startDateTime,
+        End_DateTime: startDateTime,
         Description: description,
+        Who_Id: { id: zohoLeadId, name: contactName },
+        $se_module: 'Leads',
       }],
     });
 
@@ -195,6 +196,16 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     } else {
       res.status(500).json({ error: '行動作成失敗', detail: data });
     }
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// [DEBUG] Eventsモジュールのフィールド一覧取得（API名確認用・確認後に削除）
+router.get('/api/zoho/debug-fields', requireAuth, async (req, res) => {
+  try {
+    const data = await zohoApi('GET', '/settings/fields?module=Events');
+    res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

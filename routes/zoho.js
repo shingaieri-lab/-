@@ -35,7 +35,6 @@ router.get('/api/zoho/auth', requireAuth, async (req, res) => {
     'ZohoCRM.modules.Accounts.CREATE',
     'ZohoCRM.modules.Contacts.CREATE',
     'ZohoCRM.modules.Deals.CREATE',
-    'ZohoCRM.settings.fields.ALL',
   ].join(',');
 
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -167,11 +166,7 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
   if (!zohoLeadId || !action) return res.status(400).json({ error: 'パラメータ不足' });
 
   try {
-    const leads = (await readData('leads')) || [];
-    const storedLead = leads.find(l => l.zoho_lead_id === zohoLeadId);
-    const contactName = storedLead?.contact || '';
-
-    const dateStr = action.date || new Date().toISOString().slice(0, 10);
+    const dateStr = action.date || new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
     const timeStr = action.time || '09:00';
     const startDateTime = `${dateStr}T${timeStr}:00+09:00`;
 
@@ -181,14 +176,17 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     if (action.nextDate) lines.push(`次回日時: ${action.nextDate}${action.nextTime ? ' ' + action.nextTime : ''}`);
     const description = lines.filter(Boolean).join('\n') || '（内容なし）';
 
+    const typeToMethod = { call: '電話', email: 'メール', sms: 'SMS', other: 'その他' };
+    const method = typeToMethod[action.type] || 'その他';
+
     const data = await zohoApi('POST', '/Events', {
       data: [{
         Event_Title: '電話）インバウンド',
         Start_DateTime: startDateTime,
         End_DateTime: startDateTime,
-        Description: description,
-        Who_Id: { id: zohoLeadId, name: contactName },
-        $se_module: 'Leads',
+        field: '追客',
+        field1: method,
+        field9: description,
       }],
     });
 
@@ -197,16 +195,6 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     } else {
       res.status(500).json({ error: '行動作成失敗', detail: data });
     }
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// [DEBUG] Eventsモジュールのフィールド一覧取得（API名確認用・確認後に削除）
-router.get('/api/zoho/debug-fields', requireAuth, async (req, res) => {
-  try {
-    const data = await zohoApi('GET', '/settings/fields?module=Events');
-    res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

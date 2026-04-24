@@ -31,6 +31,7 @@ router.get('/api/zoho/auth', requireAuth, async (req, res) => {
   const domain = getZohoDomain(cfg.dataCenter);
   const scopes = [
     'ZohoCRM.modules.ALL',
+    'ZohoCRM.settings.fields.ALL',
   ].join(',');
 
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;

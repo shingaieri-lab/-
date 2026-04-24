@@ -183,7 +183,6 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
       data: [{
         Event_Title: '電話）インバウンド',
         Start_DateTime: startDateTime,
-        End_DateTime: startDateTime,
         field: '追客',
         field1: method,
         field9: description,

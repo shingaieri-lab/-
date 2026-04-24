@@ -1,5 +1,5 @@
 // リード一覧ページ（フィルター・ソート・インポート・アクション履歴パネル）
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { S } from '../styles/index.js';
 import { Header } from '../components/ui/Layout.jsx';
 import { CSVImport } from '../components/leads/CSVImport.jsx';
@@ -32,18 +32,6 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
   const [sort, setSort] = useState("fixed");
   const [sortDir, setSortDir] = useState("asc");
   const [openId, setOpenId] = useState(null);
-
-  const zohoIdMigrated = useRef(false);
-  useEffect(() => {
-    if (zohoIdMigrated.current || leads.length === 0) return;
-    zohoIdMigrated.current = true;
-    leads.forEach(l => {
-      if (!l.zoho_lead_id && l.zoho_url) {
-        const id = l.zoho_url.match(/\/(\d+)\/?$/)?.[1];
-        if (id) onUpdate(l.id, { zoho_lead_id: id });
-      }
-    });
-  }, [leads.length]);
 
   useEffect(() => {
     if (!initialFilter) return;

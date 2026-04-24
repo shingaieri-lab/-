@@ -166,11 +166,6 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     const dateStr = action.date || new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
     const timeStr = action.time || '09:00';
     const startDateTime = `${dateStr}T${timeStr}:00+09:00`;
-    const endDate = new Date(`${dateStr}T${timeStr}:00+09:00`);
-    endDate.setMinutes(endDate.getMinutes() + 30);
-    const endDateStr = endDate.toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
-    const endTimeStr = endDate.toLocaleTimeString('sv', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit' });
-    const endDateTime = `${endDateStr}T${endTimeStr}:00+09:00`;
 
     const lines = [action.summary || ''];
     if (action.result) lines.push(`結果: ${action.result}`);
@@ -183,12 +178,12 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
 
     const data = await zohoApi('POST', '/Event', {
       data: [{
-        Name: '電話）インバウンド',
-        Start_DateTime: startDateTime,
-        End_DateTime: endDateTime,
-        field: '追客',
-        field1: method,
-        field9: description,
+        field34: '電話）インバウンド',
+        field12: startDateTime,
+        field24: '追客',
+        field22: method,
+        field2: description,
+        Migrated_859857062: { id: zohoLeadId },
       }],
     });
 

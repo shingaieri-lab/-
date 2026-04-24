@@ -131,15 +131,6 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" }}>
-            {!readOnly && lead.status === "商談確定" && zohoAuthenticated && !lead.zoho_deal_id && (
-              <button onClick={createZohoDeal} disabled={zohoCreating}
-                style={{ background: zohoCreating ? "#9ca3af" : "linear-gradient(135deg,#0ea5e9,#0284c7)", border: "none", borderRadius: 6, cursor: zohoCreating ? "default" : "pointer", color: "#fff", fontSize: 11, padding: "3px 9px", fontWeight: 700, lineHeight: 1.4 }}>
-                {zohoCreating ? "作成中..." : <><ExternalLinkIcon size={11} color="#fff" /> Zoho商談作成</>}
-              </button>
-            )}
-            {!readOnly && lead.status === "商談確定" && lead.zoho_deal_id && (
-              <span style={{ fontSize: 11, color: "#0ea5e9", fontWeight: 700, padding: "3px 8px", background: "#e0f2fe", border: "1px solid #7dd3fc", borderRadius: 6, display:"flex", alignItems:"center", gap:3 }}><CheckCircleIcon size={11} color="#0ea5e9" /> Zoho商談済</span>
-            )}
             <button onClick={copyDealInfo} style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", background: dealCopied ? "#10b981" : "none", border: `1px solid ${dealCopied ? "#10b981" : "#10b98166"}`, borderRadius: 6, cursor: "pointer", color: dealCopied ? "#fff" : "#059669", fontSize: 12, padding: "2px 8px", lineHeight: 1.4, fontWeight: 600, transition: "all 0.2s" }}>
               {dealCopied ? <><CheckIcon size={12} color={dealCopied ? "#fff" : "#059669"} /> コピー済み</> : <><ClipboardIcon size={12} color="#059669" /> 商談共有用</>}
             </button>

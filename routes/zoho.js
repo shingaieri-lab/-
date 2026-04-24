@@ -167,14 +167,12 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     const timeStr = action.time || '09:00';
     const startDateTime = `${dateStr}T${timeStr}:00+09:00`;
 
-    const lines = [action.summary || ''];
-    if (action.result) lines.push(`結果: ${action.result}`);
-    if (action.next) lines.push(`次回アクション: ${action.next}`);
-    if (action.nextDate) lines.push(`次回日時: ${action.nextDate}${action.nextTime ? ' ' + action.nextTime : ''}`);
-    const description = lines.filter(Boolean).join('\n') || '（内容なし）';
-
     const typeToMethod = { call: '電話', email: 'メール', sms: 'SMS', other: 'その他' };
     const method = typeToMethod[action.type] || 'その他';
+
+    const leads = (await readData('leads')) || [];
+    const storedLead = leads.find(l => l.zoho_lead_id === zohoLeadId);
+    const contactName = storedLead?.contact || '';
 
     const data = await zohoApi('POST', '/Event', {
       data: [{
@@ -183,8 +181,8 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
         field12: startDateTime,
         field24: '追客',
         field22: method,
-        field2: description,
-        Migrated_859857062: { id: zohoLeadId },
+        field2: action.summary || '',
+        field16: { id: zohoLeadId, name: contactName },
       }],
     });
 

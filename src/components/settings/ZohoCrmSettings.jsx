@@ -1,6 +1,6 @@
 // Zoho CRM連携設定（認証・マッピング・Webhook情報）
 import { useState } from 'react';
-import { getSalesMembers, getStatuses } from '../../lib/master.js';
+import { getISMembers, getStatuses } from '../../lib/master.js';
 import { ExternalLinkIcon, CheckCircleIcon, AlertIcon, InboxIcon, UploadIcon, PinIcon } from '../ui/Icons.jsx';
 
 export function ZohoCrmSettings() {
@@ -174,7 +174,7 @@ export function ZohoCrmSettings() {
           <span style={{color:'#9ca3af',fontSize:14,flexShrink:0}}>→</span>
           <select value={newMemberLocal} onChange={e=>setNewMemberLocal(e.target.value)} style={{...inp,flex:1,minWidth:130}}>
             <option value="">本ツールのメンバー選択</option>
-            {getSalesMembers().map(m=><option key={m} value={m}>{m}</option>)}
+            {getISMembers().map(m=><option key={m} value={m}>{m}</option>)}
           </select>
           <button onClick={addMemberMap} style={{...btnP,padding:'7px 12px',fontSize:11,flexShrink:0}}>追加</button>
         </div>

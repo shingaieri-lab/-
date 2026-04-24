@@ -172,8 +172,12 @@ export function LeadForm({ initial, onSave, onClose }) {
 
           <div>
             <label style={S.lbl}>Zoho CRM URL</label>
-            <input value={d.zoho_url} onChange={e => set("zoho_url", e.target.value)}
-              placeholder="https://crm.zoho.com/crm/..." style={S.inp} />
+            <input value={d.zoho_url} onChange={e => {
+              const url = e.target.value;
+              set("zoho_url", url);
+              const id = url.match(/\/(\d+)\/?$/)?.[1];
+              if (id) set("zoho_lead_id", id);
+            }} placeholder="https://crm.zoho.com/crm/..." style={S.inp} />
           </div>
           <div style={{marginTop:10}}>
             <label style={S.lbl}>HP URL</label>

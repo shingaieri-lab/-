@@ -1,5 +1,5 @@
 // アクション履歴パネル（リード詳細 + アクション一覧 + Zoho連携）
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { S } from '../../styles/index.js';
 import { PencilIcon, TrashIcon, MailIcon, ExternalLinkIcon, ClipboardIcon, CheckIcon, CheckCircleIcon, XCircleIcon, InfoIcon, MapPinIcon, InboxIcon, CalendarNavIcon, FileTextIcon } from '../ui/Icons.jsx';
 import { NextActionEditBtn } from './NextActionEditBtn.jsx';
@@ -25,6 +25,13 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
   const actions = lead.actions || [];
 
   const zohoAuthenticated = window.__appData?.zohoAuthenticated || false;
+
+  useEffect(() => {
+    if (!lead.zoho_lead_id && lead.zoho_url) {
+      const id = lead.zoho_url.match(/\/(\d+)\/?$/)?.[1];
+      if (id) onUpdate({ zoho_lead_id: id });
+    }
+  }, [lead.id]);
 
   // 商談確定時: Zohoに取引先・取引先責任者・商談を作成
   const createZohoDeal = async () => {

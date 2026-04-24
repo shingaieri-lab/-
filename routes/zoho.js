@@ -169,6 +169,12 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     const dateStr = action.date || new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
     const timeStr = action.time || '09:00';
     const startDateTime = `${dateStr}T${timeStr}:00+09:00`;
+    const endDate = new Date(`${dateStr}T${timeStr}:00+09:00`);
+    endDate.setMinutes(endDate.getMinutes() + 30);
+    const endDateStr = endDate.toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
+    const endHH = String(endDate.getHours()).padStart(2, '0');
+    const endMM = String(endDate.getMinutes()).padStart(2, '0');
+    const endDateTime = `${endDateStr}T${endHH}:${endMM}:00+09:00`;
 
     const lines = [action.summary || ''];
     if (action.result) lines.push(`結果: ${action.result}`);
@@ -183,6 +189,7 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
       data: [{
         Event_Title: '電話）インバウンド',
         Start_DateTime: startDateTime,
+        End_DateTime: endDateTime,
         field: '追客',
         field1: method,
         field9: description,

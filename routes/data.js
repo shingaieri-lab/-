@@ -10,6 +10,7 @@ const router = express.Router();
 router.get('/api/data', requireAuth, rateLimit, async (req, res) => {
   const rawAiConfig = (await readData('ai_config')) || {};
   const { geminiKey: _globalGeminiKey, ...safeAiConfig } = rawAiConfig;
+  const zohoTokens = await readData('zoho_tokens');
   res.json({
     accounts: (await getAccounts()).map(({ password: _pw, geminiKey: _gk, ...a }) => ({
       ...a,
@@ -26,6 +27,7 @@ router.get('/api/data', requireAuth, rateLimit, async (req, res) => {
       const { clientSecret: _cs, ...safeCfg } = cfg;
       return safeCfg;
     })(),
+    zohoAuthenticated: !!zohoTokens?.refresh_token,
   });
 });
 

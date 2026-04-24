@@ -15,7 +15,7 @@ import {
 } from '../lib/master.js';
 import { FlameIcon, ExternalLinkIcon, UploadIcon, InboxIcon, BuildingIcon } from '../components/ui/Icons.jsx';
 
-export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile }) {
+export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile, onGoToZohoSettings }) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -135,6 +135,18 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
             {!readOnly && <button onClick={() => { setEditing(null); setShowForm(true); }} style={{...S.btnP, background:"linear-gradient(135deg,#f97316,#ea580c)"}}>＋ 新規追加</button>}
           </div>
         </Header>
+
+        {/* Zoho未認証バナー（設定済みかつ未認証の場合のみ表示） */}
+        {!readOnly && window.__appData?.zohoConfig?.clientId && !window.__appData?.zohoAuthenticated && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8, padding:"6px 10px", background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:6, fontSize:12 }}>
+            <span style={{ color:"#c2410c", fontWeight:700 }}>⚠ Zoho再認証が必要です</span>
+            {currentUser?.role === "admin" && (
+              <button onClick={onGoToZohoSettings} style={{ fontSize:11, padding:"2px 10px", background:"#ea580c", border:"none", borderRadius:5, color:"#fff", fontWeight:700, cursor:"pointer" }}>
+                設定へ
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Zoho手動取込パネル */}
         {showZohoImport && !readOnly && (

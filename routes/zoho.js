@@ -201,6 +201,16 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
   }
 });
 
+// [DEBUG] Eventモジュールのフィールド一覧取得（確認後に削除）
+router.get('/api/zoho/debug-fields', requireAuth, async (req, res) => {
+  try {
+    const data = await zohoApi('GET', '/settings/fields?module=Event');
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 商談確定時: Zohoに取引先・取引先責任者・商談を一括作成
 router.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) => {
   const { lead } = req.body;

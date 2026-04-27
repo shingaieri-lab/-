@@ -8,10 +8,10 @@ export function SVGBarChart({ data, keys, colors, height = 200 }) {
   if (!data.length) return null;
 
   const maxVal = Math.ceil(Math.max(...data.flatMap(d => keys.map(k => d[k] || 0)), 1) * 1.2);
-  const padL = 36, padR = 12, padT = 16, padB = 28, W = 560, H = height;
+  const padL = 36, padR = 12, padT = 16, padB = 28, W = 700, H = height;
   const chartW = W - padL - padR, chartH = H - padT - padB;
   const groupW = chartW / data.length;
-  const barW = Math.max(6, Math.min(30, groupW / keys.length - 2));
+  const barW = Math.max(6, Math.min(15, groupW / keys.length - 2));
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map(r => Math.round(maxVal * r));
 
   return (
@@ -25,19 +25,19 @@ export function SVGBarChart({ data, keys, colors, height = 200 }) {
                 stroke={i === 0 ? "#c0dece" : "#e8f5ee"}
                 strokeWidth={i === 0 ? 1.5 : 1}
                 strokeDasharray={i === 0 ? "" : "4 3"} />
-              <text x={padL - 5} y={y + 4} textAnchor="end" fontSize={9} fill="#9ca3af">{v}</text>
+              <text x={padL - 5} y={y + 4} textAnchor="end" fontSize={11} fill="#9ca3af">{v}</text>
             </g>
           );
         })}
         {data.map((d, di) => {
           const gx = padL + di * groupW + groupW / 2;
-          const tw = barW * keys.length + (keys.length - 1) * 3;
+          const tw = barW * keys.length + (keys.length - 1) * 4;
           return (
             <g key={di}>
               {keys.map((k, ki) => {
                 const val = d[k] || 0;
                 const bh = Math.max((val / maxVal) * chartH, val > 0 ? 3 : 0);
-                const x = gx - tw / 2 + ki * (barW + 3);
+                const x = gx - tw / 2 + ki * (barW + 4);
                 const y = padT + chartH - bh;
                 return (
                   <g key={k}>
@@ -47,12 +47,12 @@ export function SVGBarChart({ data, keys, colors, height = 200 }) {
                       onMouseLeave={() => setTooltip(null)} />
                     {val > 0 && (
                       <text x={x + barW / 2} y={Math.max(y - 3, padT + 8)}
-                        textAnchor="middle" fontSize={9} fill={colors[k]} fontWeight={700}>{val}</text>
+                        textAnchor="middle" fontSize={11} fill={colors[k]} fontWeight={700}>{val}</text>
                     )}
                   </g>
                 );
               })}
-              <text x={gx} y={H - padB + 14} textAnchor="middle" fontSize={10} fill="#6a9a7a">{d.month}</text>
+              <text x={gx} y={H - padB + 14} textAnchor="middle" fontSize={13} fill="#6a9a7a">{d.month}</text>
             </g>
           );
         })}

@@ -7,7 +7,7 @@ export function SVGLineChart({ data, keys, colors, height = 200 }) {
   const [tooltip, setTooltip] = useState(null);
   if (!data.length) return null;
 
-  const maxVal = Math.max(...data.flatMap(d => keys.map(k => d[k] || 0)), 1);
+  const maxVal = Math.max(...data.flatMap(d => keys.map(k => d[k] || 0)), 1) + 10;
   const padL = 36, padR = 12, padT = 16, padB = 28, W = 700, H = height;
   const chartW = W - padL - padR, chartH = H - padT - padB;
   const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW;

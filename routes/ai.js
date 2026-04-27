@@ -64,20 +64,40 @@ router.post('/api/ai/analyze', requireAuth, rateLimit, async (req, res) => {
 
   if (!apiKey) return res.status(400).json({ error: 'Gemini APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。' });
 
-  try {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 8192, responseMimeType: 'application/json' },
-      }),
-    });
-    const data = await r.json();
-    res.json(data);
-  } catch (e) {
-    res.status(500).json({ error: 'AI解析リクエストに失敗しました: ' + e.message });
+  const body = JSON.stringify({
+    system_instruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { maxOutputTokens: 8192, responseMimeType: 'application/json' },
+  });
+
+  const MAX_RETRIES = 3;
+  const RETRY_DELAY_MS = 3000;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      const data = await r.json();
+
+      if (data.error?.code === 503 || data.error?.status === 'UNAVAILABLE') {
+        if (attempt < MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+          continue;
+        }
+        return res.status(503).json({ error: 'AIサービスが混雑しています。しばらく待ってから再度お試しください。' });
+      }
+
+      return res.json(data);
+    } catch (e) {
+      if (attempt < MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+        continue;
+      }
+      return res.status(500).json({ error: 'AI解析リクエストに失敗しました: ' + e.message });
+    }
   }
 });
 

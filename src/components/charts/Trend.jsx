@@ -89,7 +89,7 @@ export function Trend({ leads }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: "#174f35", marginBottom: 12, display: "flex", alignItems: "center", gap: 5 }}>
             <InboxIcon size={14} color="#174f35" /> 反響数・商談数
           </div>
-          <SVGBarChart data={data} keys={["反響数", "商談数"]} colors={{ "反響数": "#10b981", "商談数": "#f59e0b" }} height={230} />
+          <SVGBarChart data={data} keys={["反響数", "有効リード数", "商談数"]} colors={{ "反響数": "#10b981", "有効リード数": "#6ee7b7", "商談数": "#f59e0b" }} height={230} />
         </div>
         <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2f0e8" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#174f35", marginBottom: 12, display: "flex", alignItems: "center", gap: 5 }}>

@@ -8,7 +8,7 @@ export function SVGLineChart({ data, keys, colors, height = 200 }) {
   if (!data.length) return null;
 
   const maxVal = Math.max(...data.flatMap(d => keys.map(k => d[k] || 0)), 1);
-  const padL = 36, padR = 12, padT = 16, padB = 28, W = 560, H = height;
+  const padL = 36, padR = 12, padT = 16, padB = 28, W = 700, H = height;
   const chartW = W - padL - padR, chartH = H - padT - padB;
   const xStep = data.length > 1 ? chartW / (data.length - 1) : chartW;
   const px = i => padL + (data.length > 1 ? i * xStep : chartW / 2);
@@ -26,7 +26,7 @@ export function SVGLineChart({ data, keys, colors, height = 200 }) {
                 stroke={i === 0 ? "#c0dece" : "#e8f5ee"}
                 strokeWidth={i === 0 ? 1.5 : 1}
                 strokeDasharray={i === 0 ? "" : "4 3"} />
-              <text x={padL - 5} y={y + 4} textAnchor="end" fontSize={9} fill="#9ca3af">{v}</text>
+              <text x={padL - 5} y={y + 4} textAnchor="end" fontSize={11} fill="#9ca3af">{v}</text>
             </g>
           );
         })}
@@ -47,7 +47,7 @@ export function SVGLineChart({ data, keys, colors, height = 200 }) {
                       onMouseLeave={() => setTooltip(null)} />
                     {val > 0 && (
                       <text x={cx} y={Math.max(cy - 8, padT + 8)}
-                        textAnchor="middle" fontSize={9} fill={colors[k]} fontWeight={700}>{val}</text>
+                        textAnchor="middle" fontSize={11} fill={colors[k]} fontWeight={700}>{val}</text>
                     )}
                   </g>
                 );
@@ -56,7 +56,7 @@ export function SVGLineChart({ data, keys, colors, height = 200 }) {
           );
         })}
         {data.map((d, i) => (
-          <text key={i} x={px(i)} y={H - padB + 14} textAnchor="middle" fontSize={10} fill="#6a9a7a">{d.month}</text>
+          <text key={i} x={px(i)} y={H - padB + 14} textAnchor="middle" fontSize={13} fill="#6a9a7a">{d.month}</text>
         ))}
       </svg>
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 6, paddingLeft: padL }}>

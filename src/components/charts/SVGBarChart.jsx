@@ -29,6 +29,12 @@ export function SVGBarChart({ data, keys, colors, height = 200 }) {
             </g>
           );
         })}
+        {data.map((_, di) => di > 0 && (
+          <line key={`sep-${di}`}
+            x1={padL + di * groupW} x2={padL + di * groupW}
+            y1={padT} y2={padT + chartH}
+            stroke="#e8f5ee" strokeWidth={1} />
+        ))}
         {data.map((d, di) => {
           const gx = padL + di * groupW + groupW / 2;
           const tw = barW * keys.length + (keys.length - 1) * 4;

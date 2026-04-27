@@ -35,13 +35,13 @@ export function CalendarSearchForm({
         <div>
           <label style={S.lbl}>時間帯（開始）</label>
           <select value={timeStart} onChange={e=>setTimeStart(e.target.value)} style={S.inp}>
-            {Array.from({length:24},(_,i)=>`${String(i).padStart(2,"0")}:00`).map(t=><option key={t}>{t}</option>)}
+            {Array.from({length:15},(_,i)=>`${String(i+7).padStart(2,"0")}:00`).map(t=><option key={t}>{t}</option>)}
           </select>
         </div>
         <div>
           <label style={S.lbl}>時間帯（終了）</label>
           <select value={timeEnd} onChange={e=>setTimeEnd(e.target.value)} style={S.inp}>
-            {Array.from({length:24},(_,i)=>`${String(i).padStart(2,"0")}:00`).map(t=><option key={t}>{t}</option>)}
+            {Array.from({length:15},(_,i)=>`${String(i+7).padStart(2,"0")}:00`).map(t=><option key={t}>{t}</option>)}
           </select>
         </div>
         <div>

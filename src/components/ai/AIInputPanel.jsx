@@ -61,7 +61,7 @@ export function AIInputPanel({
           <div>
             <label style={{...LBL, marginBottom:6}}><ClockIcon size={13} color="#6a9a7a" /> 時刻</label>
             <select value={actionTime} onChange={e=>onTimeChange(e.target.value)} style={{width:"100%",padding:"8px 10px",borderRadius:8,border:"1px solid #c0dece",background:"#fff",color:"#174f35",fontSize:12,fontFamily:"inherit",outline:"none",boxSizing:"border-box"}}>
-              {Array.from({length:48},(_,i)=>{const h=String(Math.floor(i/2)).padStart(2,"0");const m=i%2===0?"00":"30";return <option key={i} value={`${h}:${m}`}>{h}:{m}</option>;})}
+              {Array.from({length:29},(_,i)=>{const h=String(Math.floor(i/2)+7).padStart(2,"0");const m=i%2===0?"00":"30";return <option key={i} value={`${h}:${m}`}>{h}:{m}</option>;})}
             </select>
           </div>
         </div>

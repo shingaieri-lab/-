@@ -272,8 +272,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
                     <select value={naTime} onChange={e => setNATime(e.target.value)}
                       style={{ ...S.inp, padding: "3px 6px", fontSize: 12, width: 96 }}>
                       <option value="">時刻なし</option>
-                      {Array.from({ length: 28 }, (_, i) => {
-                        const h = String(Math.floor(i / 2) + 8).padStart(2, "0");
+                      {Array.from({ length: 29 }, (_, i) => {
+                        const h = String(Math.floor(i / 2) + 7).padStart(2, "0");
                         const m = i % 2 === 0 ? "00" : "30";
                         return <option key={i} value={`${h}:${m}`}>{h}:{m}</option>;
                       })}

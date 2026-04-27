@@ -21,8 +21,8 @@ export function ActionForm({ onSave, onClose, initial }) {
   const [nextTime,  setNextTime]  = useState(initial?.nextTime  || "");
   const [nextLabel, setNextLabel] = useState(initial?.next      || "");
   const isEdit = !!initial;
-  const timeOptions = Array.from({ length: 48 }, (_, i) => {
-    const h = String(Math.floor(i / 2)).padStart(2, "0");
+  const timeOptions = Array.from({ length: 29 }, (_, i) => {
+    const h = String(Math.floor(i / 2) + 7).padStart(2, "0");
     const m = i % 2 === 0 ? "00" : "30";
     return `${h}:${m}`;
   });
@@ -76,8 +76,8 @@ export function ActionForm({ onSave, onClose, initial }) {
           <label style={S.lbl}>次回時刻</label>
           <select value={nextTime} onChange={e => setNextTime(e.target.value)} style={S.inp}>
             <option value="">指定なし</option>
-            {Array.from({ length: 28 }, (_, i) => {
-              const h = String(Math.floor(i / 2) + 8).padStart(2, "0");
+            {Array.from({ length: 29 }, (_, i) => {
+              const h = String(Math.floor(i / 2) + 7).padStart(2, "0");
               const m = i % 2 === 0 ? "00" : "30";
               return <option key={i} value={`${h}:${m}`}>{`${h}:${m}`}</option>;
             })}

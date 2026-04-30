@@ -29,6 +29,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
   const [fIS, setFIS] = useState("");
   const [fQ, setFQ] = useState("");
   const [fHasPortal, setFHasPortal] = useState(false);
+  const [fMql, setFMql] = useState(false);
   const [sort, setSort] = useState("fixed");
   const [sortDir, setSortDir] = useState("asc");
   const [openId, setOpenId] = useState(null);
@@ -70,6 +71,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
     .filter(l => !fHasPortal || !!l.portal_site)
     .filter(l => !fPortal || l.portal_site === fPortal)
     .filter(l => !fIS || l.is_member === fIS)
+    .filter(l => !fMql || (l.mql||"").trim() === "MQL")
     .filter(l => !fQ || [l.company, l.contact].join(" ").includes(fQ))
     .sort((a, b) => {
       if (sort === "date") {
@@ -200,6 +202,11 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           <button onClick={() => setFNextAction(v => v==="today" ? "" : "today")}
             style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:fNextAction==="today"?"#ea580c33":"transparent", color:fNextAction==="today"?"#ea580c":"#3d7a5e", border:`1px solid ${fNextAction==="today"?"#ea580c66":"#c0dece"}`, fontWeight:fNextAction==="today"?700:400, display:"flex", alignItems:"center", gap:4}}>
             <FlameIcon size={12} color={fNextAction==="today"?"#ea580c":"#3d7a5e"} /> 本日追客
+          </button>
+          <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
+          <button onClick={() => setFMql(v => !v)}
+            style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:fMql?"#059669":"transparent", color:fMql?"#fff":"#3d7a5e", border:`1px solid ${fMql?"#059669":"#c0dece"}`, fontWeight:fMql?700:400}}>
+            MQL
           </button>
           <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
           <span style={{fontSize:11, color:"#6a9a7a", flexShrink:0}}>ステータス:</span>

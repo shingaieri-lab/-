@@ -11,6 +11,7 @@ export function ZohoCrmSettings() {
     dataCenter: stored.dataCenter || 'jp',
     redirectUri: stored.redirectUri || (window.location.origin + '/api/zoho/callback'),
     isFieldApiName: stored.isFieldApiName || 'Main_IS_Member',
+    leadStatusFieldApiName: stored.leadStatusFieldApiName || 'Lead_Status',
     meetingDateFieldApiName: stored.meetingDateFieldApiName || '',
     closingDateFieldApiName: stored.closingDateFieldApiName || '',
     statusMap: stored.statusMap || {},        // Zoho → 本ツール
@@ -145,6 +146,9 @@ export function ZohoCrmSettings() {
         <label style={lbl}>「メインIS担当」フィールドのAPI名</label>
         <input value={cfg.isFieldApiName} onChange={e=>setCfg(c=>({...c,isFieldApiName:e.target.value}))} placeholder="例: Main_IS_Member" style={inp} />
         <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Zoho管理画面 → カスタマイズ → リード → フィールド で確認できます</div>
+        <label style={lbl}>「リード状況」フィールドのAPI名</label>
+        <input value={cfg.leadStatusFieldApiName} onChange={e=>setCfg(c=>({...c,leadStatusFieldApiName:e.target.value}))} placeholder="例: Lead_Status または field60" style={inp} />
+        <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Zoho管理画面 → カスタマイズ → リード → フィールド で確認できます（デフォルト: Lead_Status）</div>
         <label style={lbl}>「商談実施日」フィールドのAPI名</label>
         <input value={cfg.meetingDateFieldApiName} onChange={e=>setCfg(c=>({...c,meetingDateFieldApiName:e.target.value}))} placeholder="例: Shodan_Jisshi_Bi" style={inp} />
         <div style={{fontSize:10,color:'#9ca3af',marginTop:4}}>Zoho管理画面 → カスタマイズ → 商談 → フィールド で確認できます（空欄の場合は連携しません）</div>

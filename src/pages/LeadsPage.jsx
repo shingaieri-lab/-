@@ -295,6 +295,9 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
         <LeadForm initial={editing}
           onSave={d => {
             editing ? onUpdate(editing.id, d) : onAdd({ id: uid(), date: TODAY, actions: [], created_at: Date.now(), ...d });
+            if (editing && editing.zoho_lead_id && d.status !== editing.status && window.__appData?.zohoAuthenticated) {
+              fetch('/api/zoho/update-lead-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zohoLeadId: editing.zoho_lead_id, localStatus: d.status }) }).catch(() => {});
+            }
             setShowForm(false);
           }}
           onClose={() => setShowForm(false)} />

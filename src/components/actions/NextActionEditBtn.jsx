@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { S } from '../../styles/index.js';
 import { PencilIcon, TrashIcon, TaskIcon } from '../ui/Icons.jsx';
 import { isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../../lib/oauth.js';
+import { createGoogleTask } from '../../lib/gcal.js';
 import { getEffectiveAiConfig } from '../../lib/accounts.js';
 
 export function NextActionEditBtn({ nad, lead, onUpdate, currentUser, compact = false, onEdit }) {
@@ -55,18 +56,11 @@ export function NextActionEditBtn({ nad, lead, onUpdate, currentUser, compact = 
         notes: lead.zoho_url || "",
         due: `${date}T00:00:00.000Z`
       };
-      const calRes = await fetch("https://tasks.googleapis.com/tasks/v1/lists/@default/tasks", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(task)
-      });
-      if (!calRes.ok) {
-        const err = await calRes.json();
-        if ((err.error?.code === 401) || (err.error?.status === 'UNAUTHENTICATED')) {
-          setCalToken(null);
-          throw new Error('認証の期限が切れました。再度お試しください。');
-        }
-        throw new Error(err.error?.message || 'タスク作成に失敗しました');
+      try {
+        await createGoogleTask(token, task);
+      } catch (e) {
+        if (e.message === '__AUTH_EXPIRED__') { setCalToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+        throw e;
       }
       setCalSaved(true);
       setTimeout(() => setCalSaved(false), 3000);

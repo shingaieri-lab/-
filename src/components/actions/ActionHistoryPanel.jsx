@@ -8,7 +8,8 @@ import { ActEntry } from './ActEntry.jsx';
 import { getStatusColor, getSourceColor } from '../../lib/master.js';
 import { isOverdue, isDueToday, isDueSoon } from '../../lib/holidays.js';
 import { acquireCalendarToken } from '../../lib/oauth.js';
-import { loadGCalConfig } from '../../lib/gcal.js';
+import { loadGCalConfig, createMeetingEvent } from '../../lib/gcal.js';
+import { createZohoDeal, pushZohoAction } from '../../lib/zoho.js';
 import { loadAccounts } from '../../lib/accounts.js';
 
 export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAction, onEdit, onDelete, currentUser, readOnly }) {
@@ -34,24 +35,20 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
 
 
   // 商談確定時: Zohoに取引先・取引先責任者・商談を作成
-  const createZohoDeal = async () => {
+  const handleCreateZohoDeal = async () => {
     if (!zohoAuthenticated) { alert('Zoho認証が必要です。設定 → Zoho CRM連携 から認証してください。'); return; }
     if (!window.confirm(`「${lead.company}」の取引先・取引先責任者・商談をZohoに作成しますか？`)) return;
     setZohoCreating(true); setZohoMsg('');
     try {
-      const res = await fetch('/api/zoho/create-deal', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lead }),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
+      const { ok, status, data } = await createZohoDeal(lead);
+      if (ok && data.ok) {
         onUpdate({ zoho_account_id: data.accountId, zoho_contact_id: data.contactId, zoho_deal_id: data.dealId });
         if (data.warn === 'kv_save_failed') {
           setZohoMsg({ text: 'Zohoへの作成は完了しました。ページを再読み込みして「Zoho商談済」になっているか確認してください。', ok: true });
         } else {
           setZohoMsg({ text: 'Zohoに取引先・取引先責任者・商談を作成しました', ok: true });
         }
-      } else if (res.status === 409) {
+      } else if (status === 409) {
         onUpdate({ zoho_account_id: data.zoho_account_id, zoho_contact_id: data.zoho_contact_id, zoho_deal_id: data.zoho_deal_id });
         setZohoMsg({ text: 'この商談はすでにZohoに作成済みです', ok: null });
       } else {
@@ -71,12 +68,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
     if (!lead.zoho_lead_id) { alert('このリードはZohoと連携されていません。\nZohoリードIDが設定されていないため同期できません。'); return; }
     setZohoPushingId(action.id);
     try {
-      const res = await fetch('/api/zoho/push-action', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ zohoLeadId: lead.zoho_lead_id, action }),
-      });
-      const data = await res.json();
-      if (res.ok && data.ok) {
+      const { ok, data } = await pushZohoAction(lead.zoho_lead_id, action);
+      if (ok && data.ok) {
         setZohoMsg({ text: 'アクション履歴をZohoに同期しました', ok: true });
       } else {
         setZohoMsg({ text: '同期失敗: ' + (data.error || '不明なエラー'), ok: false });
@@ -85,7 +78,7 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
       setZohoMsg({ text: '通信エラー: ' + e.message, ok: false });
     } finally {
       setZohoPushingId(null);
-      setTimeout(() => setZohoMsg(null), 4000);
+      setTimeout(() => setZohoMsg(null), 5000);
     }
   };
 
@@ -138,23 +131,11 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
       const totalMin = sh * 60 + sm + 90;
       const endTime = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
 
-      const resp = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none`,
-        {
-          method: "POST",
-          headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            summary: `WEB営1）【${lead.company || ""}様】`,
-            start: { dateTime: `${lead.meeting_date}T${startTime}:00+09:00`, timeZone: "Asia/Tokyo" },
-            end:   { dateTime: `${lead.meeting_date}T${endTime}:00+09:00`,   timeZone: "Asia/Tokyo" },
-            attendees,
-          }),
-        }
-      );
-      if (!resp.ok) {
-        const err = await resp.json();
-        if (err.error?.code === 401) { setCalToken(null); throw new Error("認証の期限が切れました。再度お試しください。"); }
-        throw new Error(err.error?.message || "登録失敗");
+      try {
+        await createMeetingEvent(token, `WEB営1）【${lead.company || ""}様】`, lead.meeting_date, startTime, endTime, attendees);
+      } catch (e) {
+        if (e.message === '__AUTH_EXPIRED__') { setCalToken(null); throw new Error("認証の期限が切れました。再度お試しください。"); }
+        throw e;
       }
       const noGuest = lead.sales_member && !calendarIds[lead.sales_member];
       setCalMsg({

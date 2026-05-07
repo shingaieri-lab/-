@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { PencilIcon, TrashIcon, AlertIcon, UsersIcon, ExternalLinkIcon, MailIcon, LockOpenIcon } from '../ui/Icons.jsx';
 import { PALETTE } from '../../constants/index.js';
 import { loadAccounts, saveAccounts } from '../../lib/accounts.js';
+import { getLoginLocks, unlockAccount, createInvite } from '../../lib/account.js';
 
 export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }) {
   const [accounts, setAccounts] = useState(loadAccounts);
@@ -15,26 +16,20 @@ export function AccountManager({ currentUser, onClose, inline, onUpdateProfile }
   const [inviteLoading, setInviteLoading] = useState(false);
 
   useEffect(() => {
-    fetch('/api/login-locks')
-      .then(r => r.ok ? r.json() : {})
+    getLoginLocks()
       .then(setLockedAccounts)
       .catch(err => console.error('ロック情報取得失敗:', err));
   }, []);
 
   const handleUnlock = async (id) => {
-    await fetch('/api/login-lock/' + id, { method:'DELETE' });
+    await unlockAccount(id);
     setLockedAccounts(prev => { const n = {...prev}; delete n[id]; return n; });
   };
 
   const handleGenerateInvite = async () => {
     setInviteLoading(true);
     try {
-      const r = await fetch('/api/invite', { method:'POST', headers:{ 'Content-Type':'application/json' } });
-      if (!r.ok) {
-        const d = await r.json().catch(() => ({}));
-        throw new Error(d.error || `エラーコード ${r.status}`);
-      }
-      const data = await r.json();
+      const data = await createInvite();
       setInviteCode(data.code);
     } catch (e) { alert("招待コードの発行に失敗しました: " + e.message); }
     setInviteLoading(false);

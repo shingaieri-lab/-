@@ -52,3 +52,59 @@ export async function createCalendarEvent(token, title, slot, attendees) {
   }
   return true;
 }
+
+// 商談をカレンダーに登録（日付・開始時刻・終了時刻を個別に指定）
+export async function createMeetingEvent(token, summary, date, startTime, endTime, attendees) {
+  const resp = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none`,
+    {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary,
+        start: { dateTime: `${date}T${startTime}:00+09:00`, timeZone: "Asia/Tokyo" },
+        end:   { dateTime: `${date}T${endTime}:00+09:00`,   timeZone: "Asia/Tokyo" },
+        attendees,
+      }),
+    }
+  );
+  if (!resp.ok) {
+    const err = await resp.json();
+    if (err.error?.code === 401) throw new Error('__AUTH_EXPIRED__');
+    throw new Error(err.error?.message || "登録失敗");
+  }
+  return true;
+}
+
+// Google Tasks TODO作成
+export async function createGoogleTask(token, task) {
+  const res = await fetch("https://tasks.googleapis.com/tasks/v1/lists/@default/tasks", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(task),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    if (err.error?.code === 401 || err.error?.status === 'UNAUTHENTICATED') throw new Error('__AUTH_EXPIRED__');
+    throw new Error(err.error?.message || 'タスク作成に失敗しました');
+  }
+  return true;
+}
+
+// freeBusy APIをOAuthトークンで呼び出す
+export async function fetchFreeBusyWithToken(token, timeMin, timeMax, items) {
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/freeBusy`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ timeMin, timeMax, items }),
+    }
+  );
+  if (!res.ok) {
+    const e = await res.json();
+    if (e.error?.code === 401) throw new Error('__AUTH_EXPIRED__');
+    throw new Error(e.error?.message || "APIエラー");
+  }
+  return res.json();
+}

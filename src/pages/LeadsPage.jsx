@@ -14,6 +14,7 @@ import {
   getPortalSitesForSource, sourceHasPortal,
 } from '../lib/master.js';
 import { FlameIcon, ExternalLinkIcon, UploadIcon, InboxIcon, BuildingIcon } from '../components/ui/Icons.jsx';
+import { updateZohoLeadStatus } from '../lib/zoho.js';
 
 export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile, onGoToZohoSettings }) {
   const [showForm, setShowForm]     = useState(false);
@@ -256,7 +257,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
                   }
                   onUpdate(lead.id, patch);
                   if (lead.zoho_lead_id && window.__appData?.zohoAuthenticated) {
-                    fetch('/api/zoho/update-lead-status', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ zohoLeadId: lead.zoho_lead_id, localStatus: s }) }).catch(() => {});
+                    updateZohoLeadStatus(lead.zoho_lead_id, s);
                   }
                 }}
                 onUpdate={p => onUpdate(lead.id, p)}
@@ -303,7 +304,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           onSave={d => {
             editing ? onUpdate(editing.id, d) : onAdd({ id: uid(), date: TODAY, actions: [], created_at: Date.now(), ...d });
             if (editing && editing.zoho_lead_id && d.status !== editing.status && window.__appData?.zohoAuthenticated) {
-              fetch('/api/zoho/update-lead-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ zohoLeadId: editing.zoho_lead_id, localStatus: d.status }) }).catch(() => {});
+              updateZohoLeadStatus(editing.zoho_lead_id, d.status);
             }
             setShowForm(false);
           }}

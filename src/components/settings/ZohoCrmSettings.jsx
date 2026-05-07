@@ -1,6 +1,7 @@
 // Zoho CRM連携設定（認証・マッピング・Webhook情報）
 import { useState } from 'react';
 import { getISMembers } from '../../lib/master.js';
+import { saveZohoConfig } from '../../lib/zoho.js';
 import { ExternalLinkIcon, CheckCircleIcon, AlertIcon, PinIcon } from '../ui/Icons.jsx';
 
 export function ZohoCrmSettings() {
@@ -38,16 +39,12 @@ export function ZohoCrmSettings() {
     // 初回設定時（既存設定がない）はClient Secretも必須
     const isFirstTime = !window.__appData?.zohoConfig?.clientId;
     if (isFirstTime && !cfg.clientSecret.trim()) { showErr('初回設定時はClient Secretの入力が必要です'); return; }
-    const res = await fetch('/api/zoho-config', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(cfg),
-    });
-    if (res.ok) {
+    const result = await saveZohoConfig(cfg);
+    if (result.ok) {
       window.__appData.zohoConfig = { ...cfg, clientSecret: undefined };
       showMsg('設定を保存しました ✓');
     } else {
-      const d = await res.json().catch(() => ({}));
-      showErr('保存失敗: ' + (d.error || res.status));
+      showErr('保存失敗: ' + result.error);
     }
   };
 

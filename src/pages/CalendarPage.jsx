@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { Header } from '../components/ui/Layout.jsx';
 import { CalendarNavIcon, GearIcon } from '../components/ui/Icons.jsx';
-import { loadGCalConfig, saveGCalConfig } from '../lib/gcal.js';
+import { loadGCalConfig, saveGCalConfig, fetchFreeBusyWithToken } from '../lib/gcal.js';
 import { acquireCalendarToken, isTokenValid } from '../lib/oauth.js';
 import { loadAccounts } from '../lib/accounts.js';
 import { JP_HOLIDAYS, TODAY } from '../lib/holidays.js';
@@ -82,12 +82,7 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
       const timeMax = dateTo   + "T23:59:59+09:00";
       const items = selectedMembers.map(m => mergedCalendarIds[m]).filter(Boolean).map(id => ({ id }));
       if (items.length === 0) { setError("選択したメンバーのカレンダーIDが設定されていません"); setLoading(false); return; }
-      const res = await fetch(
-        `https://www.googleapis.com/calendar/v3/freeBusy`,
-        { method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${tokenObj.token}`}, body:JSON.stringify({ timeMin, timeMax, items }) }
-      );
-      if (!res.ok) { const e = await res.json(); throw new Error(e.error?.message || "APIエラー"); }
-      const data = await res.json();
+      const data = await fetchFreeBusyWithToken(tokenObj.token, timeMin, timeMax, items);
       const busyByMember = {};
       selectedMembers.forEach(m => {
         const calId = mergedCalendarIds[m];
@@ -135,7 +130,8 @@ export function CalendarPage({ candidateSlots = [], onSlotsChange = ()=>{}, onGo
       }
       setSlots(found); setSearched(true);
     } catch(e) {
-      setError("エラー: " + e.message);
+      if (e.message === '__AUTH_EXPIRED__') { setOauthToken(null); setError("認証の期限が切れました。再度お試しください。"); }
+      else { setError("エラー: " + e.message); }
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { S } from '../styles/index.js';
 import { PALETTE, USER_COLORS } from '../lib/accounts.js';
 import { IS_COLORS } from '../lib/master.js';
+import { signup, resetPasswordDirect, login, fetchAppData } from '../lib/authApi.js';
 import { EyeIcon, EyeOffIcon, CheckCircleIcon, AlertIcon, WrenchIcon } from '../components/ui/Icons.jsx';
 
 export function LoginScreen({ onLogin }) {
@@ -22,12 +23,11 @@ export function LoginScreen({ onLogin }) {
     if (password !== password2) { setSErr("パスワードが一致しません"); return; }
     const newAccount = { id: id.trim(), name: name.trim(), password, role:"admin", color, email: email.trim(), inviteCode: inviteCode.trim() };
     try {
-      const r = await fetch('/api/signup', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(newAccount) });
-      if (!r.ok) { const e = await r.json(); setSErr(e.error || "作成に失敗しました"); return; }
+      await signup(newAccount);
       USER_COLORS[newAccount.name] = color;
       IS_COLORS[newAccount.name] = { bg:color, text:color, border:color+"55" };
       setSOk(true); setSErr("");
-    } catch { setSErr("サーバーに接続できません"); }
+    } catch(e) { setSErr(e.message); }
   };
 
   const handleResetWithCode = async () => {
@@ -35,28 +35,17 @@ export function LoginScreen({ onLogin }) {
     if (rForm.password !== rForm.confirm) { setRErr("パスワードが一致しません"); return; }
     setRLoading(true); setRErr("");
     try {
-      const r = await fetch('/api/reset-password-direct', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: rForm.id.trim(), newPassword: rForm.password })
-      });
-      if (!r.ok) {
-        const data = await r.json().catch(() => ({}));
-        setRErr(data.error || "エラーが発生しました");
-      } else {
-        setROk(true);
-      }
-    } catch { setRErr("サーバーに接続できません"); }
+      await resetPasswordDirect(rForm.id.trim(), rForm.password);
+      setROk(true);
+    } catch(e) { setRErr(e.message); }
     setRLoading(false);
   };
 
   const handleLogin = async () => {
     try {
-      const r = await fetch('/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ id:userId.trim(), password }) });
-      if (!r.ok) { setErr("IDまたはパスワードが違います"); return; }
-      const { account } = await r.json();
+      const { account } = await login(userId.trim(), password);
       localStorage.setItem('current_user_id', account.id);
-      const dataR = await fetch('/api/data');
-      const data = dataR.ok ? await dataR.json() : null;
+      const data = await fetchAppData();
       if (data) {
         window.__appData = data;
         data.accounts.forEach(a => {
@@ -65,7 +54,7 @@ export function LoginScreen({ onLogin }) {
         });
       }
       onLogin(account, data);
-    } catch { setErr("サーバーに接続できません"); }
+    } catch(e) { setErr(e.message === 'IDまたはパスワードが違います' ? e.message : "サーバーに接続できません"); }
   };
 
   const card = { background:"#fff", borderRadius:16, padding:"36px 32px", boxShadow:"0 8px 32px #0569691a", border:"1px solid #e2f0e8", width:360, maxWidth:"90vw" };

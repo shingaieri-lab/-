@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { WizardOverlay, WizardStepBar } from './WizardParts.jsx';
 import { SparkleIcon, CheckCircleIcon, XCircleIcon, KeyIcon, ExternalLinkIcon } from '../ui/Icons.jsx';
+import { testGeminiKey } from '../../lib/ai.js';
 
 const cardStyle = { background: "#fff", borderRadius: 12, padding: "28px 32px", maxWidth: 520, width: "100%", boxShadow: "0 8px 32px #0002", maxHeight: "90vh", overflowY: "auto" };
 const btnP = { padding: "10px 28px", borderRadius: 8, border: "none", background: "linear-gradient(135deg,#10b981,#059669)", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" };
@@ -19,8 +20,8 @@ export function GeminiWizard({ currentUser, onUpdateProfile, onBack }) {
     if (!key.trim()) return;
     setGeminiTest("testing");
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-      setGeminiTest(r.ok ? "ok" : "error");
+      const ok = await testGeminiKey(key);
+      setGeminiTest(ok ? "ok" : "error");
     } catch { setGeminiTest("error"); }
   };
 

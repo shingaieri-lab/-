@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { LeadCombobox } from '../leads/LeadCombobox.jsx';
 import { CalendarNavIcon, CheckCircleIcon, XCircleIcon } from '../ui/Icons.jsx';
 import { acquireCalendarToken, isTokenValid } from '../../lib/oauth.js';
-import { loadGCalConfig } from '../../lib/gcal.js';
+import { loadGCalConfig, createCalendarEvent } from '../../lib/gcal.js';
 
 const lbl  = { display:"block", fontSize:11, color:"#6a9a7a", marginBottom:4, fontWeight:600 };
 const inp  = { width:"100%", background:"#f8fffe", border:"1px solid #99e6d8", borderRadius:7, padding:"9px 12px", color:"#1f5c40", fontSize:13, fontFamily:"inherit", outline:"none", boxSizing:"border-box", marginBottom:8 };
@@ -52,21 +52,12 @@ export function CalendarRegModal({ show, onClose, initialLeadId, candidateSlots,
           .filter(m => mergedCalendarIds[m])
           .map(m => ({ email: mergedCalendarIds[m] }));
         try {
-          const startDT = `${slot.date}T${slot.start}:00+09:00`;
-          const endDT   = `${slot.date}T${slot.end}:00+09:00`;
-          const resp = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=none`,
-            { method: "POST", headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-              body: JSON.stringify({ summary: title, start: { dateTime: startDT, timeZone: "Asia/Tokyo" }, end: { dateTime: endDT, timeZone: "Asia/Tokyo" }, attendees }) }
-          );
-          if (!resp.ok) {
-            const err = await resp.json();
-            if (err.error?.code === 401) { if (setOauthToken) setOauthToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
-            slotMembers.forEach(member => results.push({ slot, member, success: false, error: err.error?.message || "登録失敗" }));
-          } else {
-            slotMembers.forEach(member => results.push({ slot, member, success: true }));
-          }
-        } catch(e) { slotMembers.forEach(member => results.push({ slot, member, success: false, error: e.message })); }
+          await createCalendarEvent(token, title, slot, attendees);
+          slotMembers.forEach(member => results.push({ slot, member, success: true }));
+        } catch(e) {
+          if (e.message === '__AUTH_EXPIRED__') { if (setOauthToken) setOauthToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+          slotMembers.forEach(member => results.push({ slot, member, success: false, error: e.message }));
+        }
       }
       setCalRegResults(results);
     } catch(e) {

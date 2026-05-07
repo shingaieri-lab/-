@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { S } from '../../styles/index.js';
 import { ExternalLinkIcon, CheckCircleIcon, AlertIcon } from '../ui/Icons.jsx';
+import { importZohoLead } from '../../lib/zoho.js';
 
 export function ZohoImportPanel({ onAdd, onClose }) {
   const [zohoImportId, setZohoImportId] = useState('');
@@ -11,9 +12,8 @@ export function ZohoImportPanel({ onAdd, onClose }) {
   const handleImport = async () => {
     setZohoImporting(true); setZohoImportMsg(null);
     try {
-      const res = await fetch('/api/zoho/import-lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({zohoLeadId: zohoImportId.trim()}) });
-      const data = await res.json();
-      if (!res.ok) { setZohoImportMsg({ type:'err', text: data.error || '取込に失敗しました' }); }
+      const { ok, data } = await importZohoLead(zohoImportId.trim());
+      if (!ok) { setZohoImportMsg({ type:'err', text: data.error || '取込に失敗しました' }); }
       else { onAdd(data.lead); setZohoImportId(''); setZohoImportMsg({ type:'ok', text: `「${data.lead.company || data.lead.contact}」を取込みました` }); }
     } catch (e) {
       setZohoImportMsg({ type:'err', text: 'ネットワークエラー: ' + e.message });

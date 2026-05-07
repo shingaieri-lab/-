@@ -7,6 +7,8 @@ import { JP_HOLIDAYS, addBizDays } from '../lib/holidays.js';
 import { ACTION_RESULTS } from '../lib/constants.js';
 import { getEffectiveAiConfig } from '../lib/accounts.js';
 import { acquireGmailToken, buildGmailDraftRaw, postGmailDraft, isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../lib/oauth.js';
+import { analyzeWithAI } from '../lib/ai.js';
+import { createGoogleTask } from '../lib/gcal.js';
 
 const SS_KEY = "ai_page_state";
 const loadSS = () => { try { return JSON.parse(sessionStorage.getItem(SS_KEY)||"{}"); } catch(_){ return {}; } };
@@ -104,10 +106,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
     const actionWeekday=WEEKDAYS[new Date(actionDate+"T00:00:00").getDay()];
     const dateCtx=`\n\n【日付情報】今日:${todayJST}（${todayWeekday}曜日） / アクション実施日:${actionDate}（${actionWeekday}曜日）`;
     try{
-      const res=await fetch('/api/ai/analyze',{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({prompt:ctx+actHistory+userCtx+dateCtx+"\n\n【メモ】\n"+memo})});
-      const data=await res.json();
-      if(!res.ok) throw new Error(data.error||`エラーコード ${res.status}`);
-      if(data.error) throw new Error(data.error.message||data.error.status);
+      const data=await analyzeWithAI(ctx+actHistory+userCtx+dateCtx+"\n\n【メモ】\n"+memo);
       if(!data.candidates||!data.candidates[0]||!data.candidates[0].content){
         const reason=data.candidates?.[0]?.finishReason||data.promptFeedback?.blockReason||"不明";
         throw new Error(`AIレスポンスが空です（終了理由: ${reason}）`);
@@ -247,15 +246,11 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
         notes: lead.zoho_url || "",
         due: `${nextDate}T00:00:00.000Z`
       };
-      const calRes = await fetch("https://tasks.googleapis.com/tasks/v1/lists/@default/tasks", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(task)
-      });
-      if (!calRes.ok) {
-        const err = await calRes.json();
-        if ((err.error?.code===401)||(err.error?.status==='UNAUTHENTICATED')) { setAiCalToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
-        throw new Error(err.error?.message || 'タスク作成に失敗しました');
+      try {
+        await createGoogleTask(token, task);
+      } catch (e) {
+        if (e.message === '__AUTH_EXPIRED__') { setAiCalToken(null); throw new Error('認証の期限が切れました。再度お試しください。'); }
+        throw e;
       }
       setAiCalSaved(true);
       setTimeout(() => setAiCalSaved(false), 3000);

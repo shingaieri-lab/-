@@ -1,5 +1,10 @@
 // AI解析API
 
+export async function testGeminiKey(key) {
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+  return r.ok;
+}
+
 export async function analyzeWithAI(prompt) {
   const res = await fetch('/api/ai/analyze', {
     method: 'POST',

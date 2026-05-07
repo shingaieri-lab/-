@@ -1,27 +1,22 @@
 // アクション履歴パネル（リード詳細 + アクション一覧 + Zoho連携）
 import { useState } from 'react';
 import { S } from '../../styles/index.js';
-import { PencilIcon, TrashIcon, MailIcon, ExternalLinkIcon, ClipboardIcon, CheckIcon, CheckCircleIcon, XCircleIcon, InfoIcon, MapPinIcon, InboxIcon, CalendarNavIcon, FileTextIcon } from '../ui/Icons.jsx';
-import { NextActionEditBtn } from './NextActionEditBtn.jsx';
+import { PencilIcon, TrashIcon, MailIcon, ExternalLinkIcon, ClipboardIcon, CheckCircleIcon, XCircleIcon, InfoIcon, MapPinIcon, InboxIcon, FileTextIcon } from '../ui/Icons.jsx';
 import { ActionForm } from './ActionForm.jsx';
 import { ActEntry } from './ActEntry.jsx';
+import { DealActionBar } from './DealActionBar.jsx';
+import { NextActionSection } from './NextActionSection.jsx';
 import { getStatusColor, getSourceColor } from '../../lib/master.js';
 import { isOverdue, isDueToday, isDueSoon } from '../../lib/holidays.js';
 import { acquireCalendarToken } from '../../lib/oauth.js';
 import { loadGCalConfig, createMeetingEvent } from '../../lib/gcal.js';
-import { createZohoDeal, pushZohoAction } from '../../lib/zoho.js';
+import { pushZohoAction } from '../../lib/zoho.js';
 import { loadAccounts } from '../../lib/accounts.js';
 
 export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDeleteAction, onEdit, onDelete, currentUser, readOnly }) {
   const [showAF, setShowAF] = useState(false);
   const [editingAction, setEditingAction] = useState(null);
-  const [editNA, setEditNA] = useState(false);
-  const [naDate, setNADate] = useState(lead.next_action_date || "");
-  const [naTime, setNATime] = useState(lead.next_action_time || "");
-  const [naMemo, setNAMemo] = useState(lead.next_action || "");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [dealCopied, setDealCopied] = useState(false);
-  const [zohoCreating, setZohoCreating] = useState(false);
   const [zohoMsg, setZohoMsg] = useState(null);
   const [zohoPushingId, setZohoPushingId] = useState(null);
   const [calToken, setCalToken] = useState(null);
@@ -33,36 +28,6 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
 
   const zohoAuthenticated = window.__appData?.zohoAuthenticated || false;
 
-
-  // 商談確定時: Zohoに取引先・取引先責任者・商談を作成
-  const handleCreateZohoDeal = async () => {
-    if (!zohoAuthenticated) { alert('Zoho認証が必要です。設定 → Zoho CRM連携 から認証してください。'); return; }
-    if (!window.confirm(`「${lead.company}」の取引先・取引先責任者・商談をZohoに作成しますか？`)) return;
-    setZohoCreating(true); setZohoMsg('');
-    try {
-      const { ok, status, data } = await createZohoDeal(lead);
-      if (ok && data.ok) {
-        onUpdate({ zoho_account_id: data.accountId, zoho_contact_id: data.contactId, zoho_deal_id: data.dealId });
-        if (data.warn === 'kv_save_failed') {
-          setZohoMsg({ text: 'Zohoへの作成は完了しました。ページを再読み込みして「Zoho商談済」になっているか確認してください。', ok: true });
-        } else {
-          setZohoMsg({ text: 'Zohoに取引先・取引先責任者・商談を作成しました', ok: true });
-        }
-      } else if (status === 409) {
-        onUpdate({ zoho_account_id: data.zoho_account_id, zoho_contact_id: data.zoho_contact_id, zoho_deal_id: data.zoho_deal_id });
-        setZohoMsg({ text: 'この商談はすでにZohoに作成済みです', ok: null });
-      } else {
-        setZohoMsg({ text: '作成失敗: ' + (data.error || '不明なエラー'), ok: false });
-      }
-    } catch (e) {
-      setZohoMsg({ text: '通信エラー: ' + e.message, ok: false });
-    } finally {
-      setZohoCreating(false);
-      setTimeout(() => setZohoMsg(null), 5000);
-    }
-  };
-
-  // アクション履歴1件をZohoにNoteとして同期
   const pushActionToZoho = async (action) => {
     if (!zohoAuthenticated) { alert('Zoho認証が必要です。設定 → Zoho CRM連携 から認証してください。'); return; }
     if (!lead.zoho_lead_id) { alert('このリードはZohoと連携されていません。\nZohoリードIDが設定されていないため同期できません。'); return; }
@@ -82,26 +47,6 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
     }
   };
 
-  const copyDealInfo = () => {
-    // 半角数字を全角数字に変換
-    const toZenkaku = (str) => String(str).replace(/[0-9]/g, c => String.fromCharCode(c.charCodeAt(0) + 0xFEE0));
-    let meetingDateTime = '';
-    if (lead.meeting_date) {
-      const d = new Date(lead.meeting_date + 'T00:00:00'); // JST基準でパース
-      const yy = toZenkaku(String(d.getFullYear()).slice(2));
-      const mm = toZenkaku(String(d.getMonth() + 1).padStart(2, '0'));
-      const dd = toZenkaku(String(d.getDate()).padStart(2, '0'));
-      const dow = ['日','月','火','水','木','金','土'][d.getDay()];
-      // HH:MM → ＨＨ：ＭＭ（コロンも全角）
-      const timeStr = lead.meeting_time ? toZenkaku(lead.meeting_time).replace(':', '：') : '';
-      meetingDateTime = `${yy}/${mm}/${dd}（${dow}）${timeStr ? timeStr + '～' : ''}`;
-    }
-    const text = `商談担当：${lead.sales_member ? lead.sales_member + 'さん' : ''}\n商談日時：${meetingDateTime}\n会社名：${lead.company || ''}\nHP：${lead.hp_url || ''}\nzoho：${lead.zoho_url || ''}\nIS確度：${lead.is_accuracy || ''}`;
-    navigator.clipboard?.writeText(text);
-    setDealCopied(true);
-    setTimeout(() => setDealCopied(false), 2000);
-  };
-
   const addDealToCalendar = async () => {
     const aiCfg = window.__appData?.aiConfig || {};
     const clientId = currentUser?.gmailClientId || aiCfg.gmailClientId || "";
@@ -116,21 +61,17 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
       const tokenObj = await acquireCalendarToken(clientId, calToken);
       setCalToken(tokenObj);
       const token = tokenObj.token;
-
       const gcalCfg = loadGCalConfig();
       const calendarIds = { ...(gcalCfg.calendarIds || {}) };
       loadAccounts().forEach(a => { if (a.calendarId) calendarIds[a.name] = a.calendarId; });
-
       const attendees = [];
       if (lead.sales_member && calendarIds[lead.sales_member]) {
         attendees.push({ email: calendarIds[lead.sales_member] });
       }
-
       const startTime = lead.meeting_time || "09:00";
       const [sh, sm] = startTime.split(":").map(Number);
       const totalMin = sh * 60 + sm + 90;
       const endTime = `${String(Math.floor(totalMin / 60)).padStart(2, "0")}:${String(totalMin % 60).padStart(2, "0")}`;
-
       try {
         await createMeetingEvent(token, `WEB営1）【${lead.company || ""}様】`, lead.meeting_date, startTime, endTime, attendees);
       } catch (e) {
@@ -227,83 +168,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             </div>
           )}
         </div>
-        {/* カレンダー追加アクション行（商談日時設定後のみ表示） */}
-        {lead.meeting_date && !readOnly && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8, padding: "6px 10px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: 8 }}>
-            <span style={{ fontSize: 12, color: "#64748b", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
-              <CalendarNavIcon size={13} color="#64748b" />
-              商談日：{lead.meeting_date}{lead.meeting_time ? " " + lead.meeting_time : ""}
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {lead.status === '商談確定' && (
-                <button onClick={copyDealInfo} style={{ display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap", background: dealCopied ? "#10b981" : "none", border: `1px solid ${dealCopied ? "#10b981" : "#10b98166"}`, borderRadius: 6, cursor: "pointer", color: dealCopied ? "#fff" : "#059669", fontSize: 12, padding: "4px 10px", lineHeight: 1.4, fontWeight: 600, transition: "all 0.2s" }}>
-                  {dealCopied ? <><CheckIcon size={12} color="#fff" /> コピー済み</> : <><ClipboardIcon size={12} color="#059669" /> 商談共有用</>}
-                </button>
-              )}
-              <button
-                onClick={addDealToCalendar}
-                disabled={calLoading}
-                style={{ display: "flex", alignItems: "center", gap: 5, background: calLoading ? "#6ee7b7" : "#10b981", border: "none", borderRadius: 6, cursor: calLoading ? "not-allowed" : "pointer", color: "#fff", fontSize: 12, fontWeight: 700, padding: "4px 12px", opacity: calLoading ? 0.7 : 1, transition: "background 0.2s", whiteSpace: "nowrap" }}
-              >
-                <CalendarNavIcon size={12} color="#fff" />
-                {calLoading ? "登録中..." : "Googleカレンダーに追加"}
-              </button>
-            </div>
-          </div>
-        )}
-        {/* ネクストアクション */}
-        {(nad || lead.next_action) && (
-          <div style={{ marginTop: 8, padding: "5px 8px", background: overdue ? "#fef2f2" : today ? "#fff7ed" : "#ffffff", borderRadius: 6, border: `1px solid ${overdue ? "#ef444466" : today ? "#f9731666" : "#c0dece"}`, fontSize: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, minWidth: 0, flex: 1 }}>
-                {!editNA && overdue && <span style={{ fontSize: 10, background: "#ef4444", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>期限切れ</span>}
-                {!editNA && today   && <span style={{ fontSize: 10, background: "#f97316", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>本日</span>}
-                {!editNA && soon && !today && !overdue && <span style={{ fontSize: 10, background: "#a78bfa", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>まもなく</span>}
-                <span style={{ color: overdue ? "#dc2626" : today ? "#ea580c" : "#059669" }}>→</span>
-                {editNA ? (
-                  <>
-                    <input type="date" value={naDate} onChange={e => setNADate(e.target.value)}
-                      style={{ ...S.inp, padding: "3px 6px", fontSize: 12, width: 130 }} />
-                    <select value={naTime} onChange={e => setNATime(e.target.value)}
-                      style={{ ...S.inp, padding: "3px 6px", fontSize: 12, width: 96 }}>
-                      <option value="">時刻なし</option>
-                      {Array.from({ length: 29 }, (_, i) => {
-                        const h = String(Math.floor(i / 2) + 7).padStart(2, "0");
-                        const m = i % 2 === 0 ? "00" : "30";
-                        return <option key={i} value={`${h}:${m}`}>{h}:{m}</option>;
-                      })}
-                    </select>
-                  </>
-                ) : (
-                  nad && <span style={{ fontWeight: 700, color: overdue ? "#dc2626" : today ? "#ea580c" : "#059669" }}>{nad}{lead.next_action_time ? " " + lead.next_action_time : ""}</span>
-                )}
-              </div>
-              {!readOnly && (
-                editNA ? (
-                  <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                    <button onClick={() => setEditNA(false)} style={S.btnCancelXs}>✕</button>
-                    <button onClick={() => { onUpdate({ next_action_date: naDate, next_action_time: naTime, next_action: naMemo, google_task_registered: false }); setEditNA(false); }}
-                      style={{ ...S.btnDelXs, background: "#059669" }}>保存</button>
-                  </div>
-                ) : (
-                  <NextActionEditBtn nad={nad} lead={lead} onUpdate={onUpdate} currentUser={currentUser}
-                    onEdit={() => { setNADate(nad || ""); setNATime(lead.next_action_time || ""); setNAMemo(lead.next_action || ""); setEditNA(true); }} />
-                )
-              )}
-            </div>
-            {editNA ? (
-              <textarea value={naMemo} onChange={e => setNAMemo(e.target.value)}
-                placeholder="ネクストアクションの内容を入力"
-                style={{ ...S.inp, marginTop: 6, padding: "7px 10px", fontSize: 13, width: "100%", minHeight: 72, resize: "vertical", lineHeight: 1.6, boxSizing: "border-box" }} />
-            ) : (
-              lead.next_action && (
-                <div style={{ color: "#174f35", marginTop: 3, lineHeight: 1.5, wordBreak: "break-word", whiteSpace: "pre-wrap", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                  {lead.next_action}
-                </div>
-              )
-            )}
-          </div>
-        )}
+        <DealActionBar lead={lead} calLoading={calLoading} onAddDealToCalendar={addDealToCalendar} readOnly={readOnly} />
+        <NextActionSection lead={lead} overdue={overdue} today={today} soon={soon} readOnly={readOnly} onUpdate={onUpdate} currentUser={currentUser} />
       </div>
 
       {/* カレンダー登録メッセージ */}

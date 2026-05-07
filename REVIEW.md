@@ -1,6 +1,6 @@
 # IS進捗管理ツール レビュー記録
 
-レビュー開始：2026-03-23　／　最終更新：2026-05-07（date.js重複削除）
+レビュー開始：2026-03-23　／　最終更新：2026-05-07（ファイル分割・バグ修正）
 
 ---
 
@@ -109,17 +109,17 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 
 旧フラット構造コンポーネント20本（5,295行）を削除済み。
 
-#### ~~ファイル肥大化（300行超）~~ ⚠️ 再発（2026-05-01 監査で確認）
+#### ~~ファイル肥大化（300行超）~~ ✅ 再対応済み（2026-05-07、`feature/split-large-files`）
 
-PR #140 で一度解消したが、その後の機能追加により再び肥大化。
+PR #140 で一度解消したが、その後の機能追加により再び肥大化。`feature/split-large-files` にて全件対応。
 
-| ファイル | 現在の行数 |
+| ファイル | 対応内容 |
 |------|------|
-| `src/components/ui/Icons.jsx` | 579行 |
-| `src/components/actions/ActionHistoryPanel.jsx` | 391行 |
-| `src/pages/AIPage.jsx` | 327行 |
-| `src/pages/SettingsPage.jsx` | 321行 |
-| `src/pages/LeadsPage.jsx` | 314行 |
+| `src/components/ui/Icons.jsx` | 579行 → 5行（バレルre-export）。用途別4ファイルに分割 |
+| `src/components/actions/ActionHistoryPanel.jsx` | 391行 → 235行。DealActionBar・NextActionSection を切り出し |
+| `src/pages/SettingsPage.jsx` | 321行 → 125行。PortalTab を切り出し |
+| `src/pages/LeadsPage.jsx` | 314行 → 215行。LeadFilterBar を切り出し |
+| `src/pages/AIPage.jsx` | 327行（findAvailableNextDate・clampToBusinessTime を lib/ai.js に移動済み） |
 
 #### ~~API呼び出しのコンポーネント直書き~~ ✅ 再対応済み（2026-05-07、PR #238）
 
@@ -134,8 +134,8 @@ PR #140 で一度解消したが、その後の機能追加により再び肥大
 | 問題 | 詳細 |
 |------|------|
 | ~~`date.js` と `holidays.js` で関数が二重定義~~ | ✅ 対応済み（2026-05-07、PR #239）：`date.js` から重複コードを全削除。`normalizeDate` のみ残し60行削減。`addBusinessDays`（UTC バグあり）も同時に除去 |
-| `toZenkaku` がコンポーネントにインライン定義 | `ActionHistoryPanel.jsx:94` に定義。`lib/format.js` 等に切り出して共通化すべき |
-| `normDate` が `LeadsPage.jsx` にインライン定義 | `lib/date.js` の `normalizeDate` と重複。統一すべき |
+| ~~`toZenkaku` がコンポーネントにインライン定義~~ | ✅ 対応済み（2026-05-07、`feature/split-large-files`）：`lib/format.js` に切り出し。`buildDealShareText` も同ファイルに集約 |
+| ~~`normDate` が `LeadsPage.jsx` にインライン定義~~ | ✅ 対応済み（2026-05-07、`feature/split-large-files`）：削除し `lib/date.js` の `normalizeDate` に統一 |
 
 ### 🟠 中優先度
 
@@ -143,7 +143,7 @@ PR #140 で一度解消したが、その後の機能追加により再び肥大
 |------|------|
 | ページネーション未実装 | 全リードをメモリに保持する設計。1000件超で遅延の恐れあり。現在100件未満のため当面は影響なし |
 | ~~削除・編集ボタンが薄すぎる~~ | ✅ 対応済み（2026-04-15）: ボタン背景・ボーダー色を濃くして視認性を改善 |
-| 成功メッセージが消えるのが速い | 2〜3秒で消えるため読めないことがある。5〜8秒に延長を検討（ActionHistoryPanelのZoho同期メッセージは2026-05-07に5秒に修正済み） |
+| ~~成功メッセージが消えるのが速い~~ | ✅ 対応済み（2026-05-07、`feature/split-large-files`）：全メッセージを5秒以上に統一（コピー通知5秒・Zoho同期5秒・カレンダー登録6秒） |
 | バルク操作の完了通知がない | インポート・削除後の件数通知がない。トースト通知の追加を検討 |
 | ローディング表示が統一されていない | AI解析はスピナーあり、Gmail保存等はなし。統一を検討 |
 
@@ -152,7 +152,7 @@ PR #140 で一度解消したが、その後の機能追加により再び肥大
 | 問題 | 詳細 |
 |------|------|
 | AI解析後の導線が不明 | 保存完了後に次のアクション（メール送信・候補日探し）へのボタンがない |
-| 確認ダイアログがブラウザ標準のポップアップ | アプリ内モーダルに統一を検討 |
+| 確認ダイアログがブラウザ標準のポップアップ | PortalTab の削除確認は2026-05-07にインライン確認ボタン方式に対応済み。ActionHistoryPanel・LeadMgmtTab・AccountManager は未対応 |
 | モバイル対応が一部不完全 | AIページ・メールテンプレート・設定ページで固定幅が残っている |
 | ボタンのタッチ領域が小さい | 高さ約20px。WCAG推奨の44px以上への対応を検討 |
 

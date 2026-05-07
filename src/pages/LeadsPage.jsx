@@ -5,15 +5,14 @@ import { Header } from '../components/ui/Layout.jsx';
 import { CSVImport } from '../components/leads/CSVImport.jsx';
 import { LeadRow } from '../components/leads/LeadRow.jsx';
 import { LeadForm } from '../components/leads/LeadForm.jsx';
+import { LeadFilterBar } from '../components/leads/LeadFilterBar.jsx';
 import { ZohoImportPanel } from '../components/leads/ZohoImportPanel.jsx';
 import { ActionHistoryPanel } from '../components/actions/ActionHistoryPanel.jsx';
 import { TODAY } from '../lib/holidays.js';
+import { normalizeDate } from '../lib/date.js';
 import { uid } from '../constants/index.js';
-import {
-  getSources, getStatuses, getStatusColor, getISMembers,
-  getPortalSitesForSource, sourceHasPortal,
-} from '../lib/master.js';
-import { FlameIcon, ExternalLinkIcon, UploadIcon, InboxIcon, BuildingIcon } from '../components/ui/Icons.jsx';
+import { getStatuses } from '../lib/master.js';
+import { ExternalLinkIcon, UploadIcon, InboxIcon } from '../components/ui/Icons.jsx';
 import { updateZohoLeadStatus } from '../lib/zoho.js';
 
 export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile, onGoToZohoSettings }) {
@@ -53,12 +52,6 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
 
   const STATUS_ORDER_FIXED = Object.fromEntries(getStatuses().map((s, i) => [s, i]));
 
-  const normDate = s => {
-    if (!s) return "";
-    const m = s.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-    return m ? `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}` : s;
-  };
-
   const list = leads
     .filter(l => fStatuses.size === 0 || fStatuses.has(l.status))
     .filter(l => {
@@ -76,14 +69,14 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
     .filter(l => !fQ || [l.company, l.contact].join(" ").includes(fQ))
     .sort((a, b) => {
       if (sort === "date") {
-        const da = normDate(a.date), db = normDate(b.date);
+        const da = normalizeDate(a.date), db = normalizeDate(b.date);
         return sortDir === "asc" ? (da > db ? 1 : -1) : (da < db ? 1 : -1);
       }
       if (sort === "nextAction") {
         const da = a.next_action_date||"9999", db = b.next_action_date||"9999";
         return sortDir === "asc" ? (da > db ? 1 : -1) : (da < db ? 1 : -1);
       }
-      const toDay = ts => ts ? new Date(ts).toISOString().split("T")[0] : null;
+      const toDay = ts => ts ? new Date(ts).toLocaleDateString('sv',{timeZone:'Asia/Tokyo'}) : null;
       const aIsNew = toDay(a.created_at) === TODAY && (!a.actions || a.actions.length === 0);
       const bIsNew = toDay(b.created_at) === TODAY && (!b.actions || b.actions.length === 0);
       if (aIsNew && !bIsNew) return -1;
@@ -94,7 +87,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
       if (da !== db) return da < db ? -1 : 1;
       const sa = STATUS_ORDER_FIXED[a.status]??99, sb = STATUS_ORDER_FIXED[b.status]??99;
       if (sa !== sb) return sa - sb;
-      const ra = normDate(a.date)||"9999", rb = normDate(b.date)||"9999";
+      const ra = normalizeDate(a.date)||"9999", rb = normalizeDate(b.date)||"9999";
       return ra < rb ? -1 : ra > rb ? 1 : 0;
     });
 
@@ -139,7 +132,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           </div>
         </Header>
 
-        {/* Zoho未認証バナー（設定済みかつ未認証の場合のみ表示） */}
+        {/* Zoho未認証バナー */}
         {!readOnly && window.__appData?.zohoConfig?.clientId && !window.__appData?.zohoAuthenticated && (
           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:8, padding:"6px 10px", background:"#fff7ed", border:"1px solid #fed7aa", borderRadius:6, fontSize:12 }}>
             <span style={{ color:"#c2410c", fontWeight:700 }}>⚠ Zoho再認証が必要です</span>
@@ -156,79 +149,15 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           <ZohoImportPanel onAdd={lead => { onAdd(lead); setEditing(lead); setShowForm(true); }} onClose={() => setShowZohoImport(false)} />
         )}
 
-        {/* フィルター 1行目 */}
-        <div className="filter-bar" style={{display:"flex", gap:8, marginBottom:6, alignItems:"center"}}>
-          <input value={fQ} onChange={e => setFQ(e.target.value)}
-            placeholder="会社名・担当者" style={{...S.sel, width:220, flexShrink:0}} />
-          <select value={fSource} onChange={e => { setFSrc(e.target.value); setFPortal(""); }} style={{...S.sel, flexShrink:0}}>
-            <option value="">全流入元</option>
-            {getSources().map(s => <option key={s}>{s}</option>)}
-          </select>
-          {fHasPortal && (
-            <button onClick={() => setFHasPortal(false)} style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:"#8b5cf633", color:"#7c3aed", border:"1px solid #8b5cf666", fontWeight:700, display:"flex", alignItems:"center", gap:4}}><BuildingIcon size={11} color="#7c3aed" /> ポータル ✕</button>
-          )}
-          {sourceHasPortal(fSource) && (
-            <select value={fPortal} onChange={e => setFPortal(e.target.value)} style={{...S.sel, flexShrink:0}}>
-              <option value="">全サイト</option>
-              {getPortalSitesForSource(fSource).map(p => <option key={p}>{p}</option>)}
-            </select>
-          )}
-          <select value={fMonth} onChange={e => setFMonth(e.target.value)} style={{...S.sel, flexShrink:0}}>
-            <option value="">全期間</option>
-            {[...new Set(leads.map(l => {
-              const s = l.date||"";
-              if (/^\d{4}-\d{2}/.test(s)) return s.slice(0,7);
-              const m = s.match(/^(\d{4})[\/-](\d{1,2})/);
-              return m ? m[1]+"-"+m[2].padStart(2,"0") : "";
-            }).filter(Boolean))].sort().reverse().map(m => <option key={m} value={m}>{m.slice(0,4)}年{parseInt(m.slice(5))}月</option>)}
-          </select>
-          <select value={fIS} onChange={e => setFIS(e.target.value)} style={{...S.sel, flexShrink:0}}>
-            <option value="">全IS担当</option>
-            {getISMembers().map(m => <option key={m}>{m}</option>)}
-          </select>
-        </div>
-
-        {/* フィルター 2行目：並び順＋ステータス */}
-        <div className="filter-bar" style={{display:"flex", gap:4, alignItems:"center", marginBottom:16, flexWrap: isMobile ? "wrap" : "nowrap"}}>
-          <span style={{fontSize:11, color:"#6a9a7a", flexShrink:0}}>並び順:</span>
-          {[["fixed","標準"],["date","反響日"],["nextAction","追客日"]].map(([v, label]) => (
-            <button key={v} onClick={() => {
-              if (sort === v) { setSortDir(d => d === "asc" ? "desc" : "asc"); }
-              else { setSort(v); setSortDir("asc"); }
-            }} style={{fontSize:11,padding:"4px 10px",borderRadius:8,cursor:"pointer",fontFamily:"inherit", background: sort===v ? "#10b98122" : "transparent", color: sort===v ? "#059669" : "#3d7a5e", border: `1px solid ${sort===v ? "#10b98155" : "#c0dece"}`, fontWeight: sort===v ? 700 : 400}}>
-              {label}{sort===v && v!=="fixed" ? (sortDir==="asc" ? " ↑" : " ↓") : ""}
-            </button>
-          ))}
-          <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
-          <button onClick={() => setFNextAction(v => v==="today" ? "" : "today")}
-            style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:fNextAction==="today"?"#ea580c33":"transparent", color:fNextAction==="today"?"#ea580c":"#3d7a5e", border:`1px solid ${fNextAction==="today"?"#ea580c66":"#c0dece"}`, fontWeight:fNextAction==="today"?700:400, display:"flex", alignItems:"center", gap:4}}>
-            <FlameIcon size={12} color={fNextAction==="today"?"#ea580c":"#3d7a5e"} /> 本日追客
-          </button>
-          <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
-          <button onClick={() => setFMql(v => !v)}
-            style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background:fMql?"#059669":"transparent", color:fMql?"#fff":"#3d7a5e", border:`1px solid ${fMql?"#059669":"#c0dece"}`, fontWeight:fMql?700:400}}>
-            MQL
-          </button>
-          <span style={{fontSize:11, color:"#c0dece", flexShrink:0, margin:"0 4px"}}>|</span>
-          <span style={{fontSize:11, color:"#6a9a7a", flexShrink:0}}>ステータス:</span>
-          {getStatuses().map(s => {
-            const active = fStatuses.has(s);
-            const c = getStatusColor(s);
-            return (
-              <button key={s} onClick={() => setFStatuses(prev => {
-                const n = new Set(prev); active ? n.delete(s) : n.add(s); return n;
-              })} style={{fontSize:11,padding:"3px 9px",borderRadius:10,cursor:"pointer",fontFamily:"inherit",flexShrink:0, background: active ? c+"33" : "transparent", color: active ? c : "#3d7a5e", border: `1px solid ${active ? c+"66" : "#c0dece"}`, fontWeight: active ? 700 : 400}}>
-                {s}
-              </button>
-            );
-          })}
-          {fStatuses.size > 0 && (
-            <button onClick={() => setFStatuses(new Set())}
-              style={{fontSize:11,color:"#6a9a7a",background:"none",border:"none",cursor:"pointer",padding:"2px 4px",flexShrink:0,whiteSpace:"nowrap"}}>
-              ✕ クリア
-            </button>
-          )}
-        </div>
+        <LeadFilterBar
+          fQ={fQ} setFQ={setFQ} fSource={fSource} setFSrc={setFSrc}
+          fPortal={fPortal} setFPortal={setFPortal} fMonth={fMonth} setFMonth={setFMonth}
+          fNextAction={fNextAction} setFNextAction={setFNextAction}
+          fIS={fIS} setFIS={setFIS} fHasPortal={fHasPortal} setFHasPortal={setFHasPortal}
+          fMql={fMql} setFMql={setFMql} fStatuses={fStatuses} setFStatuses={setFStatuses}
+          sort={sort} setSort={setSort} sortDir={sortDir} setSortDir={setSortDir}
+          leads={leads} isMobile={isMobile}
+        />
       </div>
 
       {showImport && (
@@ -266,7 +195,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           </div>
         </div>
 
-        {/* デスクトップ: 右パネル（アクション履歴） */}
+        {/* デスクトップ: 右パネル */}
         {!isMobile && selectedLead && (
           <div style={{flex:1, minWidth:0, background:"#fff", border:"1px solid #e2f0e8", borderRadius:12, boxShadow:"0 2px 12px #0569690a", overflow:"hidden", height:"100%", overflowY:"auto"}}>
             <ActionHistoryPanel key={selectedLead.id} lead={selectedLead}

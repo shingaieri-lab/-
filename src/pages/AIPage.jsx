@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import { AIResultPanel } from '../components/ai/AIResultPanel.jsx';
 import { AIInputPanel } from '../components/ai/AIInputPanel.jsx';
 import { SparkleIcon, CheckCircleIcon, AlertIcon } from '../components/ui/Icons.jsx';
-import { JP_HOLIDAYS, addBizDays } from '../lib/holidays.js';
+import { addBizDays } from '../lib/holidays.js';
 import { ACTION_RESULTS } from '../lib/constants.js';
 import { getEffectiveAiConfig } from '../lib/accounts.js';
 import { acquireGmailToken, buildGmailDraftRaw, postGmailDraft, isTokenValid, handleOAuthCallbackError, handleOAuthPopupError } from '../lib/oauth.js';
-import { analyzeWithAI } from '../lib/ai.js';
+import { analyzeWithAI, findAvailableNextDate, clampToBusinessTime } from '../lib/ai.js';
 import { createGoogleTask } from '../lib/gcal.js';
 
 const SS_KEY = "ai_page_state";
@@ -17,7 +17,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
   const geminiConfigured = !!(aiConfig||{}).geminiConfigured;
   const [selLead, setSelLead] = useState(()=>loadSS().selLead||"");
   const [memo, setMemo] = useState(()=>loadSS().memo||"");
-  const [actionDate, setActionDate] = useState(()=>loadSS().actionDate||new Date().toISOString().split("T")[0]);
+  const [actionDate, setActionDate] = useState(()=>loadSS().actionDate||new Date().toLocaleDateString('sv',{timeZone:'Asia/Tokyo'}));
   const [actionTime, setActionTime] = useState(()=>{ const ss=loadSS(); if(ss.actionTime) return ss.actionTime; const n=new Date(); const m=Math.floor(n.getMinutes()/30)*30; return `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`; });
   const [manualType, setManualType] = useState(()=>loadSS().manualType||"call");
   const [manualResult, setManualResult] = useState(()=>loadSS().manualResult||"取次");
@@ -50,7 +50,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
   useEffect(() => { setSaved(false); setSavedActId(null); }, [selLead]);
 
   const resetAiPage = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString('sv',{timeZone:'Asia/Tokyo'});
     const n = new Date(); const m = Math.floor(n.getMinutes()/30)*30;
     const nowTime = `${String(n.getHours()).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
     setSelLead(""); setMemo(""); setActionDate(today); setActionTime(nowTime);
@@ -59,30 +59,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
     sessionStorage.removeItem(SS_KEY);
   };
 
-  // 1日あたりのネクストアクション登録上限（これを超える日は翌営業日へずらす）
   const NEXT_ACTION_DAILY_LIMIT = 4;
-
-  // 上限に達していない最も近い営業日を返す（最大60営業日先まで探す）
-  const findAvailableNextDate = (proposedDate) => {
-    let date = proposedDate;
-    for (let i = 0; i < 60; i++) {
-      const count = leads.filter(l => l.next_action_date === date).length;
-      if (count < NEXT_ACTION_DAILY_LIMIT) return date;
-      date = addBizDays(date, 1);
-    }
-    return proposedDate;
-  };
-
-  // AIが提案する時間を営業時間（9〜18時、12〜13時除外）に補正する
-  const clampToBusinessTime=(timeStr)=>{
-    if(!timeStr) return "10:00";
-    const [h,m]=timeStr.split(":").map(Number);
-    const mins=(isNaN(h)?10:h)*60+(isNaN(m)?0:m);
-    if(mins<9*60) return "09:00";
-    if(mins>=18*60) return "17:00";
-    if(mins>=12*60&&mins<13*60) return "13:00";
-    return timeStr;
-  };
 
   const analyze=async()=>{
     if(!memo.trim()) return;
@@ -138,7 +115,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
       // 1日上限（4件）を超える日はずらして確定日を next_action_date に格納
       if(parsed.next_action_date_offset!=null){
         const proposed=addBizDays(actionDate,parsed.next_action_date_offset);
-        parsed.next_action_date=findAvailableNextDate(proposed);
+        parsed.next_action_date=findAvailableNextDate(leads,proposed,NEXT_ACTION_DAILY_LIMIT);
       }
       // AI生成後：リード選択・ログイン情報から会社名・担当者名・署名・送信者名を自動反映
       const leadContact=lead?.contact||lead?.company||"";

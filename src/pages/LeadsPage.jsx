@@ -206,6 +206,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
               currentUser={currentUser} readOnly={readOnly}
               onEditAction={(aid, updated) => handleEditAction(selectedLead, aid, updated)}
               onDeleteAction={aid => handleDeleteAction(selectedLead, aid)}
+              hideConsultInfo
             />
           </div>
         )}
@@ -223,6 +224,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
               currentUser={currentUser} readOnly={readOnly}
               onEditAction={(aid, updated) => handleEditAction(selectedLead, aid, updated)}
               onDeleteAction={aid => handleDeleteAction(selectedLead, aid)}
+              hideConsultInfo
             />
           </div>
         </div>

@@ -47,8 +47,18 @@ export function PhoneIcon({ size = 16, color = "currentColor" }) {
 
 export function ChatIcon({ size = 16, color = "currentColor" }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display:"block" }}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    <svg width={size} height={size} viewBox="0 0 24 24" style={{ display:"block" }}>
+      {/* 人物：頭（塗りつぶし） */}
+      <circle cx="6.5" cy="5.5" r="3" fill={color}/>
+      {/* 人物：肩〜胴（塗りつぶし） */}
+      <path d="M0.5 20 C0.5 13 12.5 13 12.5 20 Z" fill={color}/>
+      {/* 吹き出し本体（アウトライン） */}
+      <path d="M14 2 Q13 2 13 3 L13 9.5 Q13 11 14.5 11 L15.5 11 L14 14 L17.5 11 L21.5 11 Q23 11 23 9.5 L23 3 Q23 2 21.5 2 Z"
+        fill="none" stroke={color} strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>
+      {/* 3つのドット */}
+      <circle cx="15.8" cy="6.5" r="0.9" fill={color}/>
+      <circle cx="18" cy="6.5" r="0.9" fill={color}/>
+      <circle cx="20.2" cy="6.5" r="0.9" fill={color}/>
     </svg>
   );
 }

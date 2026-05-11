@@ -14,7 +14,6 @@ function loadSettings() {
     const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
     return {
       stalledDays:          typeof s.stalledDays          === 'number'  ? s.stalledDays          : 14,
-      minUnreachable:       typeof s.minUnreachable       === 'number'  ? s.minUnreachable       : 2,
       minActions:           typeof s.minActions           === 'number'  ? s.minActions           : 2,
       excludeStatuses:      Array.isArray(s.excludeStatuses)            ? s.excludeStatuses      : [],
       stalledNoNextAction:  typeof s.stalledNoNextAction  === 'boolean' ? s.stalledNoNextAction  : false,
@@ -24,7 +23,7 @@ function loadSettings() {
       minFollowupEnd:       typeof s.minFollowupEnd       === 'number'  ? s.minFollowupEnd       : 3,
     };
   } catch {
-    return { stalledDays: 14, minUnreachable: 2, minActions: 2, minNurturing: 3, minFollowupEnd: 3, excludeStatuses: [], stalledNoNextAction: false, stalledOverdueAction: false, stalledLastFailed: false };
+    return { stalledDays: 14, minActions: 2, minNurturing: 3, minFollowupEnd: 3, excludeStatuses: [], stalledNoNextAction: false, stalledOverdueAction: false, stalledLastFailed: false };
   }
 }
 
@@ -34,7 +33,6 @@ function saveSettings(s) {
 
 const SECTIONS = [
   { key: 'flagged',     label: '相談フラグあり',     color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b33' },
-  { key: 'unreachable', label: '繋がらない',         color: '#ef4444', bg: '#fef2f2', border: '#ef444433' },
   { key: 'stalled',     label: '停滞中',             color: '#8b5cf6', bg: '#faf5ff', border: '#8b5cf633' },
   { key: 'nurturing',   label: 'ナーチャリング候補', color: '#0891b2', bg: '#ecfeff', border: '#0891b233' },
   { key: 'followupEnd', label: '追客終了候補',       color: '#64748b', bg: '#f8fafc', border: '#64748b33' },
@@ -248,7 +246,7 @@ function LeadCard({ lead, section, onOpenLead, onUpdate, onCompleted, compact })
       </div>
 
       {/* 不在・不通回数 */}
-      {unreachableCount > 0 && (
+      {callCount > 0 && (
         <div style={{ fontSize: 12, fontWeight: 700, color: '#8b5cf6' }}>
           不在・不通 {unreachableCount} / 架電 {callCount}
         </div>
@@ -354,7 +352,6 @@ function SettingsPanel({ settings, onChange, onClose }) {
   const apply = () => {
     const next = {
       stalledDays:          Math.max(1, Math.min(999, Number(draft.stalledDays)    || 14)),
-      minUnreachable:       Math.max(1, Math.min(99,  Number(draft.minUnreachable) || 2)),
       minActions:           Math.max(1, Math.min(99,  Number(draft.minActions)     || 2)),
       minNurturing:         Math.max(1, Math.min(99,  Number(draft.minNurturing)   || 3)),
       minFollowupEnd:       Math.max(1, Math.min(99,  Number(draft.minFollowupEnd) || 3)),
@@ -424,18 +421,6 @@ function SettingsPanel({ settings, onChange, onClose }) {
           </label>
         </div>
 
-        {/* 繋がらない */}
-        <div style={card('#ef4444', '#fef2f2', '#ef444444')}>
-          <div style={cardTitle('#ef4444')}>繋がらない</div>
-          <label style={checkLabelStyle}>
-            直近
-            <input type="number" min="1" max="99" value={draft.minUnreachable}
-              onChange={e => setDraft(d => ({ ...d, minUnreachable: e.target.value }))}
-              style={{ ...inputStyle, width: 46 }} />
-            回の架電がすべて不在
-          </label>
-        </div>
-
         {/* ナーチャリング候補 */}
         <div style={card('#0891b2', '#ecfeff', '#0891b244')}>
           <div style={cardTitle('#0891b2')}>ナーチャリング候補</div>
@@ -445,7 +430,7 @@ function SettingsPanel({ settings, onChange, onClose }) {
               <input type="number" min="1" max="99" value={draft.minNurturing ?? 3}
                 onChange={e => setDraft(d => ({ ...d, minNurturing: e.target.value }))}
                 style={{ ...inputStyle, width: 46 }} />
-              回の架電がすべて不在
+              回の架電がすべて不在/不通
             </span>
             <span style={{ fontSize: 12, color: '#6a9a7a' }}>（ステータスがナーチャリング以外）</span>
           </label>
@@ -526,9 +511,8 @@ export function ConsultationPage({ leads, onOpenLead, onUpdate }) {
     setTimeout(() => setToast(''), 5000);
   };
 
-  const { flagged, unreachable, stalled, nurturing, followupEnd } = useMemo(() => {
+  const { flagged, stalled, nurturing, followupEnd } = useMemo(() => {
     const flagged = [];
-    const unreachable = [];
     const stalled = [];
     const nurturing = [];
     const followupEnd = [];
@@ -572,11 +556,7 @@ export function ConsultationPage({ leads, onOpenLead, onUpdate }) {
       if (actionCount < settings.minActions) return;
       // ネクストアクション未設定はチェックボックスがオンの場合のみ対象にする
       if (!lead.next_action_date && !settings.stalledNoNextAction) return;
-      if (detectUnreachable(lead, settings.minUnreachable)) {
-        unreachable.push(lead);
-        seen.add(lead.id);
-        return;
-      }
+      if (lead.status === 'ナーチャリング') return;
       if (detectStalled(lead, settings.stalledDays, {
         stalledNoNextAction:  settings.stalledNoNextAction,
         stalledOverdueAction: settings.stalledOverdueAction,
@@ -597,12 +577,12 @@ export function ConsultationPage({ leads, onOpenLead, onUpdate }) {
       }
     });
 
-    return { flagged, unreachable, stalled, nurturing, followupEnd };
+    return { flagged, stalled, nurturing, followupEnd };
   }, [leads, settings]);
 
   const todayLabel = new Date().toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', month: 'long', day: 'numeric', weekday: 'short' });
-  const total = flagged.length + unreachable.length + stalled.length + nurturing.length + followupEnd.length;
-  const sectionData = { flagged, unreachable, stalled, nurturing, followupEnd };
+  const total = flagged.length + stalled.length + nurturing.length + followupEnd.length;
+  const sectionData = { flagged, stalled, nurturing, followupEnd };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -656,6 +636,7 @@ export function ConsultationPage({ leads, onOpenLead, onUpdate }) {
                 `${settings.stalledDays}日以上アクションなし`,
                 settings.stalledNoNextAction  && 'ネクストアクション未設定',
                 settings.stalledOverdueAction && '期限切れ',
+                'ナーチャリング除く',
               ].filter(Boolean).join(' / ')
             : section.key === 'unreachable'
             ? `直近${settings.minUnreachable}回の架電がすべて不在`

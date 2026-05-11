@@ -99,8 +99,8 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
             )}
             {lead.hp_url && (
               <a href={lead.hp_url} target="_blank" rel="noopener noreferrer"
-                style={{...S.zohoLinkSmall, fontSize:11, padding:"3px 9px", flexShrink:0, background:"#e0f2fe", borderColor:"#7dd3fc", color:"#0369a1", display:"flex", alignItems:"center", gap:4}} onClick={e=>e.stopPropagation()}>
-                <GlobeIcon size={12} color="#0369a1" /> HP
+                style={{...S.zohoLinkSmall, fontSize:11, padding:"3px 9px", flexShrink:0, background:"#dcfce7", borderColor:"#86efac", color:"#15803d", display:"flex", alignItems:"center", gap:4}} onClick={e=>e.stopPropagation()}>
+                <GlobeIcon size={12} color="#15803d" /> HP
               </a>
             )}
             {(nad || lead.next_action) && (

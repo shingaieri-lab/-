@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { detectUnreachable, detectStalled } from '../../lib/isReport.js';
 import { S } from '../../styles/index.js';
-import { PencilIcon, TrashIcon, MailIcon, ExternalLinkIcon, ClipboardIcon, CheckCircleIcon, XCircleIcon, InfoIcon, MapPinIcon, InboxIcon, FileTextIcon, ChatIcon } from '../ui/Icons.jsx';
+import { PencilIcon, TrashIcon, MailIcon, ExternalLinkIcon, ClipboardIcon, CheckCircleIcon, XCircleIcon, InfoIcon, MapPinIcon, InboxIcon, FileTextIcon, ChatIcon, GlobeIcon } from '../ui/Icons.jsx';
 import { ActionForm } from './ActionForm.jsx';
 import { ActEntry } from './ActEntry.jsx';
 import { DealActionBar } from './DealActionBar.jsx';
@@ -212,6 +212,12 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             return <span style={{ fontSize: 11, color: srcColor, background: srcColor + "1a", border: `1px solid ${srcColor}33`, borderRadius: 6, padding: "1px 7px", fontWeight: 600, display:"flex", alignItems:"center", gap:3 }}><InboxIcon size={11} color={srcColor} /> {lead.source}{lead.portal_site ? " / " + lead.portal_site : ""}</span>;
           })()}
           {lead.zoho_url && <a href={lead.zoho_url} target="_blank" rel="noopener noreferrer" style={{ ...S.zohoLinkSmall, fontSize: 10, padding: "2px 8px", display:"flex", alignItems:"center", gap:3 }}><ExternalLinkIcon size={10} color="#0284c7" /> Zoho</a>}
+          {lead.hp_url && (
+            <a href={lead.hp_url} target="_blank" rel="noopener noreferrer"
+              style={{ fontSize: 10, padding: "2px 8px", background: "#dcfce7", border: "1px solid #86efac", borderRadius: 6, color: "#15803d", fontWeight: 600, display:"flex", alignItems:"center", gap:3, textDecoration:"none" }}>
+              <GlobeIcon size={10} color="#15803d" /> HP
+            </a>
+          )}
           {!readOnly && !editingZohoId && !lead.zoho_lead_id && (
             <button onClick={() => setEditingZohoId(true)}
               style={{ fontSize: 10, padding: "2px 8px", background: "none", border: "1px solid #0284c766", borderRadius: 6, cursor: "pointer", color: "#0284c7", fontWeight: 600 }}>
@@ -220,8 +226,8 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
           )}
           {!readOnly && !editingZohoId && lead.zoho_lead_id && (
             <button onClick={() => { setZohoIdInput(lead.zoho_lead_id); setEditingZohoId(true); }}
-              style={{ fontSize: 10, padding: "2px 8px", background: "#e0f2fe", border: "1px solid #7dd3fc", borderRadius: 6, cursor: "pointer", color: "#0284c7", fontWeight: 600, display:"flex", alignItems:"center", gap:3 }}>
-              <ExternalLinkIcon size={9} color="#0284c7" /> Zoho連携済
+              style={{ fontSize: 10, padding: "2px 8px", background: "#f1f5f9", border: "1px solid #cbd5e1", borderRadius: 6, cursor: "pointer", color: "#64748b", fontWeight: 600, display:"flex", alignItems:"center", gap:3 }}>
+              <PencilIcon size={9} color="#64748b" /> Zoho ID
             </button>
           )}
           {!readOnly && editingZohoId && (

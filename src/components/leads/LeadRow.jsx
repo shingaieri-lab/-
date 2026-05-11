@@ -53,16 +53,16 @@ export function LeadRow({ lead, onEdit, onDelete, onStatusChange, onUpdate, open
         <div style={{display:"flex",alignItems:"center", gap:6,flexShrink:0}}
           onClick={e=>e.stopPropagation()}>
 
+          {/* MQL バッジ */}
+          {(lead.mql||"").trim() === "MQL" && (
+            <span style={{fontSize:11,fontWeight:700,color:"#6b7280", background:"#f3f4f6",border:"1px solid #d1d5db", borderRadius:6,padding:"2px 8px", whiteSpace:"nowrap"}}>MQL</span>
+          )}
+
           {/* IS担当バッジ */}
           {lead.is_member && (() => {
             const c = IS_COLORS[lead.is_member] || { bg:"#3d7a5e",border:"#47556966" };
             return <span style={{fontSize:11,fontWeight:700,color:c.bg, background:c.bg+"12",border:`1px solid ${c.bg}33`, borderRadius:6,padding:"2px 8px", whiteSpace:"nowrap"}}>{lead.is_member}</span>;
           })()}
-
-          {/* MQL バッジ */}
-          {(lead.mql||"").trim() === "MQL" && (
-            <span style={{fontSize:11,fontWeight:700,color:"#6b7280", background:"#f3f4f6",border:"1px solid #d1d5db", borderRadius:6,padding:"2px 8px", whiteSpace:"nowrap"}}>MQL</span>
-          )}
 
           {/* 課金対象外バッジ */}
           {lead.portal_site && lead.charge_applied && (

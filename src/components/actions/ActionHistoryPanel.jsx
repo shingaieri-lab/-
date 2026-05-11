@@ -31,23 +31,37 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
 
   const zohoAuthenticated = window.__appData?.zohoAuthenticated || false;
 
-  // 相談ボードへの表示状態を判定してピンアイコンの色を決める
+  // 相談ボードへの表示状態を判定してピンアイコンの色を決める（セクション色と統一）
   const consultSettings = (() => {
     try {
       const s = JSON.parse(localStorage.getItem('consultation_settings') || '{}');
-      return { stalledDays: typeof s.stalledDays === 'number' ? s.stalledDays : 14, minUnreachable: typeof s.minUnreachable === 'number' ? s.minUnreachable : 2 };
-    } catch { return { stalledDays: 14, minUnreachable: 2 }; }
+      return {
+        stalledDays:          typeof s.stalledDays          === 'number'  ? s.stalledDays          : 14,
+        minActions:           typeof s.minActions           === 'number'  ? s.minActions           : 2,
+        minNurturing:         typeof s.minNurturing         === 'number'  ? s.minNurturing         : 3,
+        minFollowupEnd:       typeof s.minFollowupEnd       === 'number'  ? s.minFollowupEnd       : 3,
+        excludeStatuses:      Array.isArray(s.excludeStatuses)            ? s.excludeStatuses      : [],
+        stalledNoNextAction:  typeof s.stalledNoNextAction  === 'boolean' ? s.stalledNoNextAction  : false,
+        stalledOverdueAction: typeof s.stalledOverdueAction === 'boolean' ? s.stalledOverdueAction : false,
+        stalledLastFailed:    typeof s.stalledLastFailed    === 'boolean' ? s.stalledLastFailed    : false,
+      };
+    } catch { return { stalledDays: 14, minActions: 2, minNurturing: 3, minFollowupEnd: 3, excludeStatuses: [], stalledNoNextAction: false, stalledOverdueAction: false, stalledLastFailed: false }; }
   })();
   const isConsultExcluded = lead.status === '育成対象外' ||
+    consultSettings.excludeStatuses.includes(lead.status) ||
     (lead.consultation_completed && (lead.actions || []).length <= (lead.consultation_completed_actions ?? -1));
+  const actionCount = (lead.actions || []).filter(a => a.type !== 'consultation').length;
   const consultStatus = isConsultExcluded ? null :
     lead.consultation_flag ? 'flagged' :
-    detectUnreachable(lead, consultSettings.minUnreachable) ? 'unreachable' :
-    detectStalled(lead, consultSettings.stalledDays) ? 'stalled' : null;
+    actionCount < consultSettings.minActions ? null :
+    (lead.status === 'ナーチャリング' && lead.next_action_date && detectUnreachable(lead, consultSettings.minFollowupEnd)) ? 'followupEnd' :
+    (lead.status !== 'ナーチャリング' && detectStalled(lead, consultSettings.stalledDays, { stalledNoNextAction: consultSettings.stalledNoNextAction, stalledOverdueAction: consultSettings.stalledOverdueAction, stalledLastFailed: consultSettings.stalledLastFailed })) ? 'stalled' :
+    (lead.status !== 'ナーチャリング' && detectUnreachable(lead, consultSettings.minNurturing)) ? 'nurturing' : null;
   const PIN_COLORS = {
-    flagged:     { bg: '#f59e0b', border: '1px solid #d97706',    icon: '#fff'     },
-    unreachable: { bg: '#fef2f2', border: '1px solid #ef444466',  icon: '#ef4444'  },
-    stalled:     { bg: '#faf5ff', border: '1px solid #8b5cf666',  icon: '#8b5cf6'  },
+    flagged:    { bg: '#f59e0b',   border: '1px solid #d97706',    icon: '#fff'     },
+    stalled:    { bg: '#faf5ff',   border: '1px solid #8b5cf666',  icon: '#8b5cf6'  },
+    nurturing:  { bg: '#ecfeff',   border: '1px solid #0891b266',  icon: '#0891b2'  },
+    followupEnd:{ bg: '#f8fafc',   border: '1px solid #64748b66',  icon: '#64748b'  },
   };
   const pinColor = PIN_COLORS[consultStatus] || { bg: showConsultInput ? '#fef3c7' : 'none', border: showConsultInput ? '1px solid #f59e0b44' : 'none', icon: '#f59e0b' };
 
@@ -142,18 +156,19 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
             {!readOnly && (
               <button
                 onClick={() => {
-                  if (consultStatus === 'unreachable' || consultStatus === 'stalled') return;
+                  if (consultStatus === 'stalled' || consultStatus === 'nurturing' || consultStatus === 'followupEnd') return;
                   lead.consultation_flag
                     ? onUpdate({ consultation_flag: false, consultation_note: '' })
                     : setShowConsultInput(v => !v);
                 }}
                 title={
-                  consultStatus === 'unreachable' ? '繋がらないとして相談ボードに表示中' :
                   consultStatus === 'stalled'     ? '停滞中として相談ボードに表示中' :
+                  consultStatus === 'nurturing'   ? 'ナーチャリング候補として相談ボードに表示中' :
+                  consultStatus === 'followupEnd' ? '追客終了候補として相談ボードに表示中' :
                   lead.consultation_flag          ? '相談フラグを解除' : '相談ボードに追加'
                 }
                 style={{ background: pinColor.bg, border: pinColor.border, borderRadius: 5, padding: "4px", display: "flex", alignItems: "center",
-                  cursor: (consultStatus === 'unreachable' || consultStatus === 'stalled') ? 'default' : 'pointer',
+                  cursor: (consultStatus === 'stalled' || consultStatus === 'nurturing' || consultStatus === 'followupEnd') ? 'default' : 'pointer',
                 }}
               >
                 <ChatIcon size={18} color={pinColor.icon} />

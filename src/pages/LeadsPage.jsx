@@ -60,7 +60,7 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
       if (!/^\d{4}-\d{2}$/.test(ym)) { const m = s.match(/^(\d{4})[\/-](\d{1,2})/); ym = m ? m[1]+"-"+m[2].padStart(2,"0") : ""; }
       return ym === fMonth;
     })
-    .filter(l => !fNextAction || (fNextAction==="today" ? l.next_action_date===TODAY : l.next_action_date&&l.next_action_date<TODAY))
+    .filter(l => !fNextAction || (fNextAction==="today" ? (l.next_action_date && l.next_action_date<=TODAY) : l.next_action_date&&l.next_action_date<TODAY))
     .filter(l => !fSource || l.source === fSource)
     .filter(l => !fHasPortal || !!l.portal_site)
     .filter(l => !fPortal || l.portal_site === fPortal)

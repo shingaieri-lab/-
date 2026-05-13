@@ -132,10 +132,16 @@ function isCallUnreachable(action) {
 export function detectUnreachable(lead, minCalls = 2) {
   const calls = (lead.actions || []).filter(a => a.type === 'call');
   if (calls.length < minCalls) return false;
-  const recent = calls.slice(0, Math.max(minCalls, 5));
-  const unreachable = recent.filter(isCallUnreachable);
-  // 直近の架電が minCalls 回以上あり、そのすべてが不在系
-  return unreachable.length >= minCalls && unreachable.length === recent.length;
+  // 新しい順（配列先頭が最新）で先頭から連続して不在・不通が続く件数を数える
+  let consecutive = 0;
+  for (const call of calls) {
+    if (isCallUnreachable(call)) {
+      consecutive++;
+    } else {
+      break;
+    }
+  }
+  return consecutive >= minCalls;
 }
 
 // アクションが止まっているか検出

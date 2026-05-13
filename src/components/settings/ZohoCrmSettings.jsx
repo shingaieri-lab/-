@@ -1,7 +1,7 @@
 // Zoho CRM連携設定（認証・マッピング・Webhook情報）
 import { useState } from 'react';
 import { getISMembers } from '../../lib/master.js';
-import { saveZohoConfig } from '../../lib/zoho.js';
+import { saveZohoConfig, fetchZohoUsers } from '../../lib/zoho.js';
 import { ExternalLinkIcon, CheckCircleIcon, AlertIcon, PinIcon } from '../ui/Icons.jsx';
 
 export function ZohoCrmSettings() {
@@ -18,12 +18,15 @@ export function ZohoCrmSettings() {
     statusMap: stored.statusMap || {},
     reverseStatusMap: stored.reverseStatusMap || {},
     isMemberMap: stored.isMemberMap || {},
+    memberUserIdMap: stored.memberUserIdMap || {},
   });
   const [authenticated, setAuthenticated] = useState(window.__appData?.zohoAuthenticated || false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [newMemberZoho, setNewMemberZoho] = useState('');
   const [newMemberLocal, setNewMemberLocal] = useState('');
+  const [zohoUsers, setZohoUsers] = useState([]);
+  const [fetchingUsers, setFetchingUsers] = useState(false);
 
   const inp = { width:'100%', padding:'7px 10px', borderRadius:7, border:'1px solid #c0dece', fontSize:12, outline:'none', boxSizing:'border-box', fontFamily:'inherit', background:'#fff', color:'#174f35' };
   const lbl = { fontSize:11, fontWeight:700, color:'#6a9a7a', display:'block', marginBottom:4, marginTop:12 };
@@ -74,6 +77,19 @@ export function ZohoCrmSettings() {
     const next = { ...cfg.isMemberMap }; delete next[k];
     setCfg(c => ({ ...c, isMemberMap: next }));
   };
+
+  const handleFetchZohoUsers = async () => {
+    setFetchingUsers(true);
+    try {
+      const users = await fetchZohoUsers();
+      setZohoUsers(users);
+    } catch (e) {
+      showErr('Zohoユーザーの取得に失敗しました: ' + e.message);
+    }
+    setFetchingUsers(false);
+  };
+
+  const isStaffAccounts = (window.__appData?.accounts || []).filter(a => a.isStaff || (window.__appData?.accounts || []).every(acc => !acc.isStaff));
 
   return (
     <div style={{width:"100%"}}>
@@ -153,6 +169,40 @@ export function ZohoCrmSettings() {
           <button onClick={addMemberMap} style={{...btnP,padding:'7px 12px',fontSize:11,flexShrink:0}}>追加</button>
         </div>
         <div style={{fontSize:10,color:'#9ca3af',marginTop:6}}>※ マッピングが未設定の場合、Zohoの値をそのまま使用します</div>
+      </div>
+
+      {/* Zohoユーザーマッピング */}
+      <div style={{background:'#f8fbf9',border:'1px solid #e2f0e8',borderRadius:8,padding:'14px',marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#174f35',marginBottom:4}}>Zohoユーザーマッピング</div>
+        <div style={{fontSize:11,color:'#6a9a7a',marginBottom:10}}>行動を同期する際の担当者・割り当て先として使用します<br/>本ツールのメンバーとZohoのユーザーを対応付けてください</div>
+        <button onClick={handleFetchZohoUsers} disabled={fetchingUsers || !authenticated} style={{...btnP, fontSize:11, padding:'6px 14px', marginBottom:12, opacity:(!authenticated||fetchingUsers)?0.6:1}}>
+          {fetchingUsers ? '取得中...' : 'Zohoユーザーを取得'}
+        </button>
+        {!authenticated && <div style={{fontSize:10,color:'#d97706',marginBottom:8}}>※ Zoho認証後に取得できます</div>}
+        {isStaffAccounts.length > 0 && (
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {isStaffAccounts.map(account => (
+              <div key={account.id} style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{width:120,fontSize:12,color:'#174f35',fontWeight:600,flexShrink:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{account.name}</span>
+                <span style={{color:'#9ca3af',flexShrink:0}}>→</span>
+                <select
+                  value={cfg.memberUserIdMap[account.id] || ''}
+                  onChange={e => setCfg(c => ({ ...c, memberUserIdMap: { ...c.memberUserIdMap, [account.id]: e.target.value || undefined } }))}
+                  style={{...inp, flex:1}}
+                  disabled={zohoUsers.length === 0}
+                >
+                  <option value="">{zohoUsers.length === 0 ? '先に「Zohoユーザーを取得」を押してください' : '未設定'}</option>
+                  {zohoUsers.map(u => (
+                    <option key={u.id} value={u.id}>{u.name}{u.email ? ` (${u.email})` : ''}</option>
+                  ))}
+                </select>
+              </div>
+            ))}
+          </div>
+        )}
+        {isStaffAccounts.length === 0 && (
+          <div style={{fontSize:11,color:'#9ca3af'}}>アカウント管理でメンバーを登録してください</div>
+        )}
       </div>
 
       <div style={{display:'flex',gap:8}}>

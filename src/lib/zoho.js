@@ -41,6 +41,13 @@ export async function importZohoLead(zohoLeadId) {
   return { ok: res.ok, data };
 }
 
+export async function fetchZohoUsers() {
+  const res = await fetch('/api/zoho/users');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Zohoユーザー取得失敗');
+  return data.users;
+}
+
 export async function updateZohoLeadStatus(zohoLeadId, localStatus) {
   await fetch('/api/zoho/update-lead-status', {
     method: 'POST',

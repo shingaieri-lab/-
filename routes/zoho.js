@@ -108,6 +108,7 @@ router.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) =>
 
     const zohoIsValue = zl[isField] || '';
     const zohoStatus = zl[statusField] || '';
+    console.log('[DEBUG] isField:', isField, '/ raw value:', JSON.stringify(zl[isField]));
     const today = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
     const zohoDomain = getZohoDomain(cfg?.dataCenter);
     const lead = {
@@ -158,6 +159,21 @@ router.post('/api/zoho/update-lead-status', requireAuth, rateLimit, async (req, 
   }
 });
 
+// ZohoユーザーIDの一覧を取得（担当者マッピング設定用）
+router.get('/api/zoho/users', requireAuth, rateLimit, async (req, res) => {
+  try {
+    const data = await zohoApi('GET', '/users?type=AllUsers');
+    const users = (data.users || []).map(u => ({
+      id: u.id,
+      name: u.full_name,
+      email: u.email,
+    }));
+    res.json({ ok: true, users });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // アクション履歴をZohoに行動（Events）として登録
 router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) => {
   const { zohoLeadId, action } = req.body;
@@ -175,17 +191,23 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     const storedLead = leads.find(l => l.zoho_lead_id === zohoLeadId);
     const contactName = storedLead?.contact || '';
 
-    const data = await zohoApi('POST', '/Event', {
-      data: [{
-        Name: '電話）インバウンド',
-        field34: '電話）インバウンド',
-        field12: startDateTime,
-        field24: '追客',
-        field22: method,
-        field2: action.summary || '',
-        field16: { id: zohoLeadId, name: contactName },
-      }],
-    });
+    const zohoConfig = await readData('zoho_config');
+    const zohoUserId = zohoConfig?.memberUserIdMap?.[req.accountId];
+
+    const eventRecord = {
+      Name: '電話）インバウンド',
+      field34: '電話）インバウンド',
+      field12: startDateTime,
+      field24: '追客',
+      field22: method,
+      field2: action.summary || '',
+      field16: { id: zohoLeadId, name: contactName },
+    };
+    if (zohoUserId) {
+      eventRecord.Owner = { id: zohoUserId };
+    }
+
+    const data = await zohoApi('POST', '/Event', { data: [eventRecord] });
 
     if (data.data?.[0]?.status === 'success') {
       res.json({ ok: true, activityId: data.data[0].details?.id });

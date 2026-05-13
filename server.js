@@ -1,5 +1,13 @@
 // エントリーポイント：Expressの設定とルートの登録のみ行う
 require('dotenv').config({ path: '.env.local' }); // ローカルの環境変数を読み込む
+
+// ENCRYPTION_KEY が未設定の場合は起動しない（CLAUDE.md: フォールバック禁止）
+if (!process.env.ENCRYPTION_KEY || Buffer.from(process.env.ENCRYPTION_KEY, 'hex').length !== 32) {
+  console.error('FATAL: ENCRYPTION_KEY must be set as a 64-character hex string (32 bytes).');
+  console.error('Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
+  process.exit(1);
+}
+
 const express = require('express');
 const cookieParser = require('cookie-parser');
 

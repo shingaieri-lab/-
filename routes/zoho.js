@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { kv, readData, writeData } = require('../lib/kv');
 const { requireAuth, rateLimit } = require('../lib/auth');
 const { getZohoDomain, getZohoTokens, saveZohoTokens, refreshZohoToken, zohoApi } = require('../lib/zoho');
+const { encrypt, decrypt } = require('../lib/encrypt');
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.post('/api/zoho-config', requireAuth, rateLimit, async (req, res) => {
   const existing = await readData('zoho_config');
   const { clientSecret, ...rest } = req.body;
   const newConfig = clientSecret
-    ? { ...rest, clientSecret }
+    ? { ...rest, clientSecret: encrypt(clientSecret) }
     : { ...rest, clientSecret: existing?.clientSecret };
   await writeData('zoho_config', newConfig);
   res.json({ ok: true });
@@ -35,7 +36,7 @@ router.get('/api/zoho/auth', requireAuth, async (req, res) => {
   ].join(',');
 
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const redirectUri = `${protocol}://${req.headers.host}/api/zoho/callback`;
+  const redirectUri = process.env.ZOHO_REDIRECT_URI || `${protocol}://${req.headers.host}/api/zoho/callback`;
   const url = `https://accounts.${domain}/oauth/v2/auth?response_type=code&client_id=${cfg.clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(redirectUri)}&access_type=offline&prompt=consent`;
   res.redirect(url);
 });
@@ -50,11 +51,11 @@ router.get('/api/zoho/callback', async (req, res) => {
 
   const domain = getZohoDomain(cfg.dataCenter);
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-  const redirectUri = `${protocol}://${req.headers.host}/api/zoho/callback`;
+  const redirectUri = process.env.ZOHO_REDIRECT_URI || `${protocol}://${req.headers.host}/api/zoho/callback`;
   const params = new URLSearchParams({
     code,
     client_id: cfg.clientId,
-    client_secret: cfg.clientSecret,
+    client_secret: decrypt(cfg.clientSecret),
     redirect_uri: redirectUri,
     grant_type: 'authorization_code',
   });

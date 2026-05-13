@@ -3,6 +3,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { kv, readData, writeData, getAccounts } = require('../lib/kv');
 const { BCRYPT_ROUNDS, requireAuth, rateLimit, validatePassword } = require('../lib/auth');
+const { encrypt } = require('../lib/encrypt');
 
 const router = express.Router();
 
@@ -36,15 +37,20 @@ router.post('/api/accounts', requireAuth, rateLimit, async (req, res) => {
   const accounts = req.body;
   const existingAccounts = await getAccounts();
   for (const account of accounts) {
+    const existing = existingAccounts.find(a => a.id === account.id);
     if (!account.password) {
-      const existing = existingAccounts.find(a => a.id === account.id);
       if (existing) account.password = existing.password;
     } else if (!account.password.startsWith('$2')) {
       const pwError = validatePassword(account.password);
       if (pwError) return res.status(400).json({ error: `${account.id}: ${pwError}` });
       account.password = await bcrypt.hash(account.password, BCRYPT_ROUNDS);
     }
-    // 既にハッシュ化済みの場合はそのまま保持
+    // フロントに返さないgeminiKeyは既存値を引き継ぐ（新規入力時のみ暗号化して上書き）
+    if (!account.geminiKey) {
+      if (existing?.geminiKey) account.geminiKey = existing.geminiKey;
+    } else if (!account.geminiKey.startsWith('enc:')) {
+      account.geminiKey = encrypt(account.geminiKey);
+    }
   }
   await writeData('accounts', accounts);
   res.json({ ok: true });
@@ -64,7 +70,13 @@ router.post('/api/master-settings', requireAuth, rateLimit, async (req, res) => 
 
 // AI設定保存（Gemini APIキー・Gmail OAuth）
 router.post('/api/ai-config', requireAuth, rateLimit, async (req, res) => {
-  await writeData('ai_config', req.body);
+  const { geminiKey, ...rest } = req.body;
+  const existing = (await readData('ai_config')) || {};
+  const newConfig = {
+    ...rest,
+    geminiKey: geminiKey ? encrypt(geminiKey) : existing.geminiKey,
+  };
+  await writeData('ai_config', newConfig);
   res.json({ ok: true });
 });
 

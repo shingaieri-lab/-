@@ -2,6 +2,7 @@
 const express = require('express');
 const { readData, getAccounts } = require('../lib/kv');
 const { requireAuth, rateLimit } = require('../lib/auth');
+const { decrypt } = require('../lib/encrypt');
 
 const router = express.Router();
 
@@ -60,7 +61,7 @@ router.post('/api/ai/analyze', requireAuth, rateLimit, async (req, res) => {
   const accounts = await getAccounts();
   const account = accounts.find(a => a.id === req.accountId);
   const globalAiConfig = (await readData('ai_config')) || {};
-  const apiKey = account?.geminiKey || globalAiConfig.geminiKey;
+  const apiKey = decrypt(account?.geminiKey) || decrypt(globalAiConfig.geminiKey);
 
   if (!apiKey) return res.status(400).json({ error: 'Gemini APIキーが未設定です。設定画面（⚙️）の「APIキー設定」タブから入力してください。' });
 

@@ -10,8 +10,8 @@ const {
 
 const router = express.Router();
 
-// ログイン（認証不要）
-router.post('/api/login', async (req, res) => {
+// ログイン（認証不要・IPレート制限あり）
+router.post('/api/login', rateLimit, async (req, res) => {
   const { id, password } = req.body;
 
   const failKey = 'loginFail:' + id;

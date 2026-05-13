@@ -108,7 +108,6 @@ router.post('/api/zoho/import-lead', requireAuth, rateLimit, async (req, res) =>
 
     const zohoIsValue = zl[isField] || '';
     const zohoStatus = zl[statusField] || '';
-    console.log('[DEBUG] isField:', isField, '/ raw value:', JSON.stringify(zl[isField]));
     const today = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
     const zohoDomain = getZohoDomain(cfg?.dataCenter);
     const lead = {

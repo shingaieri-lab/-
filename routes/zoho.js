@@ -158,6 +158,17 @@ router.post('/api/zoho/update-lead-status', requireAuth, rateLimit, async (req, 
   }
 });
 
+// 行動モジュールのフィールド一覧を取得（割り当て先のAPI名確認用・一時的なデバッグ用）
+router.get('/api/zoho/event-fields', requireAuth, async (req, res) => {
+  try {
+    const data = await zohoApi('GET', '/settings/fields?module=Events');
+    const fields = (data.fields || []).map(f => ({ api_name: f.api_name, label: f.field_label }));
+    res.json({ fields });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ZohoユーザーIDの一覧を取得（担当者マッピング設定用）
 router.get('/api/zoho/users', requireAuth, rateLimit, async (req, res) => {
   try {
@@ -204,6 +215,7 @@ router.post('/api/zoho/push-action', requireAuth, rateLimit, async (req, res) =>
     };
     if (zohoUserId) {
       eventRecord.Owner = { id: zohoUserId };
+      eventRecord.field15 = { id: zohoUserId };
     }
 
     const data = await zohoApi('POST', '/Event', { data: [eventRecord] });

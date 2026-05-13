@@ -158,12 +158,13 @@ router.post('/api/zoho/update-lead-status', requireAuth, rateLimit, async (req, 
   }
 });
 
-// 行動モジュールのフィールド一覧を取得（割り当て先のAPI名確認用・一時的なデバッグ用）
+// 行動レコードの内容を取得（割り当て先のAPI名確認用・一時的なデバッグ用）
 router.get('/api/zoho/event-fields', requireAuth, async (req, res) => {
+  const { id } = req.query;
+  if (!id) return res.status(400).json({ error: 'idパラメータが必要です。例: ?id=行動ID' });
   try {
-    const data = await zohoApi('GET', '/settings/fields?module=Events');
-    const fields = (data.fields || []).map(f => ({ api_name: f.api_name, label: f.field_label }));
-    res.json({ fields });
+    const data = await zohoApi('GET', `/Events/${id}`);
+    res.json(data);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

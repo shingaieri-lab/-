@@ -40,11 +40,17 @@ const SECTIONS = [
 
 function buildCardSummary(actions) {
   if (!actions || actions.length === 0) return '';
-  const last = actions[0];
-  const date = last?.date ? last.date.slice(5).replace('-', '/') : '';
-  const type = ACTION_TYPE_LABEL[last?.type] || last?.type || '';
-  const result = last?.result || '';
-  const memo = extractText(last?.summary || '');
+  const sorted = [...actions]
+    .filter(a => a.type !== 'consultation' && a.date)
+    .sort((a, b) =>
+      (String(b.date) + (b.time || '')).localeCompare(String(a.date) + (a.time || ''))
+    );
+  if (sorted.length === 0) return '';
+  const last = sorted[0];
+  const date = last.date.slice(5).replace('-', '/');
+  const type = ACTION_TYPE_LABEL[last.type] || last.type || '';
+  const result = last.result || '';
+  const memo = extractText(last.summary || '');
   return [date, type, result, memo].filter(Boolean).join('  ');
 }
 

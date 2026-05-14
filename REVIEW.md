@@ -112,7 +112,7 @@ AIが通話メモを読んで次の行動を提案したり、Googleカレンダ
 | ~~高~~ | ~~**Zoho Client SecretがKVに平文保存**~~ | ✅ 対応済み（`feature/security-review`、2026-05-13）：保存時に AES-256-GCM で暗号化。`ENCRYPTION_KEY` 環境変数が必要 |
 | ~~高~~ | ~~**APIキー（Gemini等）がKVに平文保存**~~ | ✅ 対応済み（`feature/security-review`、2026-05-13）：`ai_config.geminiKey` / `accounts[].geminiKey` を保存時に暗号化。未設定時は既存値を引き継ぎ |
 | ~~中~~ | ~~**OAuth redirectURIが動的生成**~~ | ✅ 対応済み（`feature/security-review`、2026-05-13）：`ZOHO_REDIRECT_URI` 環境変数を優先使用。未設定時は従来の動的生成にフォールバック |
-| 中 | **入力バリデーションが薄い** | リード・アカウント・設定保存のAPIで `req.body` を検証なしで保存。Zodなどでスキーマ定義が必要 |
+| ~~中~~ | ~~**入力バリデーションが薄い**~~ | ✅ 対応済み（`feature/input-validation`、2026-05-14）：`lib/validators.js` に Zod スキーマを定義。`/api/leads`・`/api/accounts`・`/api/master-settings`・`/api/email-tpls` に適用 |
 | 中 | **Webhook署名検証がない** | トークン一致のみ。ZohoのHMAC-SHA256署名検証が未実装 |
 | 低 | **セッション有効期限が7日** | 顧客情報を扱うツールとして、3日以下への短縮を検討 |
 

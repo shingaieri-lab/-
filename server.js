@@ -18,7 +18,8 @@ const zohoRoutes = require('./routes/zoho');
 
 const path = require('path');
 const app = express();
-app.use(express.json({ limit: '20mb' }));
+// verify オプションで raw body を保持（Webhook の HMAC-SHA256 署名検証に使用）
+app.use(express.json({ limit: '20mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname));

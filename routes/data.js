@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { kv, readData, writeData, getAccounts } = require('../lib/kv');
 const { BCRYPT_ROUNDS, requireAuth, rateLimit, validatePassword } = require('../lib/auth');
 const { encrypt } = require('../lib/encrypt');
+const { LeadSchema, AccountSaveSchema, MasterSettingsSchema, EmailTplSchema, validate } = require('../lib/validators');
 
 const router = express.Router();
 
@@ -34,6 +35,7 @@ router.get('/api/data', requireAuth, rateLimit, async (req, res) => {
 
 // アカウント一括保存
 router.post('/api/accounts', requireAuth, rateLimit, async (req, res) => {
+  if (!validate(AccountSaveSchema, req.body, res)) return;
   const accounts = req.body;
   const existingAccounts = await getAccounts();
   for (const account of accounts) {
@@ -58,12 +60,14 @@ router.post('/api/accounts', requireAuth, rateLimit, async (req, res) => {
 
 // リード保存
 router.post('/api/leads', requireAuth, rateLimit, async (req, res) => {
+  if (!validate(LeadSchema, req.body, res)) return;
   await writeData('leads', req.body);
   res.json({ ok: true });
 });
 
 // マスター設定保存
 router.post('/api/master-settings', requireAuth, rateLimit, async (req, res) => {
+  if (!validate(MasterSettingsSchema, req.body, res)) return;
   await writeData('master_settings', req.body);
   res.json({ ok: true });
 });
@@ -88,6 +92,7 @@ router.post('/api/gcal-config', requireAuth, rateLimit, async (req, res) => {
 
 // メールテンプレート保存
 router.post('/api/email-tpls', requireAuth, rateLimit, async (req, res) => {
+  if (!validate(EmailTplSchema, req.body, res)) return;
   await writeData('email_tpls', req.body);
   res.json({ ok: true });
 });

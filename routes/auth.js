@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { kv, getAccounts, writeData } = require('../lib/kv');
 const {
-  BCRYPT_ROUNDS, LOGIN_FAIL_LIMIT, LOGIN_LOCKOUT_SEC,
+  BCRYPT_ROUNDS, LOGIN_FAIL_LIMIT, LOGIN_LOCKOUT_SEC, SESSION_TTL_SEC,
   sessionCookieOptions, requireAuth, rateLimit, validatePassword,
 } = require('../lib/auth');
 
@@ -42,7 +42,7 @@ router.post('/api/login', rateLimit, async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  await kv.set('session:' + token, id, { ex: 60 * 60 * 24 * 7 });
+  await kv.set('session:' + token, id, { ex: SESSION_TTL_SEC });
   const { password: _pw, geminiKey: _gk, ...safeAccount } = account;
   res.cookie('session', token, sessionCookieOptions(req));
   res.json({ account: { ...safeAccount, geminiConfigured: !!_gk } });

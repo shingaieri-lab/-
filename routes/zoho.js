@@ -307,6 +307,7 @@ router.post('/api/zoho/create-deal', requireAuth, rateLimit, async (req, res) =>
 
 // Zoho Webhook受信
 router.post('/api/zoho/webhook', async (req, res) => {
+  // ① URLトークン検証（既存）
   const webhookToken = process.env.ZOHO_WEBHOOK_TOKEN;
   if (!webhookToken) {
     console.error('ZOHO_WEBHOOK_TOKEN が未設定です');
@@ -314,6 +315,31 @@ router.post('/api/zoho/webhook', async (req, res) => {
   }
   if (req.query.token !== webhookToken) {
     return res.status(401).json({ error: '認証エラー' });
+  }
+
+  // ② HMAC-SHA256 署名検証（ZOHO_WEBHOOK_SECRET が設定されている場合は必須）
+  // Zoho 側で "X-Zoho-Webhook-Signature" ヘッダーに HMAC-SHA256(body, secret) を設定する
+  const webhookSecret = process.env.ZOHO_WEBHOOK_SECRET;
+  if (webhookSecret) {
+    const signature = req.headers['x-zoho-webhook-signature'] || '';
+    const expected = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(req.rawBody || '')
+      .digest('hex');
+    let valid = false;
+    try {
+      valid = crypto.timingSafeEqual(
+        Buffer.from(expected, 'hex'),
+        Buffer.from(signature.toLowerCase().replace(/^sha256=/, ''), 'hex')
+      );
+    } catch {
+      valid = false;
+    }
+    if (!valid) {
+      return res.status(401).json({ error: '署名が不正です' });
+    }
+  } else {
+    console.warn('[webhook] ZOHO_WEBHOOK_SECRET 未設定: HMAC-SHA256 署名検証をスキップします');
   }
 
   const lockKey = 'webhook_lock';

@@ -43,13 +43,13 @@ export function AIResultPanel({
       {/* ヘッダー：保存ボタン */}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid #e2f0e8",background:"#fff",flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <img src={loadingKakunin} alt="" style={{height:72,objectFit:"contain"}} />
           <div>
             <span style={{fontSize:16,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:6}}>
               <SparkleIcon size={17} color="#059669" /> AI解析結果
             </span>
             <div style={{fontSize:12,color:"#9ca3af",marginTop:3}}>解析結果をリードの活動履歴に保存できます</div>
           </div>
-          <img src={loadingKakunin} alt="" style={{height:72,objectFit:"contain"}} />
         </div>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
         {!selLead

@@ -1,5 +1,9 @@
 // AIアシスタントページ（アクション記録→AI解析→ネクストアクション提案・メール生成）
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import loadingOmakase from '../assets/loading-omakase.png';
+import loadingKakunin from '../assets/loading-kakunin.png';
+
+const LOADING_IMGS = [loadingOmakase, loadingKakunin];
 import { AIResultPanel } from '../components/ai/AIResultPanel.jsx';
 import { AIInputPanel } from '../components/ai/AIInputPanel.jsx';
 import { SparkleIcon, CheckCircleIcon, AlertIcon } from '../components/ui/Icons.jsx';
@@ -22,6 +26,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
   const [manualType, setManualType] = useState(()=>loadSS().manualType||"call");
   const [manualResult, setManualResult] = useState(()=>loadSS().manualResult||"取次");
   const [loading, setLoading] = useState(false);
+  const loadingImg = useRef(LOADING_IMGS[0]);
   const [result, setResult] = useState(()=>{ const ss=loadSS(); return ss.result||null; });
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -64,6 +69,7 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
   const analyze=async()=>{
     if(!memo.trim()) return;
     if(!geminiConfigured){setError("APIキーが未設定です。設定画面の「APIキー設定」タブから入力してください。");return;}
+    loadingImg.current = loadingOmakase;
     setLoading(true);setError("");setResult(null);setSaved(false);
     const senderName=currentUser?.name||"";
     const senderSig=currentUser?.signature||"";
@@ -276,8 +282,8 @@ export function AIPage({ leads, onAdd, onUpdate, goLeads, goCalendar, aiConfig, 
             </div>
           )}
           {loading&&(
-            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}}>
-              <div style={{width:48,height:48,border:"3px solid #c0dece",borderTop:"3px solid #3b82f6",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/>
+            <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:12}}>
+              <img src={loadingImg.current} alt="解析中" style={{width:120,height:120,objectFit:"contain"}} />
               <div style={{fontSize:14,color:"#64748b"}}>解析中...</div>
             </div>
           )}

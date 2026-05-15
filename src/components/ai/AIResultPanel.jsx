@@ -6,6 +6,7 @@ import {
   PhoneIcon, MailIcon, ChatIcon, FileTextIcon,
   CalendarNavIcon, ClipboardIcon, SendIcon,
 } from '../ui/Icons.jsx';
+import loadingKakunin from '../../assets/loading-kakunin.png';
 
 const ACTION_ICON_MAP = {
   call:  PhoneIcon,
@@ -40,13 +41,17 @@ export function AIResultPanel({
   return (
     <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
       {/* ヘッダー：保存ボタン */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 20px",borderBottom:"1px solid #e2f0e8",background:"#fff",flexShrink:0}}>
-        <div>
-          <span style={{fontSize:13,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:5}}>
-            <SparkleIcon size={14} color="#059669" /> AI解析結果
-          </span>
-          <div style={{fontSize:10,color:"#9ca3af",marginTop:2}}>解析結果をリードの活動履歴に保存できます</div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 20px",borderBottom:"1px solid #e2f0e8",background:"#fff",flexShrink:0}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div>
+            <span style={{fontSize:16,fontWeight:700,color:"#059669",display:"flex",alignItems:"center",gap:6}}>
+              <SparkleIcon size={17} color="#059669" /> AI解析結果
+            </span>
+            <div style={{fontSize:12,color:"#9ca3af",marginTop:3}}>解析結果をリードの活動履歴に保存できます</div>
+          </div>
+          <img src={loadingKakunin} alt="" style={{height:72,objectFit:"contain"}} />
         </div>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
         {!selLead
           ? <div style={{textAlign:"right"}}>
               <div style={{fontSize:12,fontWeight:700,color:"#d1d5db",display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}}>
@@ -68,6 +73,7 @@ export function AIResultPanel({
                 <div style={{fontSize:10,color:"#6a9a7a",marginTop:2}}>この解析結果をリードに紐づけます</div>
               </div>
         }
+        </div>
       </div>
 
       {/* 本体：スクロール可能 */}

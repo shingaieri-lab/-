@@ -27,6 +27,48 @@ function currentYearMonth() {
   return new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' }).slice(0, 7);
 }
 
+// CSV用フィールドエスケープ（カンマ・改行・ダブルクォートを含む場合はダブルクォートで囲む）
+function csvField(v) {
+  const s = String(v ?? '');
+  return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replaceAll('"', '""')}"` : s;
+}
+
+function exportToCSV(rows, filterMonth) {
+  const headers = ['会社名', '役職', '担当者名', '商談担当', 'ランク', '商談ステータス',
+    'アポ獲得日', '商談開始日', '商談開始時刻', '前確認', '案内メール送信済み',
+    '商談後アポ種別', 'アポ単価', 'リスト名'];
+
+  const dataRows = rows.map(({ lead, listName }) => {
+    const ai = lead.appointmentInfo || {};
+    return [
+      lead.company,
+      lead.position,
+      lead.contact,
+      ai.salesPerson,
+      ai.rank,
+      ai.dealStatus || '商談確定',
+      ai.confirmedDate,
+      ai.meetingDate,
+      ai.meetingTime,
+      ai.preConfirm ? '済' : '',
+      ai.gmailDraftedAt ? '済' : '',
+      ai.appointType,
+      ai.appointPrice,
+      listName,
+    ].map(csvField).join(',');
+  });
+
+  const csv = '﻿' + [headers.join(','), ...dataRows].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const label = filterMonth ? filterMonth.replace('-', '年') + '月' : '全期間';
+  a.href = url;
+  a.download = `アポ一覧_${label}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function AppointmentList({ currentUser }) {
   const [rows,        setRows]        = useState([]); // { lead, listId, listName, leadsCache }
   const [loading,     setLoading]     = useState(true);
@@ -110,7 +152,7 @@ export function AppointmentList({ currentUser }) {
   return (
     <div>
       {/* 月絞り込みバー */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: '#6a9a7a', whiteSpace: 'nowrap' }}>商談開始月：</span>
         <select
           value={filterMonth}
@@ -122,6 +164,13 @@ export function AppointmentList({ currentUser }) {
             <option key={m} value={m}>{m.replace('-', '年')}月</option>
           ))}
         </select>
+        <button
+          onClick={() => exportToCSV(filtered, filterMonth)}
+          disabled={filtered.length === 0}
+          style={{ background: '#f0f5f2', color: '#3d7a5e', border: '1px solid #c0dece', borderRadius: 6, padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: filtered.length === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: filtered.length === 0 ? 0.5 : 1, whiteSpace: 'nowrap' }}
+        >
+          ⬇ CSV書き出し
+        </button>
       </div>
 
       <div style={{ fontSize: 12, color: '#6a9a7a', marginBottom: 12 }}>

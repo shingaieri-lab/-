@@ -180,26 +180,36 @@ function splitCSVLine(line) {
 }
 
 // Chatwork送信メッセージ生成
+const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
 export function buildChatworkMessage(lead) {
   const info = lead.appointmentInfo || {};
-  const supervisorLabel = { yes: 'はい', no: 'いいえ', unknown: '不明' }[info.supervisor] || '';
+
+  let meetingDatetime = '';
+  if (info.meetingDate) {
+    const weekday = WEEKDAYS[new Date(info.meetingDate + 'T00:00:00').getDay()];
+    meetingDatetime = `${info.meetingDate}（${weekday}）${info.meetingTime ? ' ' + info.meetingTime : ''}`;
+  }
+
   const lines = [
-    '【アポ獲得報告】',
-    lead.listName   ? `リスト：${lead.listName}` : null,
-    info.salesPerson ? `営業担当者：${info.salesPerson}` : null,
-    `企業名：${lead.company}`,
-    info.website    ? `会社HP：${info.website}` : null,
-    info.address    ? `住所：${info.address}` : null,
-    (lead.position || lead.contact) ? `役職/氏名：${[lead.position, lead.contact].filter(Boolean).join(' / ')}` : null,
-    lead.phone      ? `電話番号：${lead.phone}` : null,
-    lead.mobile     ? `携帯番号：${lead.mobile}` : null,
-    lead.email      ? `メールアドレス：${lead.email}` : null,
-    info.confirmedDate ? `商談獲得日：${info.confirmedDate}` : null,
-    (info.meetingDate && info.meetingTime) ? `商談日時：${info.meetingDate} ${info.meetingTime}` : null,
-    info.construction ? `工事内容：${info.construction}` : null,
-    supervisorLabel ? `現場に監督常駐している？：${supervisorLabel}` : null,
-    info.rank       ? `ランク：${info.rank}` : null,
-    info.note       ? `備考：${info.note}` : null,
-  ].filter(Boolean);
+    'お疲れ様です、アポイントを獲得したので報告致します。',
+    '',
+    `リスト：${lead.listName || ''}`,
+    `営業担当者：${info.salesPerson || ''}`,
+    `企業名：${lead.company || ''}`,
+    `会社HP：${info.website || ''}`,
+    `住所：${info.address || ''}`,
+    `役職/氏名：${[lead.position, lead.contact].filter(Boolean).join(' / ')}`,
+    `電話番号：${lead.phone || ''}`,
+    `携帯電話：${lead.mobile || ''}`,
+    `メールアドレス：${lead.email || ''}`,
+    `商談獲得日：${info.confirmedDate || ''}`,
+    `商談日時：${meetingDatetime}`,
+    `工事内容：${info.construction || ''}`,
+    `ランク：${info.rank || ''}`,
+    '',
+    '【概要】',
+    info.note || '',
+  ];
   return lines.join('\n');
 }

@@ -134,15 +134,15 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
             </select>
           </div>
 
-          {/* 会社HP・住所 */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-            <div>
-              <label style={S.lbl}>会社HP</label>
-              <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="例: https://example.com" style={S.inp} />
-            </div>
+          {/* 住所・会社HP */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
               <label style={S.lbl}>住所</label>
               <input value={form.address} onChange={e => set('address', e.target.value)} placeholder="例: 大阪府大阪市〇〇区" style={S.inp} />
+            </div>
+            <div>
+              <label style={S.lbl}>会社HP</label>
+              <input value={form.website} onChange={e => set('website', e.target.value)} placeholder="例: https://example.com" style={S.inp} />
             </div>
           </div>
 
@@ -180,7 +180,7 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
 
           {/* 備考 */}
           <div>
-            <label style={S.lbl}>備考（任意）</label>
+            <label style={S.lbl}>【概要】</label>
             <textarea value={form.note} onChange={e => set('note', e.target.value)} rows={2} placeholder="例: 〇〇について関心あり" style={{ ...S.inp, resize: 'vertical' }} />
           </div>
 

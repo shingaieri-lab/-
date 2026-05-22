@@ -312,7 +312,7 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
             style={{ padding: '5px 14px 7px', borderTop: '1px solid #f0f5f2', fontSize: 12, color: '#6a9a7a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}
           >
             <span>
-              最終: {lastCall.date} ／ {lastCall.method === 'phone' ? '電話' : 'メール'} ／ {lastCall.result}
+              最終: {lastCall.date} ／ {lastCall.method === 'phone' ? <><PhoneCallIcon size={12} color="#059669" /> 電話</> : <><EnvelopeIcon size={12} color="#6a9a7a" /> メール</>} ／ {lastCall.result}
               {lastCall.memo && <span style={{ marginLeft: 6, color: '#3d7a5e' }}>「{lastCall.memo}」</span>}
             </span>
             <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 8, flexShrink: 0 }}>
@@ -325,7 +325,7 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
               {lead.callHistory.map(h => (
                 <div key={h.id} style={{ fontSize: 12, color: '#3d7a5e', padding: '5px 0', borderBottom: '1px solid #f0f5f2', display: 'flex', gap: 8, alignItems: 'baseline' }}>
                   <span style={{ color: '#6a9a7a', whiteSpace: 'nowrap', flexShrink: 0 }}>{h.date}</span>
-                  <span style={{ flexShrink: 0 }}>{h.method === 'phone' ? '📞 電話' : '📧 メール'}</span>
+                  <span style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 4 }}>{h.method === 'phone' ? <><PhoneCallIcon size={12} color="#059669" /> 電話</> : <><EnvelopeIcon size={12} color="#6a9a7a" /> メール</>}</span>
                   <span style={{ fontWeight: 700, flexShrink: 0 }}>{h.result}</span>
                   {h.memo && <span style={{ color: '#6a9a7a' }}>「{h.memo}」</span>}
                 </div>
@@ -362,7 +362,7 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
               <div style={{ fontSize: 11, color: '#6a9a7a', fontWeight: 700, marginBottom: 4 }}>架電履歴</div>
               {lead.callHistory.map(h => (
                 <div key={h.id} style={{ fontSize: 11, color: '#3d7a5e', padding: '3px 0', borderBottom: '1px solid #f0f5f2' }}>
-                  {h.date} ／ {h.method === 'phone' ? '電話' : 'メール'} ／ {h.result}
+                  {h.date} ／ <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{h.method === 'phone' ? <><PhoneCallIcon size={11} color="#059669" /> 電話</> : <><EnvelopeIcon size={11} color="#6a9a7a" /> メール</>}</span> ／ {h.result}
                   {h.memo && <span style={{ marginLeft: 6, color: '#6a9a7a' }}>「{h.memo}」</span>}
                 </div>
               ))}

@@ -5,23 +5,31 @@ import { fetchOutboundConfig, saveOutboundConfig } from '../../lib/outboundApi.j
 const VARIABLES = ['{{担当者名}}', '{{企業名}}', '{{商談日時}}', '{{Zoomリンク}}', '{{商談担当}}', '{{送信者名}}', '{{署名}}'];
 
 function ChatworkSettings() {
-  const [roomId,  setRoomId]  = useState('');
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
-  const [saved,   setSaved]   = useState(false);
+  const [roomId,   setRoomId]   = useState('');
+  const [mentions, setMentions] = useState([]); // [{ id, name }]
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [saved,    setSaved]    = useState(false);
 
   useEffect(() => {
     fetchOutboundConfig()
-      .then(cfg => setRoomId(cfg.roomId || ''))
+      .then(cfg => {
+        setRoomId(cfg.roomId || '');
+        setMentions(cfg.mentions || []);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const addMention    = () => setMentions(prev => [...prev, { id: '', name: '' }]);
+  const removeMention = (i) => setMentions(prev => prev.filter((_, idx) => idx !== i));
+  const updateMention = (i, key, val) => setMentions(prev => prev.map((m, idx) => idx === i ? { ...m, [key]: val } : m));
 
   const handleSave = async () => {
     if (!roomId.trim()) { alert('ルームIDを入力してください'); return; }
     setSaving(true);
     try {
-      await saveOutboundConfig({ roomId: roomId.trim() });
+      await saveOutboundConfig({ roomId: roomId.trim(), mentions: mentions.filter(m => m.id.trim()) });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -31,7 +39,7 @@ function ChatworkSettings() {
     }
   };
 
-  const inp = { width: '100%', padding: '7px 10px', borderRadius: 7, border: '1px solid #c0dece', fontSize: 12, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff', color: '#174f35' };
+  const inp = { padding: '7px 10px', borderRadius: 7, border: '1px solid #c0dece', fontSize: 12, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit', background: '#fff', color: '#174f35' };
 
   if (loading) return <div style={{ fontSize: 12, color: '#6a9a7a' }}>読み込み中...</div>;
 
@@ -47,11 +55,49 @@ function ChatworkSettings() {
           value={roomId}
           onChange={e => setRoomId(e.target.value)}
           placeholder="例: 123456789"
-          style={inp}
+          style={{ ...inp, width: '100%' }}
         />
         <div style={{ fontSize: 11, color: '#6a9a7a', marginTop: 3 }}>
           ChatworkのルームURLに含まれる数字（例: chatwork.com/rooms/<strong>123456789</strong>）
         </div>
+      </div>
+
+      {/* メンション先 */}
+      <div>
+        <label style={{ fontSize: 12, color: '#3d7a5e', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+          メンション先
+        </label>
+        <div style={{ fontSize: 11, color: '#6a9a7a', marginBottom: 8 }}>
+          送信時にメッセージ先頭へ自動でメンションを付与します。ユーザーIDはChatworkのプロフィールURLの数字で確認できます。
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {mentions.map((m, i) => (
+            <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input
+                value={m.id}
+                onChange={e => updateMention(i, 'id', e.target.value)}
+                placeholder="ユーザーID（例: 1234567）"
+                style={{ ...inp, width: 180, flexShrink: 0 }}
+              />
+              <input
+                value={m.name}
+                onChange={e => updateMention(i, 'name', e.target.value)}
+                placeholder="表示名（例: 田中）"
+                style={{ ...inp, flex: 1 }}
+              />
+              <button
+                onClick={() => removeMention(i)}
+                style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: 6, color: '#ef4444', fontSize: 12, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                削除
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={addMention}
+          style={{ marginTop: 8, background: '#f0f5f2', color: '#3d7a5e', border: '1px solid #c0dece', borderRadius: 6, padding: '5px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+          ＋ メンション先を追加
+        </button>
       </div>
 
       {/* 保存ボタン */}

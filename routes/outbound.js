@@ -135,6 +135,13 @@ router.post('/api/outbound/chatwork', requireAuth, rateLimit, async (req, res) =
   const { message } = req.body;
   if (!message) return res.status(400).json({ error: 'メッセージが空です' });
 
+  // 登録済みメンション先をメッセージ先頭に付与
+  const mentions = (config.mentions || [])
+    .filter(m => m.id)
+    .map(m => `[To:${m.id}]${m.name || ''}`)
+    .join('\n');
+  const body = mentions ? `${mentions}\n${message}` : message;
+
   try {
     const r = await fetch(`https://api.chatwork.com/v2/rooms/${roomId}/messages`, {
       method: 'POST',
@@ -142,7 +149,7 @@ router.post('/api/outbound/chatwork', requireAuth, rateLimit, async (req, res) =
         'X-ChatWorkToken': apiToken,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: new URLSearchParams({ body: message }).toString(),
+      body: new URLSearchParams({ body }).toString(),
     });
     if (!r.ok) {
       console.error('Chatwork API error:', r.status, await r.text());
@@ -161,7 +168,7 @@ router.get('/api/outbound/config', requireAuth, rateLimit, async (req, res) => {
     return res.status(403).json({ error: '管理者のみ実行できます' });
   }
   const config = (await readData('outbound_config')) || {};
-  res.json({ roomId: config.roomId || '', apiTokenConfigured: !!config.apiToken });
+  res.json({ roomId: config.roomId || '', mentions: config.mentions || [], apiTokenConfigured: !!config.apiToken });
 });
 
 // Chatwork設定保存（adminのみ）
@@ -169,10 +176,11 @@ router.post('/api/outbound/config', requireAuth, rateLimit, async (req, res) => 
   if (await getRole(req.accountId) !== 'admin') {
     return res.status(403).json({ error: '管理者のみ実行できます' });
   }
-  const { apiToken, roomId } = req.body;
+  const { apiToken, roomId, mentions } = req.body;
   const existing = (await readData('outbound_config')) || {};
   await writeData('outbound_config', {
-    roomId: roomId ?? existing.roomId ?? '',
+    roomId:   roomId   ?? existing.roomId   ?? '',
+    mentions: mentions ?? existing.mentions ?? [],
     apiToken: apiToken ? encrypt(apiToken) : (existing.apiToken || ''),
   });
   res.json({ ok: true });

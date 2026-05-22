@@ -118,11 +118,18 @@ router.post('/api/outbound/chatwork', requireAuth, rateLimit, async (req, res) =
   if (!await checkOutboundWrite(req, res)) return;
 
   const config = (await readData('outbound_config')) || {};
-  const apiToken = decrypt(config.apiToken);
   const roomId = config.roomId;
-
-  if (!apiToken || !roomId) {
+  if (!roomId) {
     return res.status(400).json({ error: 'Chatwork設定が未完了です。管理者にお問い合わせください。' });
+  }
+
+  // ユーザー個人のトークンのみ使用
+  const accounts = await getAccounts();
+  const userAccount = accounts.find(a => a.id === req.accountId);
+  const apiToken = userAccount?.chatworkApiToken ? decrypt(userAccount.chatworkApiToken) : null;
+
+  if (!apiToken) {
+    return res.status(400).json({ error: 'Chatwork APIトークンが設定されていません。設定＞API設定からご自身のトークンを登録してください。' });
   }
 
   const { message } = req.body;

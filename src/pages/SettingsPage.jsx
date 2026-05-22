@@ -15,7 +15,7 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
   const defaultTab = initialTab || (currentUser?.role === "admin" ? "leadmgmt" : currentUser?.role === "outbound" ? "myaccount" : "apikey");
   const [tab, setTab] = useState(defaultTab);
   const [msg, setMsg] = useState("");
-  const [profileForm, setProfileForm] = useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"" });
+  const [profileForm, setProfileForm] = useState({ name: currentUser?.name||"", password: currentUser?.password||"", email: currentUser?.email||"", color: currentUser?.color||PALETTE[0], id: currentUser?.id||"", signature: currentUser?.signature||"", geminiKey: currentUser?.geminiKey||"", gmailClientId: currentUser?.gmailClientId||"", calendarId: currentUser?.calendarId||"", chatworkApiToken: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
 
@@ -139,6 +139,28 @@ export function SettingsPage({ aiConfig, onSave, currentUser, onUpdateProfile, i
                   <textarea value={profileForm.signature||""} onChange={e=>setProfileForm(p=>({...p,signature:e.target.value}))}
                     placeholder={"例：\n---\n田中 太郎\n〇〇株式会社\nTEL: 03-xxxx-xxxx"}
                     style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff",resize:"vertical",height:"calc(100vh - 640px)",minHeight:140,maxHeight:420,overflowY:"auto",lineHeight:1.5}} />
+                </div>
+              )}
+              {currentUser?.role === 'outbound' && (
+                <div style={{marginBottom:16,paddingTop:16,borderTop:"1px solid #e2f0e8"}}>
+                  <label style={{fontSize:11,fontWeight:700,color:"#6a9a7a",display:"flex",alignItems:"center",gap:4,marginBottom:4}}>
+                    Chatwork APIトークン
+                    {currentUser?.chatworkTokenConfigured
+                      ? <span style={{fontSize:10,background:"#d1fae5",color:"#059669",borderRadius:20,padding:"1px 8px",fontWeight:700,marginLeft:6}}>設定済み</span>
+                      : <span style={{fontSize:10,background:"#fef3c7",color:"#d97706",borderRadius:20,padding:"1px 8px",fontWeight:700,marginLeft:6}}>未設定</span>
+                    }
+                  </label>
+                  <input
+                    type="password"
+                    value={profileForm.chatworkApiToken||""}
+                    onChange={e=>setProfileForm(p=>({...p,chatworkApiToken:e.target.value}))}
+                    placeholder={currentUser?.chatworkTokenConfigured ? "新しいトークンを入力（変更する場合のみ）" : "Chatwork APIトークンを入力"}
+                    style={{width:"100%",padding:"10px 14px",borderRadius:7,border:"1px solid #c0dece",fontSize:13,color:"#174f35",outline:"none",boxSizing:"border-box",fontFamily:"inherit",background:"#fff"}}
+                    autoComplete="new-password"
+                  />
+                  <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>
+                    Chatwork → 右上アイコン →「サービス連携」→「APIトークン」から取得できます。
+                  </div>
                 </div>
               )}
               {profileMsg && <div style={{fontSize:12,color:"#059669",fontWeight:700,marginBottom:6}}>{profileMsg}</div>}

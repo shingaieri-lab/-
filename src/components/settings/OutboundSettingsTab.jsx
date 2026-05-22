@@ -5,35 +5,23 @@ import { fetchOutboundConfig, saveOutboundConfig } from '../../lib/outboundApi.j
 const VARIABLES = ['{{担当者名}}', '{{企業名}}', '{{商談日時}}', '{{Zoomリンク}}', '{{商談担当}}', '{{送信者名}}', '{{署名}}'];
 
 function ChatworkSettings() {
-  const [roomId,          setRoomId]          = useState('');
-  const [tokenConfigured, setTokenConfigured] = useState(false);
-  const [showTokenInput,  setShowTokenInput]  = useState(false);
-  const [newToken,        setNewToken]        = useState('');
-  const [loading,         setLoading]         = useState(true);
-  const [saving,          setSaving]          = useState(false);
-  const [saved,           setSaved]           = useState(false);
+  const [roomId,  setRoomId]  = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [saved,   setSaved]   = useState(false);
 
   useEffect(() => {
     fetchOutboundConfig()
-      .then(cfg => {
-        setRoomId(cfg.roomId || '');
-        setTokenConfigured(!!cfg.apiTokenConfigured);
-      })
+      .then(cfg => setRoomId(cfg.roomId || ''))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
   const handleSave = async () => {
     if (!roomId.trim()) { alert('ルームIDを入力してください'); return; }
-    if (!tokenConfigured && !newToken.trim()) { alert('APIトークンを入力してください'); return; }
     setSaving(true);
     try {
-      const payload = { roomId: roomId.trim() };
-      if (newToken.trim()) payload.apiToken = newToken.trim();
-      await saveOutboundConfig(payload);
-      setTokenConfigured(true);
-      setShowTokenInput(false);
-      setNewToken('');
+      await saveOutboundConfig({ roomId: roomId.trim() });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (e) {
@@ -64,46 +52,6 @@ function ChatworkSettings() {
         <div style={{ fontSize: 11, color: '#6a9a7a', marginTop: 3 }}>
           ChatworkのルームURLに含まれる数字（例: chatwork.com/rooms/<strong>123456789</strong>）
         </div>
-      </div>
-
-      {/* APIトークン */}
-      <div>
-        <label style={{ fontSize: 12, color: '#3d7a5e', fontWeight: 600, display: 'block', marginBottom: 4 }}>
-          APIトークン <span style={{ color: '#ef4444' }}>*</span>
-        </label>
-        {tokenConfigured && !showTokenInput ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ background: '#d1fae5', color: '#059669', border: '1px solid #10b98155', borderRadius: 6, padding: '5px 12px', fontSize: 12, fontWeight: 700 }}>
-              ✓ 設定済み
-            </span>
-            <button
-              onClick={() => setShowTokenInput(true)}
-              style={{ background: 'none', border: '1px solid #c0dece', borderRadius: 6, padding: '5px 12px', fontSize: 12, color: '#6a9a7a', cursor: 'pointer', fontFamily: 'inherit' }}>
-              変更する
-            </button>
-          </div>
-        ) : (
-          <div>
-            <input
-              type="password"
-              value={newToken}
-              onChange={e => setNewToken(e.target.value)}
-              placeholder={tokenConfigured ? '新しいトークンを入力...' : 'APIトークンを入力'}
-              style={inp}
-              autoComplete="new-password"
-            />
-            {tokenConfigured && (
-              <button
-                onClick={() => { setShowTokenInput(false); setNewToken(''); }}
-                style={{ marginTop: 6, background: 'none', border: 'none', color: '#6a9a7a', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                キャンセル
-              </button>
-            )}
-            <div style={{ fontSize: 11, color: '#6a9a7a', marginTop: 3 }}>
-              Chatwork設定 → APIトークンから取得できます
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 保存ボタン */}

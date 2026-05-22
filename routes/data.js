@@ -14,9 +14,10 @@ router.get('/api/data', requireAuth, rateLimit, async (req, res) => {
   const { geminiKey: _globalGeminiKey, ...safeAiConfig } = rawAiConfig;
   const zohoTokens = await readData('zoho_tokens');
   res.json({
-    accounts: (await getAccounts()).map(({ password: _pw, geminiKey: _gk, ...a }) => ({
+    accounts: (await getAccounts()).map(({ password: _pw, geminiKey: _gk, chatworkApiToken: _cwt, ...a }) => ({
       ...a,
       geminiConfigured: !!_gk,
+      chatworkTokenConfigured: !!_cwt,
     })),
     leads: (await readData('leads')) || [],
     masterSettings: (await readData('master_settings')) || {},
@@ -52,6 +53,12 @@ router.post('/api/accounts', requireAuth, rateLimit, async (req, res) => {
       if (existing?.geminiKey) account.geminiKey = existing.geminiKey;
     } else if (!account.geminiKey.startsWith('enc:')) {
       account.geminiKey = encrypt(account.geminiKey);
+    }
+    // chatworkApiTokenも同様に暗号化して保存（フロントには返さない）
+    if (!account.chatworkApiToken) {
+      if (existing?.chatworkApiToken) account.chatworkApiToken = existing.chatworkApiToken;
+    } else if (!account.chatworkApiToken.startsWith('enc:')) {
+      account.chatworkApiToken = encrypt(account.chatworkApiToken);
     }
   }
   await writeData('accounts', accounts);

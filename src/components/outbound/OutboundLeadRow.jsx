@@ -306,14 +306,10 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
           onClick={() => setHistoryOpen(v => !v)}
           style={{ padding: '6px 14px 8px', borderTop: '1px solid #f0f5f2', fontSize: 12, color: '#6a9a7a', cursor: 'pointer', userSelect: 'none', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}
         >
-          <div style={{ lineHeight: 1.6 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>{lastCall.date}</span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{lastCall.method === 'phone' ? <><PhoneCallIcon size={11} color="#059669" /> 電話</> : <><EnvelopeIcon size={11} color="#6a9a7a" /> メール</>}</span>
-              <span style={{ color: '#3d7a5e', fontWeight: 700 }}>{lastCall.result}</span>
-            </div>
-            {lastCall.memo && <div style={{ whiteSpace: 'pre-wrap', color: '#6a9a7a', marginTop: 1 }}>{lastCall.memo}</div>}
-          </div>
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {lastCall.date}　<span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>{lastCall.method === 'phone' ? <><PhoneCallIcon size={11} color="#059669" /> 電話</> : <><EnvelopeIcon size={11} color="#6a9a7a" /> メール</>}</span>　<span style={{ color: '#3d7a5e', fontWeight: 700 }}>{lastCall.result}</span>
+            {lastCall.memo && <>　{lastCall.memo.includes('\n') ? lastCall.memo.split('\n')[0] + '…' : lastCall.memo}</>}
+          </span>
           <span style={{ fontSize: 11, color: '#9ca3af', flexShrink: 0, paddingTop: 2 }}>
             {lead.callHistory.length > 1 && `全${lead.callHistory.length}件`} {historyOpen ? '▲' : '▼'}
           </span>

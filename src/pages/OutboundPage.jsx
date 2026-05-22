@@ -5,6 +5,7 @@ import { OutboundListHeader } from '../components/outbound/OutboundListHeader.js
 import { OutboundLeadRow }    from '../components/outbound/OutboundLeadRow.jsx';
 import { AppointmentModal }   from '../components/outbound/AppointmentModal.jsx';
 import { AppointmentList }    from '../components/outbound/AppointmentList.jsx';
+import { Pagination }         from '../components/ui/Pagination.jsx';
 import { fetchOutboundLists, createOutboundList, deleteOutboundList, fetchOutboundLeads, saveOutboundLeads } from '../lib/outboundApi.js';
 import { SignatureEditModal } from '../components/outbound/SignatureEditModal.jsx';
 
@@ -18,6 +19,9 @@ export function OutboundPage({ currentUser }) {
   const [selectedIds,    setSelectedIds]    = useState(new Set());
   const [confirmDelete,  setConfirmDelete]  = useState(false);
   const [showSignature,  setShowSignature]  = useState(false);
+  const [filterStatus,   setFilterStatus]   = useState(null); // null = すべて表示
+  const [page,           setPage]           = useState(1);
+  const [pageSize,       setPageSize]       = useState(30);
 
   const canWrite = currentUser?.role === 'outbound' || currentUser?.role === 'admin';
   const isIS     = currentUser?.role === 'admin' || currentUser?.role === 'member';
@@ -37,6 +41,8 @@ export function OutboundPage({ currentUser }) {
     if (!currentListId) { setLeads([]); return; }
     setSelectedIds(new Set());
     setConfirmDelete(false);
+    setFilterStatus(null);
+    setPage(1);
     setLoading(true);
     fetchOutboundLeads(currentListId)
       .then(data => setLeads(data))
@@ -105,6 +111,31 @@ export function OutboundPage({ currentUser }) {
     }
   }, [leads, selectedIds, currentListId]);
 
+  // フィルタ・ページネーション計算
+  const filteredLeads = filterStatus ? leads.filter(l => {
+    if (filterStatus === '対応中') return l.status !== '未架電' && l.status !== 'アポ獲得' && l.status !== 'お断り';
+    return l.status === filterStatus;
+  }) : leads;
+  const totalPages  = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
+  const safePage    = Math.min(page, totalPages);
+  const pagedLeads  = filteredLeads.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const handleFilterStatus = (s) => {
+    setFilterStatus(s === null ? null : prev => prev === s ? null : s);
+    setPage(1);
+  };
+
+  const paginationBar = filteredLeads.length > 0 && (
+    <Pagination
+      page={safePage}
+      totalPages={totalPages}
+      total={filteredLeads.length}
+      pageSize={pageSize}
+      onPageChange={setPage}
+      onPageSizeChange={n => { setPageSize(n); setPage(1); }}
+    />
+  );
+
   return (
     <div style={S.page}>
       <div style={{ marginBottom: 20, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -150,6 +181,8 @@ export function OutboundPage({ currentUser }) {
         onSelectList={setCurrentListId}
         onCreateList={handleCreateList}
         onDeleteList={handleDeleteList}
+        filterStatus={filterStatus}
+        onFilterStatus={handleFilterStatus}
       />
 
       {!currentListId && (
@@ -180,6 +213,12 @@ export function OutboundPage({ currentUser }) {
                 全選択
               </label>
             )}
+            {filterStatus && (
+              <span style={{ fontSize: 12, color: '#6a9a7a' }}>
+                <span style={{ fontWeight: 700, color: '#174f35' }}>{filteredLeads.length}件</span>
+                {filteredLeads.length !== leads.length && <span style={{ marginLeft: 4 }}>/ 全{leads.length}件</span>}
+              </span>
+            )}
             {selectedIds.size > 0 && (
               <>
                 <span style={{ fontSize: 13, color: '#174f35', fontWeight: 700 }}>{selectedIds.size}件選択中</span>
@@ -209,7 +248,10 @@ export function OutboundPage({ currentUser }) {
             )}
           </div>
 
-          {leads.map(lead => (
+          {/* ページネーション（上） */}
+          {paginationBar}
+
+          {pagedLeads.map(lead => (
             <OutboundLeadRow
               key={lead.id}
               lead={lead}
@@ -222,6 +264,9 @@ export function OutboundPage({ currentUser }) {
               onOpenAppointment={setAppointLead}
             />
           ))}
+
+          {/* ページネーション（下） */}
+          {paginationBar}
         </div>
       )}
       </>}

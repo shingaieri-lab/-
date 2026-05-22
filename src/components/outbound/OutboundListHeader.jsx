@@ -22,7 +22,7 @@ function getSummary(leads) {
   return counts;
 }
 
-export function OutboundListHeader({ lists, currentListId, leads, currentUser, onSelectList, onCreateList, onDeleteList }) {
+export function OutboundListHeader({ lists, currentListId, leads, currentUser, onSelectList, onCreateList, onDeleteList, filterStatus, onFilterStatus }) {
   const isIS = currentUser?.role === 'admin' || currentUser?.role === 'member';
   const [showImport, setShowImport] = useState(false);
   const [listName, setListName] = useState('');
@@ -157,14 +157,45 @@ export function OutboundListHeader({ lists, currentListId, leads, currentUser, o
 
       {/* 進捗サマリー */}
       {currentListId && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {Object.entries(summary).map(([label, count]) => (
-            <div key={label} style={{ background: STATUS_GROUPS[label]?.bg, border: `1px solid ${STATUS_GROUPS[label]?.color}44`, borderRadius: 8, padding: '5px 12px', fontSize: 12 }}>
-              <span style={{ color: STATUS_GROUPS[label]?.color, fontWeight: 700 }}>{label}</span>
-              <span style={{ color: '#2d6b4a', marginLeft: 6, fontWeight: 700 }}>{count}件</span>
-            </div>
-          ))}
-          <div style={{ background: '#f8fbf9', border: '1px solid #c0dece', borderRadius: 8, padding: '5px 12px', fontSize: 12, color: '#6a9a7a' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          {Object.entries(summary).map(([label, count]) => {
+            const active = filterStatus === label;
+            return (
+              <div
+                key={label}
+                onClick={() => onFilterStatus?.(label)}
+                style={{
+                  background: STATUS_GROUPS[label]?.bg,
+                  border: active ? `2px solid ${STATUS_GROUPS[label]?.color}` : `1px solid ${STATUS_GROUPS[label]?.color}44`,
+                  borderRadius: 8,
+                  padding: active ? '4px 11px' : '5px 12px',
+                  fontSize: 12,
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  boxShadow: active ? `0 0 0 2px ${STATUS_GROUPS[label]?.color}22` : 'none',
+                  transition: 'border 0.1s, box-shadow 0.1s',
+                }}
+              >
+                <span style={{ color: STATUS_GROUPS[label]?.color, fontWeight: 700 }}>{label}</span>
+                <span style={{ color: '#2d6b4a', marginLeft: 6, fontWeight: 700 }}>{count}件</span>
+              </div>
+            );
+          })}
+          <div
+            onClick={() => onFilterStatus?.(null)}
+            style={{
+              background: '#f8fbf9',
+              border: !filterStatus ? '2px solid #059669' : '1px solid #c0dece',
+              borderRadius: 8,
+              padding: !filterStatus ? '4px 11px' : '5px 12px',
+              fontSize: 12,
+              color: '#6a9a7a',
+              cursor: 'pointer',
+              userSelect: 'none',
+              boxShadow: !filterStatus ? '0 0 0 2px #05966922' : 'none',
+              transition: 'border 0.1s, box-shadow 0.1s',
+            }}
+          >
             合計 <span style={{ fontWeight: 700, color: '#174f35' }}>{leads.length}件</span>
           </div>
         </div>

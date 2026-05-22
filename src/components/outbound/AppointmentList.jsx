@@ -1,6 +1,7 @@
 // アポ獲得一覧（全リストのアポ獲得リードをまとめて表示）
 import { useState, useEffect, useCallback } from 'react';
 import { fetchOutboundLists, fetchOutboundLeads, saveOutboundLeads } from '../../lib/outboundApi.js';
+import { Pagination } from '../ui/Pagination.jsx';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -30,6 +31,8 @@ export function AppointmentList({ currentUser }) {
   const [rows,        setRows]        = useState([]); // { lead, listId, listName, leadsCache }
   const [loading,     setLoading]     = useState(true);
   const [filterMonth, setFilterMonth] = useState(''); // '' = すべて
+  const [page,        setPage]        = useState(1);
+  const [pageSize,    setPageSize]    = useState(30);
 
   const isIS       = currentUser?.role === 'admin' || currentUser?.role === 'member';
   const isOutbound = currentUser?.role === 'outbound';
@@ -85,10 +88,24 @@ export function AppointmentList({ currentUser }) {
       .filter(Boolean)
   )].sort((a, b) => b.localeCompare(a));
 
-  // 絞り込み適用
-  const filtered = filterMonth
+  // 絞り込み・ページネーション計算
+  const filtered    = filterMonth
     ? rows.filter(r => (r.lead.appointmentInfo?.meetingDate || '').startsWith(filterMonth))
     : rows;
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage    = Math.min(page, totalPages);
+  const pagedRows   = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const paginationBar = filtered.length > 0 && (
+    <Pagination
+      page={safePage}
+      totalPages={totalPages}
+      total={filtered.length}
+      pageSize={pageSize}
+      onPageChange={setPage}
+      onPageSizeChange={n => { setPageSize(n); setPage(1); }}
+    />
+  );
 
   return (
     <div>
@@ -97,7 +114,7 @@ export function AppointmentList({ currentUser }) {
         <span style={{ fontSize: 12, color: '#6a9a7a', whiteSpace: 'nowrap' }}>商談開始月：</span>
         <select
           value={filterMonth}
-          onChange={e => setFilterMonth(e.target.value)}
+          onChange={e => { setFilterMonth(e.target.value); setPage(1); }}
           style={{ border: '1px solid #c0dece', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontFamily: 'inherit', color: '#174f35', background: '#fff', cursor: 'pointer', outline: 'none' }}
         >
           <option value="">すべて</option>
@@ -114,6 +131,10 @@ export function AppointmentList({ currentUser }) {
           <span style={{ marginLeft: 6, color: '#9ca3af' }}>（全{rows.length}件中）</span>
         )}
       </div>
+
+      {/* ページネーション（上） */}
+      {paginationBar}
+
       <div style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -129,7 +150,7 @@ export function AppointmentList({ currentUser }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(({ lead, listId, listName, leads }) => {
+            {pagedRows.map(({ lead, listId, listName, leads }) => {
               const ai = lead.appointmentInfo || {};
               const ds = ai.dealStatus || '商談確定';
               const dsStyle = DEAL_STATUS_STYLE[ds] || DEAL_STATUS_STYLE['商談確定'];
@@ -267,6 +288,9 @@ export function AppointmentList({ currentUser }) {
           </tbody>
         </table>
       </div>
+
+      {/* ページネーション（下） */}
+      {paginationBar}
     </div>
   );
 }

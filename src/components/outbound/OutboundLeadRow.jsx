@@ -85,11 +85,12 @@ function EditPanel({ lead, onSave, onCancel }) {
 }
 
 export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSelect, onUpdate, onOpenAppointment, currentUser }) {
-  const [mode, setMode]         = useState(null); // null | 'record' | 'edit' | 'zoom'
-  const [method, setMethod]     = useState('phone');
-  const [memo, setMemo]         = useState('');
-  const [saving, setSaving]     = useState(false);
-  const [memoOpen, setMemoOpen] = useState(false);
+  const [mode, setMode]             = useState(null); // null | 'record' | 'edit' | 'zoom'
+  const [method, setMethod]         = useState('phone');
+  const [memo, setMemo]             = useState('');
+  const [saving, setSaving]         = useState(false);
+  const [memoOpen, setMemoOpen]     = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [zoomText, setZoomText] = useState(lead.appointmentInfo?.zoomText || '');
   const [gmailSending,  setGmailSending]  = useState(false);
   const [gmailToken,    setGmailToken]    = useState(null);
@@ -241,8 +242,8 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
           </span>
         </div>
 
-        {/* ステータス */}
-        {canWrite ? (
+        {/* ステータス（業務委託のみ編集、IS以上は読み取り表示） */}
+        {currentUser?.role === 'outbound' ? (
           <select value={lead.status} onChange={e => handleStatusChange(e.target.value)}
             style={{ background: sc.bg, color: sc.color, border: `1px solid ${sc.color}55`, borderRadius: 6, padding: '5px 10px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', outline: 'none' }}>
             {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
@@ -253,8 +254,8 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
           </span>
         )}
 
-        {/* アポ情報入力ボタン */}
-        {lead.status === 'アポ獲得' && (
+        {/* アポ情報入力ボタン（業務委託のみ） */}
+        {lead.status === 'アポ獲得' && currentUser?.role === 'outbound' && (
           <button onClick={() => onOpenAppointment(lead)}
             style={{ background: '#d1fae5', color: '#059669', border: '1px solid #10b98155', borderRadius: 7, padding: '6px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             アポ情報入力
@@ -265,7 +266,7 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
           {/* 左列 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {canWrite && (
+            {currentUser?.role === 'outbound' && (
               <button onClick={() => setMode(mode === 'record' ? null : 'record')}
                 style={{ ...S.btnSec, fontSize: 13, padding: '5px 12px' }}>
                 {mode === 'record' ? '閉じる' : '記録する'}
@@ -277,19 +278,19 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
                 {mode === 'zoom' ? '閉じる' : 'Zoom入力'}
               </button>
             )}
-          </div>
-          {/* 右列 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {canEdit && (
-              <button onClick={() => setMode(mode === 'edit' ? null : 'edit')}
-                style={{ background: 'none', border: '1px solid #c0dece', borderRadius: 6, padding: '5px 12px', fontSize: 13, color: '#6a9a7a', cursor: 'pointer', fontFamily: 'inherit' }}>
-                {mode === 'edit' ? '閉じる' : '編集'}
-              </button>
-            )}
             {canEdit && lead.appointmentInfo?.zoomText && (
               <button onClick={handleOpenGmailPreview}
                 style={{ background: '#fef2f2', color: '#ea4335', border: '1px solid #fca5a5', borderRadius: 6, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Gmail下書き
+              </button>
+            )}
+          </div>
+          {/* 右列 */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {canEdit && lead.status !== 'アポ獲得' && (
+              <button onClick={() => setMode(mode === 'edit' ? null : 'edit')}
+                style={{ background: 'none', border: '1px solid #c0dece', borderRadius: 6, padding: '5px 12px', fontSize: 13, color: '#6a9a7a', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {mode === 'edit' ? '閉じる' : '編集'}
               </button>
             )}
           </div>
@@ -303,12 +304,35 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
         </div>
       )}
 
-      {/* 最終架電履歴（通常時） */}
-      {lastCall && mode === null && (
-        <div style={{ padding: '5px 14px 7px', borderTop: '1px solid #f0f5f2', fontSize: 12, color: '#6a9a7a' }}>
-          最終: {lastCall.date} ／ {lastCall.method === 'phone' ? '電話' : 'メール'} ／ {lastCall.result}
-          {lastCall.memo && <span style={{ marginLeft: 6, color: '#3d7a5e' }}>「{lastCall.memo}」</span>}
-        </div>
+      {/* 最終架電履歴（クリックで全履歴展開） */}
+      {lastCall && mode !== 'record' && (
+        <>
+          <div
+            onClick={() => setHistoryOpen(v => !v)}
+            style={{ padding: '5px 14px 7px', borderTop: '1px solid #f0f5f2', fontSize: 12, color: '#6a9a7a', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', userSelect: 'none' }}
+          >
+            <span>
+              最終: {lastCall.date} ／ {lastCall.method === 'phone' ? '電話' : 'メール'} ／ {lastCall.result}
+              {lastCall.memo && <span style={{ marginLeft: 6, color: '#3d7a5e' }}>「{lastCall.memo}」</span>}
+            </span>
+            <span style={{ fontSize: 11, color: '#9ca3af', marginLeft: 8, flexShrink: 0 }}>
+              {lead.callHistory.length > 1 && `全${lead.callHistory.length}件`} {historyOpen ? '▲' : '▼'}
+            </span>
+          </div>
+          {historyOpen && (
+            <div style={{ padding: '8px 14px 10px', borderTop: '1px solid #f0f5f2', background: '#f8fbf9' }}>
+              <div style={{ fontSize: 11, color: '#6a9a7a', fontWeight: 700, marginBottom: 6 }}>架電履歴</div>
+              {lead.callHistory.map(h => (
+                <div key={h.id} style={{ fontSize: 12, color: '#3d7a5e', padding: '5px 0', borderBottom: '1px solid #f0f5f2', display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                  <span style={{ color: '#6a9a7a', whiteSpace: 'nowrap', flexShrink: 0 }}>{h.date}</span>
+                  <span style={{ flexShrink: 0 }}>{h.method === 'phone' ? '📞 電話' : '📧 メール'}</span>
+                  <span style={{ fontWeight: 700, flexShrink: 0 }}>{h.result}</span>
+                  {h.memo && <span style={{ color: '#6a9a7a' }}>「{h.memo}」</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* 架電記録フォーム */}

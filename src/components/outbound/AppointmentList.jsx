@@ -118,8 +118,13 @@ export function AppointmentList({ currentUser }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: '#f0f5f2', borderBottom: '2px solid #c0dece' }}>
-              {['会社名', '役職 / 名前', '商談担当', 'ランク', 'ステータス', 'アポ獲得日', '商談開始日', '前確認', '案内メール', '商談後アポ種別', 'アポ単価', 'リスト'].map(h => (
-                <th key={h} style={{ padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#3d7a5e', whiteSpace: 'nowrap' }}>{h}</th>
+              {[
+                { label: '会社名' }, { label: '役職 / 名前' }, { label: '商談担当' }, { label: 'ランク' },
+                { label: 'ステータス' }, { label: 'アポ獲得日' }, { label: '商談開始日' },
+                { label: '前確認', center: true }, { label: '案内メール', center: true },
+                { label: '商談後アポ種別' }, { label: 'アポ単価' }, { label: 'リスト' },
+              ].map(({ label, center }) => (
+                <th key={label} style={{ padding: '9px 12px', textAlign: center ? 'center' : 'left', fontSize: 11, fontWeight: 700, color: '#3d7a5e', whiteSpace: 'nowrap' }}>{label}</th>
               ))}
             </tr>
           </thead>
@@ -185,29 +190,33 @@ export function AppointmentList({ currentUser }) {
                   </td>
 
                   {/* 前確認（業務委託のみ編集） */}
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    {isOutbound ? (
-                      <input
-                        type="checkbox"
-                        checked={!!ai.preConfirm}
-                        onChange={e => handleUpdate(listId, {
-                          ...lead,
-                          appointmentInfo: { ...ai, preConfirm: e.target.checked },
-                        }, leads)}
-                        style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#059669' }}
-                      />
-                    ) : (
-                      <span style={{ fontSize: 16, color: ai.preConfirm ? '#059669' : '#d1d5db' }}>
-                        {ai.preConfirm ? '✓' : '—'}
-                      </span>
-                    )}
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      {isOutbound ? (
+                        <input
+                          type="checkbox"
+                          checked={!!ai.preConfirm}
+                          onChange={e => handleUpdate(listId, {
+                            ...lead,
+                            appointmentInfo: { ...ai, preConfirm: e.target.checked },
+                          }, leads)}
+                          style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#059669' }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 16, color: ai.preConfirm ? '#059669' : '#d1d5db' }}>
+                          {ai.preConfirm ? '✓' : '—'}
+                        </span>
+                      )}
+                    </div>
                   </td>
 
                   {/* 案内メール（Gmail下書き済みなら✓） */}
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span style={{ fontSize: 16, color: ai.gmailDraftedAt ? '#059669' : '#d1d5db' }} title={ai.gmailDraftedAt ? `${ai.gmailDraftedAt.slice(0, 10)} 送信済み` : '未送信'}>
-                      {ai.gmailDraftedAt ? '✓' : '—'}
-                    </span>
+                  <td style={{ padding: '10px 12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                      <span style={{ fontSize: 16, color: ai.gmailDraftedAt ? '#059669' : '#d1d5db' }} title={ai.gmailDraftedAt ? `${ai.gmailDraftedAt.slice(0, 10)} 送信済み` : '未送信'}>
+                        {ai.gmailDraftedAt ? '✓' : '—'}
+                      </span>
+                    </div>
                   </td>
 
                   {/* 商談後アポ種別（ISのみ編集） */}

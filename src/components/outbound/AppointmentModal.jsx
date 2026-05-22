@@ -39,12 +39,18 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
-  const [sending, setSending] = useState(false);
-  const [sent,    setSent]    = useState(!!existing.chatworkSentAt);
-  const [preview, setPreview] = useState(false);
+  const [sending,     setSending]     = useState(false);
+  const [sent,        setSent]        = useState(!!existing.chatworkSentAt);
+  const [preview,     setPreview]     = useState(false);
+  const [editMessage, setEditMessage] = useState(null);
 
   const appointmentInfo = { ...form };
   const message = buildChatworkMessage({ ...lead, appointmentInfo, listName });
+
+  const handleTogglePreview = () => {
+    if (!preview) setEditMessage(message); // 開くたびに最新内容で初期化
+    setPreview(v => !v);
+  };
 
   const validate = () => {
     if (!form.confirmedDate || !form.meetingDate) {
@@ -64,7 +70,7 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
     if (!validate()) return;
     setSending(true);
     try {
-      await sendChatwork(message);
+      await sendChatwork(editMessage ?? message);
       const sentAt = new Date().toISOString();
       const updated = { ...lead, appointmentInfo: { ...appointmentInfo, chatworkSentAt: sentAt } };
       await onSave(updated);
@@ -82,14 +88,14 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
     <div style={S.overlay}>
       <div style={{ ...S.modal, maxWidth: 560 }}>
         <div style={S.modalHead}>
-          <span style={{ fontWeight: 700, fontSize: 14, color: '#174f35' }}>アポ獲得情報の入力</span>
+          <span style={{ fontWeight: 700, fontSize: 16, color: '#174f35' }}>アポ獲得情報の入力</span>
           <button onClick={onClose} style={S.closeX}>✕</button>
         </div>
 
-        <div style={{ ...S.modalBody, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ ...S.modalBody, display: 'flex', flexDirection: 'column', gap: 14, fontSize: 14 }}>
 
           {/* リスト・企業情報（読み取り専用） */}
-          <div style={{ background: '#f0f5f2', border: '1px solid #c0dece', borderRadius: 8, padding: '10px 14px', fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
+          <div style={{ background: '#f0f5f2', border: '1px solid #c0dece', borderRadius: 8, padding: '10px 14px', fontSize: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px' }}>
             {listName  && <div><span style={{ color: '#6a9a7a' }}>リスト：</span><span style={{ color: '#174f35', fontWeight: 600 }}>{listName}</span></div>}
             <div><span style={{ color: '#6a9a7a' }}>企業名：</span><span style={{ color: '#174f35', fontWeight: 600 }}>{lead.company}</span></div>
             {(lead.contact || lead.position) && (
@@ -155,10 +161,10 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
           {/* 現場監督常駐・ランク */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
             <div>
-              <label style={S.lbl}>現場に監督常駐している？</label>
+              <label style={{ ...S.lbl, fontSize: 13 }}>現場に監督常駐している？</label>
               <div style={{ display: 'flex', gap: 16, paddingTop: 4 }}>
                 {[['yes', 'はい'], ['no', 'いいえ'], ['unknown', '不明']].map(([v, label]) => (
-                  <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 13, color: '#2d6b4a', cursor: 'pointer' }}>
+                  <label key={v} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, color: '#2d6b4a', cursor: 'pointer' }}>
                     <input type="radio" name="supervisor" value={v} checked={form.supervisor === v} onChange={() => set('supervisor', v)} />
                     {label}
                   </label>
@@ -166,10 +172,10 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
               </div>
             </div>
             <div>
-              <label style={S.lbl}>ランク</label>
+              <label style={{ ...S.lbl, fontSize: 13 }}>ランク</label>
               <div style={{ display: 'flex', gap: 10, paddingTop: 4 }}>
                 {RANK_OPTIONS.map(r => (
-                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#2d6b4a', cursor: 'pointer' }}>
+                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 14, color: '#2d6b4a', cursor: 'pointer' }}>
                     <input type="radio" name="rank" value={r} checked={form.rank === r} onChange={() => set('rank', r)} />
                     {r}
                   </label>
@@ -184,16 +190,22 @@ export function AppointmentModal({ lead, listName, currentUser, onSave, onClose 
             <textarea value={form.note} onChange={e => set('note', e.target.value)} rows={2} placeholder="例: 〇〇について関心あり" style={{ ...S.inp, resize: 'vertical' }} />
           </div>
 
-          {/* Chatworkメッセージプレビュー */}
+          {/* Chatworkメッセージプレビュー（編集可） */}
           <div>
-            <button onClick={() => setPreview(v => !v)}
-              style={{ background: 'none', border: 'none', color: '#059669', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: 0 }}>
-              {preview ? '▲ 送信内容を閉じる' : '▼ 送信内容を確認する'}
+            <button onClick={handleTogglePreview}
+              style={{ background: 'none', border: 'none', color: '#059669', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline', padding: 0 }}>
+              {preview ? '▲ 送信内容を閉じる' : '▼ 送信内容を確認・編集する'}
             </button>
             {preview && (
-              <pre style={{ background: '#f8fbf9', border: '1px solid #c0dece', borderRadius: 8, padding: '12px 14px', fontSize: 12, color: '#174f35', marginTop: 8, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                {message}
-              </pre>
+              <>
+                <div style={{ fontSize: 12, color: '#6a9a7a', marginTop: 6, marginBottom: 4 }}>内容を直接編集できます</div>
+                <textarea
+                  value={editMessage ?? ''}
+                  onChange={e => setEditMessage(e.target.value)}
+                  rows={14}
+                  style={{ ...S.inp, fontSize: 13, whiteSpace: 'pre-wrap', resize: 'vertical', lineHeight: 1.7, fontFamily: 'inherit' }}
+                />
+              </>
             )}
           </div>
 

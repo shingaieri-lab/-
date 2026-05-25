@@ -5,15 +5,16 @@ import { Pagination } from '../ui/Pagination.jsx';
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
-const DEAL_STATUSES    = ['商談確定', '追客中', '契約', '保留/失注'];
+const DEAL_STATUSES    = ['商談確定', '追客中', '契約', '保留/失注', '商談キャンセル'];
 const APPOINT_TYPES    = ['決裁者アポ', '担当者アポ', '対象外'];
-const APPOINT_PRICES   = ['35,000円', '25,000円', '0円'];
+const APPOINT_PRICES   = ['35,000円', '20,000円', '0円'];
 
 const DEAL_STATUS_STYLE = {
-  '商談確定': { color: '#059669', bg: '#d1fae5', border: '#10b98155' },
-  '追客中':   { color: '#f59e0b', bg: '#fef9ec', border: '#f59e0b55' },
-  '契約':     { color: '#0284c7', bg: '#e0f2fe', border: '#0284c755' },
-  '保留/失注': { color: '#ef4444', bg: '#fef2f2', border: '#ef444455' },
+  '商談確定':     { color: '#059669', bg: '#d1fae5', border: '#10b98155' },
+  '追客中':       { color: '#f59e0b', bg: '#fef9ec', border: '#f59e0b55' },
+  '契約':         { color: '#0284c7', bg: '#e0f2fe', border: '#0284c755' },
+  '保留/失注':    { color: '#ef4444', bg: '#fef2f2', border: '#ef444455' },
+  '商談キャンセル': { color: '#6b7280', bg: '#f3f4f6', border: '#6b728055' },
 };
 
 function formatDate(dateStr) {

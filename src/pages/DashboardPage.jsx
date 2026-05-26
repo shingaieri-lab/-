@@ -58,7 +58,7 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
   const todayActions   = leads.filter(l => l.next_action_date === TODAY && l.is_member === currentUser?.name);
   const overdueActions = leads.filter(l => l.next_action_date && l.next_action_date < TODAY && l.is_member === currentUser?.name);
 
-  const monthApos    = apoLeads.filter(l => l.appointmentInfo?.confirmedDate?.slice(0, 7) === month);
+  const monthApos    = apoLeads.filter(l => l.appointmentInfo?.meetingDate?.slice(0, 7) === month);
   const totalApoCount = monthApos.length;
   const totalApoPrice = monthApos.reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0);
   const rankCounts  = Object.fromEntries(RANK_ITEMS.map(({ rank }) => [rank, monthApos.filter(l => l.appointmentInfo?.rank === rank).length]));
@@ -219,9 +219,9 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
             </div>
           </div>
 
-          {/* 商談後アポ種別 */}
+          {/* アポ種別 */}
           <div>
-            <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:6}}>商談後アポ種別</div>
+            <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:6}}>アポ種別</div>
             <div style={{display:"flex", flexDirection:"column", gap:5}}>
               {APPOINT_TYPE_ITEMS.map(({ type, color }) => (
                 <div key={type} style={{background:color+"18", border:`1.5px solid ${color}44`, borderRadius:10, padding:"7px 10px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>

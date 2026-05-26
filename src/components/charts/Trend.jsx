@@ -44,7 +44,7 @@ export function Trend({ leads, apoLeads = [] }) {
 
   const buildData = (ym) => {
     const fl = leads.filter(l => normYM(l.date) === ym);
-    const apoMonth = apoLeads.filter(l => l.appointmentInfo?.confirmedDate?.slice(0, 7) === ym);
+    const apoMonth = apoLeads.filter(l => l.appointmentInfo?.meetingDate?.slice(0, 7) === ym);
     return {
       month: ym.slice(5) + "月",
       反響数: fl.length,
@@ -115,7 +115,7 @@ export function Trend({ leads, apoLeads = [] }) {
     const monthLeads  = leads.filter(l => normYM(l.date) === monthKey);
     const prevLeads   = leads.filter(l => normYM(l.date) === `${prevYear}-${monthKey.slice(5)}`);
 
-    const monthApos    = apoLeads.filter(l => l.appointmentInfo?.confirmedDate?.slice(0, 7) === monthKey);
+    const monthApos    = apoLeads.filter(l => l.appointmentInfo?.meetingDate?.slice(0, 7) === monthKey);
     const apoMonthCount = monthApos.length;
     const apoMonthPrice = monthApos.reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0);
 
@@ -193,7 +193,7 @@ export function Trend({ leads, apoLeads = [] }) {
         </td>
         {/* アポ単価合計 */}
         <td style={{ ...tdC }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#059669" }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#059669" }}>
             {apoMonthPrice > 0 ? "¥" + apoMonthPrice.toLocaleString() : "—"}
           </div>
         </td>

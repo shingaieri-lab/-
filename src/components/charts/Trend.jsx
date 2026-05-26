@@ -193,7 +193,7 @@ export function Trend({ leads, apoLeads = [] }) {
         </td>
         {/* アポ単価合計 */}
         <td style={{ ...tdC }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#059669" }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#059669" }}>
             {apoMonthPrice > 0 ? "¥" + apoMonthPrice.toLocaleString() : "—"}
           </div>
         </td>

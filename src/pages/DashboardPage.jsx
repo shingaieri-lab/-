@@ -8,8 +8,22 @@ import {
   getSources, getStatuses, getStatusColor, getSourceColor, getSourceIcon,
   getPortalSites, getPortalPrice,
 } from '../lib/master.js';
+import { parseAppointPrice } from '../lib/outboundApi.js';
 
-export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMobile }) {
+const RANK_ITEMS = [
+  { rank: 'A', color: '#ef4444' },
+  { rank: 'B', color: '#f97316' },
+  { rank: 'C', color: '#f59e0b' },
+  { rank: 'D', color: '#94a3b8' },
+];
+
+const APPOINT_TYPE_ITEMS = [
+  { type: '決裁者アポ', color: '#8b5cf6' },
+  { type: '担当者アポ', color: '#06b6d4' },
+  { type: '対象外',     color: '#9ca3af' },
+];
+
+export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMobile, apoLeads = [] }) {
   const toYM = (dateStr) => {
     if (!dateStr) return "";
     if (/^\d{4}-\d{2}/.test(dateStr)) return dateStr.slice(0, 7);
@@ -44,6 +58,14 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
   const todayActions   = leads.filter(l => l.next_action_date === TODAY && l.is_member === currentUser?.name);
   const overdueActions = leads.filter(l => l.next_action_date && l.next_action_date < TODAY && l.is_member === currentUser?.name);
 
+  const monthApos    = apoLeads.filter(l => l.appointmentInfo?.confirmedDate?.slice(0, 7) === month);
+  const totalApoCount = monthApos.length;
+  const totalApoPrice = monthApos.reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0);
+  const rankCounts  = Object.fromEntries(RANK_ITEMS.map(({ rank }) => [rank, monthApos.filter(l => l.appointmentInfo?.rank === rank).length]));
+  const rankPrices  = Object.fromEntries(RANK_ITEMS.map(({ rank }) => [rank, monthApos.filter(l => l.appointmentInfo?.rank === rank).reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0)]));
+  const typeCounts  = Object.fromEntries(APPOINT_TYPE_ITEMS.map(({ type }) => [type, monthApos.filter(l => l.appointmentInfo?.appointType === type).length]));
+  const typePrices  = Object.fromEntries(APPOINT_TYPE_ITEMS.map(({ type }) => [type, monthApos.filter(l => l.appointmentInfo?.appointType === type).reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0)]));
+
   const kpiItems = [
     { Icon:InboxIcon,      label:"総反響数",   value:fl.length+"件",               color:"#10b981", bg:"linear-gradient(135deg,#0ecf8a,#059669)", sub:`MQL ${fl.filter(l=>l.mql==="MQL").length}件 (${rate(fl.filter(l=>l.mql==="MQL").length, fl.length)}) / 有効リード ${validLeads.length}件`, filter:{ month } },
     { Icon:CalendarNavIcon,label:"商談設定数", value:fl.filter(isAppt).length+"件",color:"#f59e0b", bg:"linear-gradient(135deg,#fbbf24,#d97706)", sub:`商談化率 ${rate(fl.filter(isAppt).length, validLeads.length)}（有効リード ${validLeads.length}件）`, filter:{ month, statuses:["日程調整中","商談確定"] } },
@@ -52,12 +74,12 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
   ];
 
   return (
-    <div className="dash-container" style={{padding:"24px 28px", height: isMobile ? "auto" : "calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow: isMobile ? "visible" : "hidden"}}>
+    <div className="dash-container" style={{padding:"24px 28px", height: isMobile ? "auto" : "calc(100vh - 60px)", display:"flex", flexDirection:"column", gap:10, overflow: isMobile ? "visible" : "auto"}}>
       {/* ヘッダー */}
       <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0}}>
         <div style={{display:"flex", alignItems:"center", gap:10}}>
           <div style={{fontSize:22, fontWeight:800, color:"#174f35", letterSpacing:"-0.02em", display:"flex", alignItems:"center", gap:7}}><DashboardIcon size={20} color="#174f35" /> ダッシュボード</div>
-          <div style={{fontSize:11, color:"#6a9a7a"}}>月次・流入元別レポート</div>
+          <div style={{fontSize:12, color:"#6a9a7a"}}>月次・流入元別レポート</div>
         </div>
         <select value={month} onChange={e => setMonth(e.target.value)} style={{...S.sel, fontSize:12}}>
           {months.length === 0 && <option value={THIS_MONTH}>{THIS_MONTH.slice(0,4)}年{parseInt(THIS_MONTH.slice(5))}月</option>}
@@ -77,28 +99,28 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
               <div style={{position:"absolute", bottom:-10, right:16, width:40, height:40, borderRadius:"50%", background:"#ffffff10"}} />
               <div style={{display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10}}>
                 <div style={{filter:"drop-shadow(0 2px 4px #0003)"}}><k.Icon size={22} color="#ffffffcc" /></div>
-                <div style={{fontSize:11, color:"#ffffffcc", fontWeight:600, letterSpacing:0.3}}>{k.label}</div>
+                <div style={{fontSize:12, color:"#ffffffcc", fontWeight:600, letterSpacing:0.3}}>{k.label}</div>
               </div>
               <div style={{fontSize:24, fontWeight:900, color:"#fff", lineHeight:1, letterSpacing:-0.5, filter:"drop-shadow(0 1px 2px #0002)"}}>
                 {k.value}
               </div>
             </div>
             <div style={{background:"#fff", padding:"5px 16px", borderRadius:"0 0 16px 16px", border:"1px solid "+k.color+"22", borderTop:"none"}}>
-              <div style={{fontSize:11, color:k.color, fontWeight:700}}>{k.sub}</div>
+              <div style={{fontSize:12, color:k.color, fontWeight:700}}>{k.sub}</div>
             </div>
           </div>
         ))}
       </div>
 
       {/* 2カラム */}
-      <div className="two-col" style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, flex:1, minHeight:0}}>
+      <div className="two-col" style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, flex:"0 0 170px"}}>
         {/* 流入元カード */}
         <div style={{background:"#fff", borderRadius:14, padding:"12px 14px", boxShadow:"0 2px 10px #0569690a", border:"1px solid #e2f0e8", overflowY:"auto"}}>
           <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:4, display:"flex", alignItems:"center", gap:6}}>
             <span style={{width:4, height:16, background:"#10b981", borderRadius:2, display:"inline-block"}} />
             流入元別 商談化実績
           </div>
-          <div style={{fontSize:11, color:"#6a9a7a", marginBottom:14}}>
+          <div style={{fontSize:12, color:"#6a9a7a", marginBottom:14}}>
             各流入元ごとの「反響数」と「有効リード（育成対象外を除く）」「商談設定数（日程調整中＋商談確定）」、商談化率（商談数÷有効リード）を表示
           </div>
           {getSources().map((src, srcIdx) => {
@@ -115,16 +137,16 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
                     <SourceIconSVG iconKey={srcIconKey} size={18}/> {src}
                   </span>
                   <div style={{flex:1, display:"flex", gap:6, justifyContent:"flex-end", flexWrap:"wrap"}}>
-                    <span style={{fontSize:11, background:"#fff", border:"1px solid #e2f0e8", borderRadius:6, padding:"2px 8px", color:"#6a9a7a"}}>
+                    <span style={{fontSize:12, background:"#fff", border:"1px solid #e2f0e8", borderRadius:6, padding:"2px 8px", color:"#6a9a7a"}}>
                       反響 <b style={{color:"#174f35"}}>{arr.length}</b>
                     </span>
-                    <span style={{fontSize:11, background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:6, padding:"2px 8px", color:"#15803d", fontWeight:700}}>
+                    <span style={{fontSize:12, background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:6, padding:"2px 8px", color:"#15803d", fontWeight:700}}>
                       有効リード <b>{validArr.length}</b>
                     </span>
-                    <span style={{fontSize:11, background:"#fff8eb", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", color:"#d97706", fontWeight:700, display:"inline-flex", alignItems:"center", gap:3}}>
+                    <span style={{fontSize:12, background:"#fff8eb", border:"1px solid #fde68a", borderRadius:6, padding:"2px 8px", color:"#d97706", fontWeight:700, display:"inline-flex", alignItems:"center", gap:3}}>
                       <CalendarNavIcon size={11} color="#d97706" /> 商談 {ap}件 ({rate(ap, validArr.length)})
                     </span>
-                    <span style={{fontSize:11, background:"#ecfdf5", border:"1px solid #a7f3d0", borderRadius:6, padding:"2px 8px", color:"#059669", fontWeight:700, display:"inline-flex", alignItems:"center", gap:3}}>
+                    <span style={{fontSize:12, background:"#ecfdf5", border:"1px solid #a7f3d0", borderRadius:6, padding:"2px 8px", color:"#059669", fontWeight:700, display:"inline-flex", alignItems:"center", gap:3}}>
                       <SparkleIcon size={11} color="#059669" /> MQL {arr.filter(l=>l.mql==="MQL").length}件 ({rate(arr.filter(l=>l.mql==="MQL").length, arr.length)})
                     </span>
                   </div>
@@ -165,6 +187,58 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
         </div>
       </div>
 
+      {/* アウトバウンドアポ実績 */}
+      <div style={{background:"#fff", borderRadius:14, padding:"12px 16px", boxShadow:"0 2px 10px #0569690a", border:"1px solid #e2f0e8", flexShrink:0}}>
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+          <div style={{display:"flex", alignItems:"center", gap:6}}>
+            <span style={{width:4, height:18, background:"#8b5cf6", borderRadius:2, display:"inline-block"}} />
+            <span style={{fontSize:14, fontWeight:700, color:"#174f35"}}>アウトバウンドアポ実績</span>
+          </div>
+          <div style={{display:"flex", gap:20, alignItems:"baseline"}}>
+            <span style={{fontSize:13, color:"#6a9a7a"}}>獲得数：<strong style={{fontSize:22, color:"#8b5cf6"}}>{totalApoCount}</strong><span style={{fontSize:12, color:"#6a9a7a"}}>件</span></span>
+            <span style={{fontSize:13, color:"#6a9a7a"}}>単価合計：<strong style={{fontSize:22, color:"#059669"}}>¥{totalApoPrice.toLocaleString()}</strong></span>
+          </div>
+        </div>
+
+        <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:10}}>
+          {/* ランク別 */}
+          <div>
+            <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:6}}>ランク別</div>
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:5}}>
+              {RANK_ITEMS.map(({ rank, color }) => (
+                <div key={rank} style={{background:color+"18", border:`1.5px solid ${color}44`, borderRadius:10, padding:"7px 10px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                  <span style={{fontSize:12, color, fontWeight:700}}>ランク {rank}</span>
+                  <div style={{display:"flex", alignItems:"baseline", gap:8}}>
+                    <span style={{fontSize:18, fontWeight:900, color}}>{rankCounts[rank]}<span style={{fontSize:12, fontWeight:600}}> 件</span></span>
+                    <span style={{fontSize:12, color:color+"bb", fontWeight:600}}>
+                      {rankPrices[rank] > 0 ? "¥" + rankPrices[rank].toLocaleString() : "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 商談後アポ種別 */}
+          <div>
+            <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:6}}>商談後アポ種別</div>
+            <div style={{display:"flex", flexDirection:"column", gap:5}}>
+              {APPOINT_TYPE_ITEMS.map(({ type, color }) => (
+                <div key={type} style={{background:color+"18", border:`1.5px solid ${color}44`, borderRadius:10, padding:"7px 10px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                  <span style={{fontSize:12, color, fontWeight:700}}>{type}</span>
+                  <div style={{display:"flex", alignItems:"baseline", gap:8}}>
+                    <span style={{fontSize:18, fontWeight:900, color}}>{typeCounts[type]}<span style={{fontSize:12, fontWeight:600}}> 件</span></span>
+                    <span style={{fontSize:12, color:color+"bb", fontWeight:600}}>
+                      {typePrices[type] > 0 ? "¥" + typePrices[type].toLocaleString() : "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ポータル課金カード */}
       <div style={{background:"#fff", borderRadius:14, padding:"10px 14px", boxShadow:"0 2px 10px #0569690a", border:"1px solid #e2f0e8", flexShrink:0}}>
         <div style={{fontSize:13, fontWeight:700, color:"#174f35", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between"}}>
@@ -186,16 +260,16 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
             const free    = sl.filter(l => l.charge_applied).length;
             return (
               <div key={site} style={{flex:"1 1 120px", background:"#f8fbf9", borderRadius:10, padding:"8px 10px", border:"1px solid #d8ede1"}}>
-                <div style={{fontSize:11, fontWeight:700, color:"#174f35", marginBottom:4}}>{site}</div>
+                <div style={{fontSize:12, fontWeight:700, color:"#174f35", marginBottom:4}}>{site}</div>
                 <div style={{fontSize:16, fontWeight:900, color:"#174f35"}}>{sl.length}<span style={{fontSize:10, color:"#6a9a7a"}}>件</span></div>
-                <div style={{fontSize:11, color:"#6a9a7a", marginTop:2}}>課金{charged} / 対象外{free}</div>
+                <div style={{fontSize:12, color:"#6a9a7a", marginTop:2}}>課金{charged} / 対象外{free}</div>
                 <div style={{fontSize:13, fontWeight:700, color:"#f59e0b", marginTop:4}}>¥{sc.toLocaleString()}</div>
                 <div style={{fontSize:10, color:"#6a9a7a", marginTop:2}}>獲得単価 {unit}</div>
               </div>
             );
           })}
           <div style={{flex:"1 1 120px", background:"#ecfdf5", borderRadius:10, padding:"8px 10px", border:"1px solid #a7f3d0"}}>
-            <div style={{fontSize:11, fontWeight:700, color:"#059669", marginBottom:6, display:"flex", alignItems:"center", gap:4}}><CheckCircleIcon size={12} color="#059669" /> 対象外申請済</div>
+            <div style={{fontSize:12, fontWeight:700, color:"#059669", marginBottom:6, display:"flex", alignItems:"center", gap:4}}><CheckCircleIcon size={12} color="#059669" /> 対象外申請済</div>
             <div style={{fontSize:16, fontWeight:900, color:"#059669"}}>{applied.length}<span style={{fontSize:10}}>件</span></div>
             <div style={{fontSize:13, fontWeight:700, color:"#10b981", marginTop:4}}>
               節約 ¥{applied.reduce((s, l) => s + getPortalPrice(l.portal_site, l.portal_type), 0).toLocaleString()}

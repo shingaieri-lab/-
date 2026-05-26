@@ -179,6 +179,17 @@ function splitCSVLine(line) {
   return cols.map(c => c.replace(/^"(.*)"$/, '$1'));
 }
 
+// 全リストのアポ獲得リード一括取得
+export async function fetchOutboundAppointments() {
+  const r = await fetch('/api/outbound/appointments');
+  if (!r.ok) throw new Error('アポデータの取得に失敗しました');
+  return r.json();
+}
+
+// アポ単価文字列（例: '20,000円'）を数値に変換
+export const parseAppointPrice = (str) =>
+  str ? parseInt(str.replace(/[^\d]/g, ''), 10) || 0 : 0;
+
 // Chatwork送信メッセージ生成
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 

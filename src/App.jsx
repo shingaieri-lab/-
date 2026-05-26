@@ -19,6 +19,7 @@ import { USER_COLORS } from './lib/accounts.js';
 import { IS_COLORS } from './lib/master.js';
 import { loadAccounts, saveAccounts } from './lib/accounts.js';
 import { loadLeads, saveLeads, apiPost } from './lib/api.js';
+import { fetchOutboundAppointments } from './lib/outboundApi.js';
 
 // ページ全体のコンテナスタイル
 const rootStyle = { display:"flex", height:"100vh", background:"#f0f5f2", fontFamily:"'Noto Sans JP','Hiragino Sans',sans-serif", color:"#1f5c40", overflow:"hidden" };
@@ -35,6 +36,7 @@ export function App() {
   const [masterVer, setMasterVer] = useState(0);
   const [currentUser, setCurrentUser] = useState(null);
   const [aiConfig, setAiConfig] = useState({});
+  const [apoLeads, setApoLeads] = useState([]);
 
   const selectUser = (account, data) => {
     // outboundロールはアウトバウンドページに直接遷移
@@ -122,9 +124,13 @@ export function App() {
           localStorage.removeItem('current_user_id');
         }
       } catch {}
-      const l = await loadLeads();
+      const [l, apos] = await Promise.all([
+        loadLeads(),
+        fetchOutboundAppointments().catch(() => []),
+      ]);
       const migrated = l.map(lead => lead.portal_type === "請求" ? { ...lead, portal_type: "一括請求" } : lead);
       setLeads(migrated);
+      setApoLeads(apos);
       setLoaded(true);
       if (migrated.some((lead,i) => lead.portal_type !== l[i].portal_type)) saveLeads(migrated);
     }
@@ -147,8 +153,8 @@ const mut = (next) => { setLeads(next); saveLeads(next); };
       <Nav page={page} setPage={navigate} setSettingsTab={setSettingsTab} count={leads.length} currentUser={currentUser} onLogout={logout} onUpdateProfile={updateMyProfile} isMobile={isMobile}/>
       {showWizard && <SetupWizard currentUser={currentUser} onUpdateProfile={updateMyProfile} onSave={saveAiConfig} aiConfig={effectiveAiConfig} onClose={() => setShowWizard(false)} />}
       <main style={{...mainStyle, paddingBottom: isMobile ? 65 : 0, ...(page === "trend" ? { overflow: "hidden", display: "flex", flexDirection: "column" } : {})}}>
-        {page === "dashboard" && <DashboardPage leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); navigate("leads"); }} masterVer={masterVer} isMobile={isMobile} />}
-        {page === "trend"     && <Trend leads={leads} />}
+        {page === "dashboard" && <DashboardPage leads={leads} currentUser={currentUser} onNavigate={(f)=>{ setDashFilter(f); navigate("leads"); }} masterVer={masterVer} isMobile={isMobile} apoLeads={apoLeads} />}
+        {page === "trend"     && <Trend leads={leads} apoLeads={apoLeads} />}
         {page === "leads"     && <LeadsPage leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} initialOpenId={aiOpenLeadId} onOpenIdConsumed={()=>setAiOpenLeadId(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={false}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }}
           onGoToZohoSettings={() => { setSettingsTab("zoho"); navigate("settings"); }} />}

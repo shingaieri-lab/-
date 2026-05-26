@@ -3,6 +3,7 @@ import { SVGBarChart } from './SVGBarChart.jsx';
 import { SVGLineChart } from './SVGLineChart.jsx';
 import { TrendIcon, InboxIcon, ClipboardIcon } from '../ui/Icons.jsx';
 import { getSources, getSourceColor } from '../../lib/master.js';
+import { parseAppointPrice } from '../../lib/outboundApi.js';
 
 function normYM(s) {
   if (!s) return "";
@@ -20,7 +21,7 @@ function DiffBadge({ diff, hasPrev, suffix = "" }) {
   return <div style={{ fontSize: 10, color, marginTop: 2, fontWeight: 500, whiteSpace: "nowrap" }}>前年比：{val}</div>;
 }
 
-export function Trend({ leads }) {
+export function Trend({ leads, apoLeads = [] }) {
   const currentYear = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' }).slice(0, 4);
   const currentYM   = new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' }).slice(0, 7);
 
@@ -43,12 +44,15 @@ export function Trend({ leads }) {
 
   const buildData = (ym) => {
     const fl = leads.filter(l => normYM(l.date) === ym);
+    const apoMonth = apoLeads.filter(l => l.appointmentInfo?.confirmedDate?.slice(0, 7) === ym);
     return {
       month: ym.slice(5) + "月",
       反響数: fl.length,
       有効リード数: fl.filter(l => l.status !== "育成対象外").length,
       商談数: fl.filter(l => ["日程調整中", "商談確定"].includes(l.status)).length,
       MQL数: fl.filter(l => l.mql === "MQL").length,
+      アポ獲得数: apoMonth.length,
+      アポ単価合計: apoMonth.reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0),
       ...Object.fromEntries(sources.map(src => [src, fl.filter(l => l.source === src).length])),
     };
   };
@@ -85,6 +89,15 @@ export function Trend({ leads }) {
     whiteSpace: "nowrap", borderRight: "1px solid #1e6645",
   };
 
+  const thApo = {
+    ...thS, background: "#4c1d95", borderRight: "1px solid #5b21b6",
+  };
+
+  const thGroup = {
+    padding: "6px 14px", textAlign: "center", fontWeight: 700,
+    fontSize: 12, whiteSpace: "nowrap", letterSpacing: "0.05em",
+  };
+
   const tdC = { padding: "10px 14px", textAlign: "center", verticalAlign: "middle" };
 
   const sortedMonths = (() => {
@@ -101,6 +114,10 @@ export function Trend({ leads }) {
     const isCurrent   = monthKey === currentYM && selectedYear === currentYear;
     const monthLeads  = leads.filter(l => normYM(l.date) === monthKey);
     const prevLeads   = leads.filter(l => normYM(l.date) === `${prevYear}-${monthKey.slice(5)}`);
+
+    const monthApos    = apoLeads.filter(l => l.appointmentInfo?.confirmedDate?.slice(0, 7) === monthKey);
+    const apoMonthCount = monthApos.length;
+    const apoMonthPrice = monthApos.reduce((s, l) => s + parseAppointPrice(l.appointmentInfo?.appointPrice), 0);
 
     const totalCnt   = monthLeads.length;
     const totalValid = monthLeads.filter(l => l.status !== "育成対象外").length;
@@ -166,9 +183,19 @@ export function Trend({ leads }) {
           <DiffBadge diff={diffDR} hasPrev={hasPrev} suffix="pt" />
         </td>
         {/* MQL率 */}
-        <td style={{ ...tdC }}>
+        <td style={{ ...tdC, borderRight: "1px solid #f0f5f2" }}>
           <div style={{ fontSize: 17, fontWeight: 800, color: "#7c3aed" }}>{totalMR}%</div>
           <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{totalMql}件</div>
+        </td>
+        {/* アポ獲得数 */}
+        <td style={{ ...tdC, borderRight: "1px solid #f0f5f2" }}>
+          <div style={{ fontSize: 17, fontWeight: 800, color: "#8b5cf6" }}>{apoMonthCount}</div>
+        </td>
+        {/* アポ単価合計 */}
+        <td style={{ ...tdC }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#059669" }}>
+            {apoMonthPrice > 0 ? "¥" + apoMonthPrice.toLocaleString() : "—"}
+          </div>
         </td>
       </tr>
     );
@@ -219,10 +246,12 @@ export function Trend({ leads }) {
             <div style={{ fontSize: 12, color: "#9ca3af" }}>{dr}%</div>
             <DiffBadge diff={dDR} hasPrev={hasSP} suffix="pt" />
           </td>
-          <td style={{ ...tdC }}>
+          <td style={{ ...tdC, borderRight: "1px solid #f0f5f2" }}>
             <div style={{ fontSize: 12, color: "#9ca3af" }}>{mr}%</div>
             <div style={{ fontSize: 10, color: "#c0ccc6" }}>{mql}件</div>
           </td>
+          <td style={{ ...tdC, borderRight: "1px solid #f0f5f2" }}><span style={{ color: "#d1d5db", fontSize: 12 }}>—</span></td>
+          <td style={{ ...tdC }}><span style={{ color: "#d1d5db", fontSize: 12 }}>—</span></td>
         </tr>
       );
     }).filter(Boolean) : [];
@@ -249,9 +278,9 @@ export function Trend({ leads }) {
       <div className="two-col trend-charts" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20, flexShrink: 0 }}>
         <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2f0e8" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#174f35", marginBottom: 12, display: "flex", alignItems: "center", gap: 5 }}>
-            <InboxIcon size={14} color="#174f35" /> 反響数・商談数
+            <InboxIcon size={14} color="#174f35" /> 反響数・商談数・アポ獲得数
           </div>
-          <SVGBarChart data={data} keys={["反響数", "有効リード数", "商談数"]} colors={{ "反響数": "#10b981", "有効リード数": "#6ee7b7", "商談数": "#f59e0b" }} height={230} />
+          <SVGBarChart data={data} keys={["反響数", "有効リード数", "商談数", "アポ獲得数"]} colors={{ "反響数": "#10b981", "有効リード数": "#6ee7b7", "商談数": "#f59e0b", "アポ獲得数": "#8b5cf6" }} height={230} />
         </div>
         <div style={{ background: "#fff", borderRadius: 14, padding: "18px 20px", border: "1px solid #e2f0e8" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#174f35", marginBottom: 12, display: "flex", alignItems: "center", gap: 5 }}>
@@ -270,13 +299,21 @@ export function Trend({ leads }) {
         <div style={{ flex: 1, minHeight: 0, overflowY: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
             <thead style={{ position: "sticky", top: 0, zIndex: 1 }}>
+              {/* グループ行 */}
               <tr>
-                <th style={{ ...thS, textAlign: "left", paddingLeft: 16, width: 96 }}>月</th>
+                <th rowSpan={2} style={{ ...thS, textAlign: "left", paddingLeft: 16, width: 96, verticalAlign: "middle" }}>月</th>
+                <th colSpan={5} style={{ ...thGroup, background: "#1a6640", color: "#a7f3d0", borderRight: "1px solid #1e6645", borderBottom: "1px solid #1e6645" }}>インバウンド</th>
+                <th colSpan={2} style={{ ...thGroup, background: "#3b0764", color: "#e9d5ff", borderRight: "none", borderBottom: "1px solid #5b21b6" }}>アウトバウンド</th>
+              </tr>
+              {/* 列名行 */}
+              <tr>
                 <th style={thS}>反響数</th>
                 <th style={thS}>有効リード数</th>
                 <th style={thS}>商談数</th>
                 <th style={thS}>商談化率</th>
-                <th style={{ ...thS, borderRight: "none" }}>MQL率</th>
+                <th style={thS}>MQL率</th>
+                <th style={thApo}>アポ獲得数</th>
+                <th style={{ ...thApo, borderRight: "none" }}>アポ単価合計</th>
               </tr>
             </thead>
             <tbody>{rows}</tbody>

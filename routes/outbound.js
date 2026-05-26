@@ -186,4 +186,17 @@ router.post('/api/outbound/config', requireAuth, rateLimit, async (req, res) => 
   res.json({ ok: true });
 });
 
+// 全リストのアポ獲得リード一括取得（全ロール）
+router.get('/api/outbound/appointments', requireAuth, rateLimit, async (req, res) => {
+  const lists = (await readData('outbound_lists')) || [];
+  const allApos = [];
+  for (const list of lists) {
+    const leads = (await readData(`outbound_leads:${list.id}`)) || [];
+    leads
+      .filter(l => l.status === 'アポ獲得' && l.appointmentInfo)
+      .forEach(l => allApos.push({ ...l, listName: list.name }));
+  }
+  res.json(allApos);
+});
+
 module.exports = router;

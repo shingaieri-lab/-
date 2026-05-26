@@ -37,7 +37,7 @@ function csvField(v) {
 function exportToCSV(rows, filterMonth) {
   const headers = ['会社名', '役職', '担当者名', '商談担当', 'ランク', '商談ステータス',
     'アポ獲得日', '商談開始日', '商談開始時刻', '前確認', '案内メール送信済み',
-    '商談後アポ種別', 'アポ単価', 'リスト名'];
+    'アポ種別', 'アポ単価', 'リスト名'];
 
   const dataRows = rows.map(({ lead, listName }) => {
     const ai = lead.appointmentInfo || {};
@@ -193,7 +193,7 @@ export function AppointmentList({ currentUser }) {
                 { label: '会社名' }, { label: '役職 / 名前' }, { label: '商談担当' }, { label: 'ランク' },
                 { label: 'ステータス' }, { label: 'アポ獲得日' }, { label: '商談開始日' },
                 { label: '前確認', center: true }, { label: '案内メール', center: true },
-                { label: '商談後アポ種別' }, { label: 'アポ単価' }, { label: 'リスト' },
+                { label: 'アポ種別' }, { label: 'アポ単価' }, { label: 'リスト' },
               ].map(({ label, center }) => (
                 <th key={label} style={{ padding: '9px 12px', textAlign: center ? 'center' : 'left', fontSize: 11, fontWeight: 700, color: '#3d7a5e', whiteSpace: 'nowrap' }}>{label}</th>
               ))}
@@ -290,7 +290,7 @@ export function AppointmentList({ currentUser }) {
                     </div>
                   </td>
 
-                  {/* 商談後アポ種別（ISのみ編集）→ 変更時にアポ単価を自動セット */}
+                  {/* アポ種別（ISのみ編集）→ 変更時にアポ単価を自動セット */}
                   <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
                     {isIS ? (
                       <select
@@ -316,7 +316,7 @@ export function AppointmentList({ currentUser }) {
                     )}
                   </td>
 
-                  {/* アポ単価（商談後アポ種別から自動算出・編集不可） */}
+                  {/* アポ単価（アポ種別から自動算出・編集不可） */}
                   <td style={{ padding: '10px 12px', whiteSpace: 'nowrap', fontSize: 12, color: '#3d7a5e', fontWeight: 600 }}>
                     {APPOINT_PRICE_MAP[ai.appointType] || '—'}
                   </td>

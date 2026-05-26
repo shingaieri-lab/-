@@ -219,9 +219,9 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
             </div>
           </div>
 
-          {/* 商談後アポ種別 */}
+          {/* アポ種別 */}
           <div>
-            <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:6}}>商談後アポ種別</div>
+            <div style={{fontSize:12, fontWeight:700, color:"#6a9a7a", marginBottom:6}}>アポ種別</div>
             <div style={{display:"flex", flexDirection:"column", gap:5}}>
               {APPOINT_TYPE_ITEMS.map(({ type, color }) => (
                 <div key={type} style={{background:color+"18", border:`1.5px solid ${color}44`, borderRadius:10, padding:"7px 10px", display:"flex", alignItems:"center", justifyContent:"space-between"}}>

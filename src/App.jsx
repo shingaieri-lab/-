@@ -98,6 +98,13 @@ export function App() {
     apiPost('/api/ai-config', cfg);
   };
 
+  // ダッシュボード表示のたびにアポデータを最新化
+  useEffect(() => {
+    if (page === 'dashboard' && currentUser) {
+      fetchOutboundAppointments().catch(() => []).then(setApoLeads);
+    }
+  }, [page, currentUser]);
+
   useEffect(() => {
     async function init() {
       // セッションCookieが有効なら自動的に認証される（localStorageのトークン不要）

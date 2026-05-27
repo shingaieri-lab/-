@@ -22,7 +22,7 @@ function getSummary(leads) {
   return counts;
 }
 
-export function OutboundListHeader({ lists, currentListId, leads, currentUser, onSelectList, onCreateList, onDeleteList, filterStatus, onFilterStatus }) {
+export function OutboundListHeader({ lists, currentListId, leads, currentUser, onSelectList, onCreateList, onDeleteList, filterStatus, onFilterStatus, searchQuery = '', onSearchChange }) {
   const isIS = currentUser?.role === 'admin' || currentUser?.role === 'member';
   const [showImport, setShowImport] = useState(false);
   const [listName, setListName] = useState('');
@@ -151,6 +151,20 @@ export function OutboundListHeader({ lists, currentListId, leads, currentUser, o
               </div>
             )}
           </>
+        )}
+        {currentListId && onSearchChange && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 4 }}>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => onSearchChange(e.target.value)}
+              placeholder="会社名・氏名で検索..."
+              style={{ border: '1px solid #c0dece', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontFamily: 'inherit', color: '#174f35', background: '#fff', outline: 'none', width: 220 }}
+            />
+            {searchQuery && (
+              <button onClick={() => onSearchChange('')} style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>✕</button>
+            )}
+          </div>
         )}
       </div>
 

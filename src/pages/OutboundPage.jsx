@@ -20,6 +20,7 @@ export function OutboundPage({ currentUser }) {
   const [confirmDelete,  setConfirmDelete]  = useState(false);
   const [showSignature,  setShowSignature]  = useState(false);
   const [filterStatus,   setFilterStatus]   = useState(null); // null = すべて表示
+  const [searchQuery,    setSearchQuery]    = useState('');
   const [page,           setPage]           = useState(1);
   const [pageSize,       setPageSize]       = useState(30);
 
@@ -42,6 +43,7 @@ export function OutboundPage({ currentUser }) {
     setSelectedIds(new Set());
     setConfirmDelete(false);
     setFilterStatus(null);
+    setSearchQuery('');
     setPage(1);
     setLoading(true);
     fetchOutboundLeads(currentListId)
@@ -112,10 +114,18 @@ export function OutboundPage({ currentUser }) {
   }, [leads, selectedIds, currentListId]);
 
   // フィルタ・ページネーション計算
-  const filteredLeads = filterStatus ? leads.filter(l => {
-    if (filterStatus === '対応中') return l.status !== '未架電' && l.status !== 'アポ獲得' && l.status !== 'お断り';
-    return l.status === filterStatus;
-  }) : leads;
+  const q = searchQuery.trim().toLowerCase();
+  const filteredLeads = leads.filter(l => {
+    if (filterStatus) {
+      if (filterStatus === '対応中' && (l.status === '未架電' || l.status === 'アポ獲得' || l.status === 'お断り')) return false;
+      if (filterStatus !== '対応中' && l.status !== filterStatus) return false;
+    }
+    if (q) {
+      const hit = (l.company || '').toLowerCase().includes(q) || (l.contact || '').toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    return true;
+  });
   const totalPages  = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
   const safePage    = Math.min(page, totalPages);
   const pagedLeads  = filteredLeads.slice((safePage - 1) * pageSize, safePage * pageSize);
@@ -183,6 +193,8 @@ export function OutboundPage({ currentUser }) {
         onDeleteList={handleDeleteList}
         filterStatus={filterStatus}
         onFilterStatus={handleFilterStatus}
+        searchQuery={searchQuery}
+        onSearchChange={v => { setSearchQuery(v); setPage(1); }}
       />
 
       {!currentListId && (

@@ -23,6 +23,26 @@ function formatDate(dateStr) {
   return `${dateStr}（${weekday}）`;
 }
 
+function todayJST() {
+  return new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
+}
+
+// 商談開始日の前日になってもpreConfirmが未チェックかどうか
+function needsPreConfirmAlert(ai) {
+  if (ai.preConfirm || !ai.meetingDate) return false;
+  const d = new Date(ai.meetingDate + 'T00:00:00');
+  d.setDate(d.getDate() - 1);
+  return todayJST() >= d.toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
+}
+
+// アポ獲得日から3日経過しても案内メール未送信かどうか
+function needsGmailAlert(ai) {
+  if (ai.gmailDraftedAt || !ai.confirmedDate) return false;
+  const d = new Date(ai.confirmedDate + 'T00:00:00');
+  d.setDate(d.getDate() + 3);
+  return todayJST() >= d.toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' });
+}
+
 // 今月を YYYY-MM 形式で返す（JST基準）
 function currentYearMonth() {
   return new Date().toLocaleDateString('sv', { timeZone: 'Asia/Tokyo' }).slice(0, 7);
@@ -73,9 +93,11 @@ function exportToCSV(rows, filterMonth) {
 export function AppointmentList({ currentUser }) {
   const [rows,        setRows]        = useState([]); // { lead, listId, listName, leadsCache }
   const [loading,     setLoading]     = useState(true);
-  const [filterMonth, setFilterMonth] = useState(''); // '' = すべて
-  const [page,        setPage]        = useState(1);
-  const [pageSize,    setPageSize]    = useState(30);
+  const [filterMonth,  setFilterMonth]  = useState(''); // '' = すべて
+  const [filterAlert,  setFilterAlert]  = useState(false);
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [page,         setPage]         = useState(1);
+  const [pageSize,     setPageSize]     = useState(30);
 
   const isIS       = currentUser?.role === 'admin' || currentUser?.role === 'member';
   const isOutbound = currentUser?.role === 'outbound';
@@ -132,12 +154,29 @@ export function AppointmentList({ currentUser }) {
   )].sort((a, b) => b.localeCompare(a));
 
   // 絞り込み・ページネーション計算
-  const filtered    = filterMonth
-    ? rows.filter(r => (r.lead.appointmentInfo?.meetingDate || '').startsWith(filterMonth))
-    : rows;
+  const hasAlertFor = (ai) =>
+    (isOutbound && needsPreConfirmAlert(ai)) || (isIS && needsGmailAlert(ai));
+
+  const q = searchQuery.trim().toLowerCase();
+  const filtered = rows.filter(r => {
+    const ai = r.lead.appointmentInfo || {};
+    if (filterMonth && !(r.lead.appointmentInfo?.meetingDate || '').startsWith(filterMonth)) return false;
+    if (filterAlert && !hasAlertFor(ai)) return false;
+    if (q) {
+      const hit = (r.lead.company || '').toLowerCase().includes(q) || (r.lead.contact || '').toLowerCase().includes(q);
+      if (!hit) return false;
+    }
+    return true;
+  });
   const totalPages  = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage    = Math.min(page, totalPages);
   const pagedRows   = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+
+  const alertCount = rows.filter(r => {
+    const ai = r.lead.appointmentInfo || {};
+    if (filterMonth && !(r.lead.appointmentInfo?.meetingDate || '').startsWith(filterMonth)) return false;
+    return hasAlertFor(ai);
+  }).length;
 
   const paginationBar = filtered.length > 0 && (
     <Pagination
@@ -152,12 +191,26 @@ export function AppointmentList({ currentUser }) {
 
   return (
     <div>
+      {/* 検索バー */}
+      <div style={{ marginBottom: 10 }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={e => { setSearchQuery(e.target.value); setPage(1); }}
+          placeholder="会社名・氏名で検索..."
+          style={{ border: '1px solid #c0dece', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontFamily: 'inherit', color: '#174f35', background: '#fff', outline: 'none', width: 260 }}
+        />
+        {q && (
+          <button onClick={() => { setSearchQuery(''); setPage(1); }} style={{ marginLeft: 8, fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>✕ クリア</button>
+        )}
+      </div>
+
       {/* 月絞り込みバー */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 12, color: '#6a9a7a', whiteSpace: 'nowrap' }}>商談開始月：</span>
         <select
           value={filterMonth}
-          onChange={e => { setFilterMonth(e.target.value); setPage(1); }}
+          onChange={e => { setFilterMonth(e.target.value); setFilterAlert(false); setSearchQuery(''); setPage(1); }}
           style={{ border: '1px solid #c0dece', borderRadius: 6, padding: '5px 10px', fontSize: 12, fontFamily: 'inherit', color: '#174f35', background: '#fff', cursor: 'pointer', outline: 'none' }}
         >
           <option value="">すべて</option>
@@ -174,11 +227,21 @@ export function AppointmentList({ currentUser }) {
         </button>
       </div>
 
-      <div style={{ fontSize: 12, color: '#6a9a7a', marginBottom: 12 }}>
-        {filterMonth ? `${filterMonth.replace('-', '年')}月の商談` : '全期間'}
-        <span style={{ fontWeight: 700, color: '#174f35', marginLeft: 4 }}>{filtered.length}件</span>
-        {filterMonth && rows.length !== filtered.length && (
-          <span style={{ marginLeft: 6, color: '#9ca3af' }}>（全{rows.length}件中）</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12, color: '#6a9a7a' }}>
+          {filterMonth ? `${filterMonth.replace('-', '年')}月の商談` : '全期間'}
+          <span style={{ fontWeight: 700, color: '#174f35', marginLeft: 4 }}>{filtered.length}件</span>
+          {filterMonth && rows.length !== filtered.length && (
+            <span style={{ marginLeft: 6, color: '#9ca3af' }}>（全{rows.length}件中）</span>
+          )}
+        </div>
+        {alertCount > 0 && (
+          <button
+            onClick={() => { setFilterAlert(f => !f); setPage(1); }}
+            style={{ fontSize: 12, fontWeight: 700, color: filterAlert ? '#fff' : '#d97706', background: filterAlert ? '#d97706' : '#fef3c7', border: '1px solid #fcd34d', borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            ⚠ 要対応 {alertCount}件{filterAlert ? '（絞り込み中）' : ''}
+          </button>
         )}
       </div>
 
@@ -204,9 +267,12 @@ export function AppointmentList({ currentUser }) {
               const ai = lead.appointmentInfo || {};
               const ds = ai.dealStatus || '商談確定';
               const dsStyle = DEAL_STATUS_STYLE[ds] || DEAL_STATUS_STYLE['商談確定'];
+              const preConfirmAlert = isOutbound && needsPreConfirmAlert(ai);
+              const gmailAlert      = isIS && needsGmailAlert(ai);
+              const hasAlert        = preConfirmAlert || gmailAlert;
 
               return (
-                <tr key={lead.id} style={{ borderBottom: '1px solid #e2f0e8' }}>
+                <tr key={lead.id} style={{ borderBottom: '1px solid #e2f0e8', background: hasAlert ? '#fffbeb' : undefined }}>
 
                   {/* 会社名 */}
                   <td style={{ padding: '10px 12px', fontWeight: 700, color: '#174f35', minWidth: 140 }}>
@@ -261,8 +327,8 @@ export function AppointmentList({ currentUser }) {
                   </td>
 
                   {/* 前確認（業務委託のみ編集） */}
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <td style={{ padding: '10px 12px', background: preConfirmAlert ? '#fef3c7' : undefined }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       {isOutbound ? (
                         <input
                           type="checkbox"
@@ -278,15 +344,21 @@ export function AppointmentList({ currentUser }) {
                           {ai.preConfirm ? '✓' : '—'}
                         </span>
                       )}
+                      {preConfirmAlert && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#d97706', whiteSpace: 'nowrap' }}>⚠ 要確認</span>
+                      )}
                     </div>
                   </td>
 
                   {/* 案内メール（Gmail下書き済みなら✓） */}
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  <td style={{ padding: '10px 12px', background: gmailAlert ? '#fef3c7' : undefined }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <span style={{ fontSize: 16, color: ai.gmailDraftedAt ? '#059669' : '#d1d5db' }} title={ai.gmailDraftedAt ? `${ai.gmailDraftedAt.slice(0, 10)} 送信済み` : '未送信'}>
                         {ai.gmailDraftedAt ? '✓' : '—'}
                       </span>
+                      {gmailAlert && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: '#d97706', whiteSpace: 'nowrap' }}>⚠ 未送信</span>
+                      )}
                     </div>
                   </td>
 

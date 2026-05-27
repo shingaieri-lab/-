@@ -281,12 +281,15 @@ export function OutboundLeadRow({ lead, canWrite, canEdit, selected, onToggleSel
                 {mode === 'zoom' ? '閉じる' : 'Zoom入力'}
               </button>
             )}
-            {canEdit && lead.appointmentInfo?.zoomText && (
-              <button onClick={handleOpenGmailPreview}
-                style={{ background: '#fef2f2', color: '#ea4335', border: '1px solid #fca5a5', borderRadius: 6, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Gmail下書き
-              </button>
-            )}
+            {canEdit && lead.appointmentInfo?.zoomText && (() => {
+              const drafted = !!lead.appointmentInfo?.gmailDraftedAt;
+              return (
+                <button onClick={handleOpenGmailPreview}
+                  style={{ background: drafted ? '#d1fae5' : '#fef2f2', color: drafted ? '#059669' : '#ea4335', border: `1px solid ${drafted ? '#6ee7b7' : '#fca5a5'}`, borderRadius: 6, padding: '5px 12px', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  {drafted ? '✓ Gmail下書き済' : 'Gmail下書き'}
+                </button>
+              );
+            })()}
           </div>
           {/* 右列 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

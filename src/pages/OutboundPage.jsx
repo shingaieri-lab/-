@@ -168,6 +168,7 @@ export function OutboundPage({ currentUser }) {
         {[
           { key: 'list',         label: '架電リスト' },
           { key: 'appointments', label: 'アポ一覧' },
+          ...(isIS ? [{ key: 'mail-pending', label: 'メール未送信' }] : []),
         ].map(({ key, label }) => (
           <button key={key} onClick={() => setView(key)}
             style={{ padding: '8px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', border: 'none', borderBottom: view === key ? '2px solid #059669' : '2px solid transparent', background: 'none', color: view === key ? '#059669' : '#6a9a7a', marginBottom: -2, transition: 'color 0.15s' }}>
@@ -179,6 +180,11 @@ export function OutboundPage({ currentUser }) {
       {/* アポ一覧ビュー */}
       {view === 'appointments' && (
         <AppointmentList currentUser={currentUser} />
+      )}
+
+      {/* メール未送信ビュー（ISのみ） */}
+      {view === 'mail-pending' && isIS && (
+        <AppointmentList currentUser={currentUser} mailPendingOnly={true} />
       )}
 
       {/* 架電リストビュー */}

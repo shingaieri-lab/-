@@ -1,7 +1,15 @@
 // アポ獲得一覧（全リストのアポ獲得リードをまとめて表示）
 import { useState, useEffect, useCallback } from 'react';
 import { fetchOutboundLists, fetchOutboundLeads, saveOutboundLeads } from '../../lib/outboundApi.js';
+import { acquireGmailToken, buildGmailDraftRaw, postGmailDraft } from '../../lib/oauth.js';
+import { getEffectiveAiConfig } from '../../lib/accounts.js';
+import { getMaster } from '../../lib/master.js';
+import { GmailDraftModal } from './GmailDraftModal.jsx';
 import { Pagination } from '../ui/Pagination.jsx';
+
+function applyTplVars(tpl, vars) {
+  return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{{${k}}}`, v || ''), tpl);
+}
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -90,7 +98,7 @@ function exportToCSV(rows, filterMonth) {
   URL.revokeObjectURL(url);
 }
 
-export function AppointmentList({ currentUser }) {
+export function AppointmentList({ currentUser, mailPendingOnly = false }) {
   const [rows,        setRows]        = useState([]); // { lead, listId, listName, leadsCache }
   const [loading,     setLoading]     = useState(true);
   const [filterMonth,  setFilterMonth]  = useState(''); // '' = すべて
@@ -98,6 +106,9 @@ export function AppointmentList({ currentUser }) {
   const [searchQuery,  setSearchQuery]  = useState('');
   const [page,         setPage]         = useState(1);
   const [pageSize,     setPageSize]     = useState(30);
+  const [gmailPreview, setGmailPreview] = useState(null); // { subject, body, to, row }
+  const [gmailToken,   setGmailToken]   = useState(null);
+  const [gmailSending, setGmailSending] = useState(false);
 
   const isIS       = currentUser?.role === 'admin' || currentUser?.role === 'member';
   const isOutbound = currentUser?.role === 'outbound';
@@ -143,6 +154,53 @@ export function AppointmentList({ currentUser }) {
     await saveOutboundLeads(listId, newLeads);
   }, []);
 
+  const handleOpenGmailPreview = (row) => {
+    const clientId = getEffectiveAiConfig(currentUser).gmailClientId || currentUser?.gmailClientId;
+    if (!clientId) { alert('Gmail連携が設定されていません。'); return; }
+    const ai = row.lead.appointmentInfo || {};
+    const meetingDate = ai.meetingDate || '';
+    const weekday = meetingDate ? WEEKDAYS[new Date(meetingDate + 'T00:00:00').getDay()] : '';
+    const dateStr = meetingDate ? `${meetingDate}（${weekday}） ${ai.meetingTime || ''}〜` : '';
+    const tpl = getMaster().outboundEmailTpl || {};
+    const vars = {
+      担当者名: row.lead.contact || 'ご担当者',
+      企業名:   row.lead.company,
+      商談日時: dateStr,
+      Zoomリンク: ai.zoomText || '',
+      商談担当: ai.salesPerson || '',
+      送信者名: currentUser?.name || '',
+      署名:     currentUser?.signature || '',
+    };
+    setGmailPreview({
+      to:      row.lead.email || '',
+      subject: applyTplVars(tpl.subject || '', vars),
+      body:    applyTplVars(tpl.body || '', vars),
+      row,
+    });
+  };
+
+  const handleSendGmailDraft = async (subject, body) => {
+    const clientId = getEffectiveAiConfig(currentUser).gmailClientId || currentUser?.gmailClientId;
+    setGmailSending(true);
+    try {
+      const tokenObj = await acquireGmailToken(clientId, gmailToken);
+      setGmailToken(tokenObj);
+      const raw = buildGmailDraftRaw(gmailPreview.to, subject, body);
+      await postGmailDraft(tokenObj.token, raw);
+      const { row } = gmailPreview;
+      const draftedAt = new Date().toISOString();
+      await handleUpdate(row.listId, {
+        ...row.lead,
+        appointmentInfo: { ...(row.lead.appointmentInfo || {}), gmailDraftedAt: draftedAt },
+      }, row.leads);
+      setGmailPreview(null);
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setGmailSending(false);
+    }
+  };
+
   if (loading) return <div style={{ fontSize: 13, color: '#6a9a7a', padding: '40px 0', textAlign: 'center' }}>読み込み中...</div>;
   if (rows.length === 0) return <div style={{ fontSize: 13, color: '#6a9a7a', padding: '40px 0', textAlign: 'center' }}>アポ獲得のデータがありません。</div>;
 
@@ -160,6 +218,7 @@ export function AppointmentList({ currentUser }) {
   const q = searchQuery.trim().toLowerCase();
   const filtered = rows.filter(r => {
     const ai = r.lead.appointmentInfo || {};
+    if (mailPendingOnly && ai.gmailDraftedAt) return false;
     if (filterMonth && !(r.lead.appointmentInfo?.meetingDate || '').startsWith(filterMonth)) return false;
     if (filterAlert && !hasAlertFor(ai)) return false;
     if (q) {
@@ -296,9 +355,9 @@ export function AppointmentList({ currentUser }) {
                       : <span style={{ color: '#c0dece' }}>—</span>}
                   </td>
 
-                  {/* 商談ステータス（ISのみ編集） */}
+                  {/* 商談ステータス（ISのみ編集・mailPendingOnly時は読み取り専用） */}
                   <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                    {isIS ? (
+                    {isIS && !mailPendingOnly ? (
                       <select
                         value={ds}
                         onChange={e => handleUpdate(listId, {
@@ -350,21 +409,33 @@ export function AppointmentList({ currentUser }) {
                     </div>
                   </td>
 
-                  {/* 案内メール（Gmail下書き済みなら✓） */}
+                  {/* 案内メール */}
                   <td style={{ padding: '10px 12px', background: gmailAlert ? '#fef3c7' : undefined }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                      <span style={{ fontSize: 16, color: ai.gmailDraftedAt ? '#059669' : '#d1d5db' }} title={ai.gmailDraftedAt ? `${ai.gmailDraftedAt.slice(0, 10)} 送信済み` : '未送信'}>
-                        {ai.gmailDraftedAt ? '✓' : '—'}
-                      </span>
-                      {gmailAlert && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: '#d97706', whiteSpace: 'nowrap' }}>⚠ 未送信</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      {mailPendingOnly ? (
+                        <button
+                          onClick={() => handleOpenGmailPreview({ lead, listId, listName, leads })}
+                          disabled={gmailSending}
+                          style={{ background: ai.gmailDraftedAt ? '#d1fae5' : '#fef2f2', color: ai.gmailDraftedAt ? '#059669' : '#ea4335', border: `1px solid ${ai.gmailDraftedAt ? '#6ee7b7' : '#fca5a5'}`, borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                        >
+                          {ai.gmailDraftedAt ? '✓ 下書き済' : 'Gmail下書き'}
+                        </button>
+                      ) : (
+                        <>
+                          <span style={{ fontSize: 16, color: ai.gmailDraftedAt ? '#059669' : '#d1d5db' }} title={ai.gmailDraftedAt ? `${ai.gmailDraftedAt.slice(0, 10)} 送信済み` : '未送信'}>
+                            {ai.gmailDraftedAt ? '✓' : '—'}
+                          </span>
+                          {gmailAlert && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#d97706', whiteSpace: 'nowrap' }}>⚠ 未送信</span>
+                          )}
+                        </>
                       )}
                     </div>
                   </td>
 
-                  {/* アポ種別（ISのみ編集）→ 変更時にアポ単価を自動セット */}
+                  {/* アポ種別（ISのみ編集・mailPendingOnly時は読み取り専用） */}
                   <td style={{ padding: '10px 12px', whiteSpace: 'nowrap' }}>
-                    {isIS ? (
+                    {isIS && !mailPendingOnly ? (
                       <select
                         value={ai.appointType || ''}
                         onChange={e => {
@@ -406,6 +477,16 @@ export function AppointmentList({ currentUser }) {
 
       {/* ページネーション（下） */}
       {paginationBar}
+
+      {gmailPreview && (
+        <GmailDraftModal
+          to={gmailPreview.to}
+          initialSubject={gmailPreview.subject}
+          initialBody={gmailPreview.body}
+          onSend={handleSendGmailDraft}
+          onClose={() => setGmailPreview(null)}
+        />
+      )}
     </div>
   );
 }

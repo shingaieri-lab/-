@@ -284,9 +284,7 @@ export function OutboundPage({ currentUser }) {
       </>}
 
       {showSignature && (
-        <SignatureEditModal
-          onClose={() => setShowSignature(false)}
-        />
+        <SignatureEditModal onClose={() => setShowSignature(false)} />
       )}
 
       {appointLead && (

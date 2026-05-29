@@ -1,18 +1,22 @@
 // Zoho連携API
 
 // ZohoのURLや生IDから、Lead/Dealの種別とIDを抽出する
+// Zohoの画面URLは「商談」が `Potentials` パスで表現される（API名はDealsだが、画面URLパスはPotentials）
 // 受け付ける形式：
-//   - "https://crm.zoho.jp/crm/tab/Leads/1234567890" → { type: 'Lead', id: '1234567890' }
-//   - "https://crm.zoho.jp/crm/tab/Deals/9876543210" → { type: 'Deal', id: '9876543210' }
-//   - "1234567890" (生ID) → { type: null, id: '1234567890' }（種別は呼び出し側で判断）
-//   - その他不正な値 → null
+//   - 旧形式: "https://crm.zoho.jp/crm/tab/Leads/1234567890"           → { type: 'Lead', id }
+//   - 新形式: "https://crm.zoho.jp/crm/org12345/tab/Leads/1234567890"  → { type: 'Lead', id }
+//   - 旧形式: "https://crm.zoho.jp/crm/tab/Deals/9876543210"           → { type: 'Deal', id }
+//   - 新形式: "https://crm.zoho.jp/crm/org12345/tab/Potentials/9876543210" → { type: 'Deal', id }
+//   - 生ID:   "1234567890" → { type: null, id: '1234567890' }
+//   - 不正:   その他 → null
 export function parseZohoUrl(input) {
   if (!input) return null;
   const trimmed = String(input).trim();
-  // URL形式：/Leads/<id> または /Deals/<id>
-  const urlMatch = trimmed.match(/\/(Leads|Deals)\/(\d+)/);
+  // URL形式：/Leads/<id> / /Deals/<id> / /Potentials/<id>（新URL形式の商談画面）
+  const urlMatch = trimmed.match(/\/(Leads|Deals|Potentials)\/(\d+)/);
   if (urlMatch) {
     const [, mod, id] = urlMatch;
+    // Potentials も Deals と同じ「商談（Deal）」扱い
     return { type: mod === 'Leads' ? 'Lead' : 'Deal', id };
   }
   // 生ID（数字のみ）
@@ -28,10 +32,13 @@ export function getZohoCrmDomain() {
   return dc === 'com' ? 'zoho.com' : 'zoho.jp';
 }
 
-// Lead/Deal IDから Zoho の画面URLを組み立てる
+// Lead/Deal IDから Zoho の画面URLを組み立てる（フォールバック用）
+// 注意：Zohoの新URL形式は /crm/org{ID}/tab/... のように組織IDを含むが、
+// ここでは組織ID不明のため旧形式で組み立てる。Zoho側でリダイレクトが効くケースが多い。
+// 商談画面のパスは Potentials（API名 Deals とは異なる）
 export function buildZohoUrl(type, id) {
   const domain = getZohoCrmDomain();
-  const path = type === 'Deal' ? 'Deals' : 'Leads';
+  const path = type === 'Deal' ? 'Potentials' : 'Leads';
   return `https://crm.${domain}/crm/tab/${path}/${id}`;
 }
 

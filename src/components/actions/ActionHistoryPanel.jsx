@@ -275,19 +275,21 @@ export function ActionHistoryPanel({ lead, onClose, onUpdate, onEditAction, onDe
               </button>
               <button onClick={() => {
                 if (!zohoIdInput) { setZohoIdErr('URLまたはIDを入力してください'); return; }
-                // URL貼り付け（/Leads/<id> or /Deals/<id>）と生IDの両対応
-                // URLなら種別判別、生IDなら従来通りリードID扱い
+                // URL貼り付け（/Leads/<id> or /Deals/<id> or /Potentials/<id>）と生IDの両対応
                 const parsed = parseZohoUrl(zohoIdInput);
                 if (!parsed) {
                   setZohoIdErr('URLまたはIDが正しくありません');
                   return;
                 }
+                // 入力がフルURL（org IDを含む新形式に対応）ならそのまま保存。生IDなら旧形式で組み立て
+                const isUrl = /^https?:\/\//i.test(zohoIdInput);
+                const savedUrl = isUrl ? zohoIdInput : buildZohoUrl(parsed.type || 'Lead', parsed.id);
                 if (parsed.type === 'Deal') {
-                  // Deal画面のURLを貼られた場合：zoho_deal_id に保存、URLも商談画面のものにする
-                  onUpdate({ zoho_deal_id: parsed.id, zoho_url: buildZohoUrl('Deal', parsed.id) });
+                  // Deal（商談）画面のURLまたはID：zoho_deal_id に保存
+                  onUpdate({ zoho_deal_id: parsed.id, zoho_url: savedUrl });
                 } else {
-                  // Lead画面のURL or 生ID：zoho_lead_id に保存
-                  onUpdate({ zoho_lead_id: parsed.id, zoho_url: lead.zoho_url || buildZohoUrl('Lead', parsed.id) });
+                  // Lead画面のURL or 生ID：zoho_lead_id に保存。URLは入力されたものを優先
+                  onUpdate({ zoho_lead_id: parsed.id, zoho_url: isUrl ? savedUrl : (lead.zoho_url || savedUrl) });
                 }
                 setEditingZohoId(false);
                 setZohoIdErr('');

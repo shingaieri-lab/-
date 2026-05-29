@@ -7,6 +7,7 @@ import { LeadRow } from '../components/leads/LeadRow.jsx';
 import { LeadForm } from '../components/leads/LeadForm.jsx';
 import { LeadFilterBar } from '../components/leads/LeadFilterBar.jsx';
 import { ZohoImportPanel } from '../components/leads/ZohoImportPanel.jsx';
+import { InboundAppointmentList } from '../components/leads/InboundAppointmentList.jsx';
 import { ActionHistoryPanel } from '../components/actions/ActionHistoryPanel.jsx';
 import { TODAY } from '../lib/holidays.js';
 import { normalizeDate } from '../lib/date.js';
@@ -39,6 +40,10 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
   const [pageSize, setPageSize] = useState(30);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
+  // タブ：'all' = 全リスト / 'appointments' = アポ一覧（status===商談確定のみ）
+  // role==='outbound' のユーザーには「アポ一覧」タブは表示しない
+  const [view, setView] = useState('all');
+  const canSeeAppointments = currentUser?.role !== 'outbound';
 
   const showToast = (message, type = 'success') => {
     clearTimeout(toastTimer.current);
@@ -114,6 +119,9 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
   const totalPages = Math.ceil(list.length / pageSize);
   const paged = list.slice((page - 1) * pageSize, page * pageSize);
 
+  // アポ一覧（status==='商談確定'）のリードのみ
+  const appointmentLeads = leads.filter(l => l.status === '商談確定');
+
   const selectedLead = openId ? leads.find(l => l.id === openId) : null;
 
   const handleEditAction = (lead, aid, updated) => {
@@ -144,16 +152,53 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
   return (
     <div className="lead-list-container" style={{paddingLeft:28, paddingRight:28, height: isMobile ? "auto" : "100%", overflow: isMobile ? "visible" : "hidden", display:"flex", flexDirection:"column", minHeight: isMobile ? "calc(100vh - 130px)" : undefined}}>
       <div className="page-pad" style={{flexShrink:0, background:"#f0f5f2", paddingTop:24, paddingBottom:8, marginLeft:-28, marginRight:-28, paddingLeft:28, paddingRight:28, borderBottom:"1px solid #d8ede1"}}>
-        <Header title={<span style={{display:"flex",alignItems:"center",gap:7}}><UsersIcon size={20} color="#174f35" /> リード一覧</span>} sub={`全 ${leads.length}件 / フィルター後 ${list.length}件`}>
-          <div className="lead-header-actions" style={{display:"flex", gap:8}}>
-            <button onClick={exportCSV} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><UploadIcon size={12} color="#6a9a7a" /> CSVエクスポート</button>
-            {!readOnly && <button onClick={() => { setShowImport(v=>!v); setImportResult(null); }} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><InboxIcon size={12} color="#6a9a7a" /> CSVインポート</button>}
-            {!readOnly && window.__appData?.zohoAuthenticated && (
-              <button onClick={() => setShowZohoImport(v=>!v)} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><ExternalLinkIcon size={12} color="#6a9a7a" /> Zohoから取込</button>
-            )}
-            {!readOnly && <button onClick={() => { setEditing(null); setShowForm(true); }} style={{...S.btnP, background:"linear-gradient(135deg,#f97316,#ea580c)"}}>＋ 新規追加</button>}
-          </div>
+        <Header
+          title={
+            <span style={{display:"flex",alignItems:"center",gap:7}}>
+              <UsersIcon size={20} color="#174f35" /> {view === 'appointments' ? 'アポ一覧' : 'リード一覧'}
+            </span>
+          }
+          sub={
+            view === 'appointments'
+              ? `商談確定 ${appointmentLeads.length}件`
+              : `全 ${leads.length}件 / フィルター後 ${list.length}件`
+          }
+        >
+          {view === 'all' && (
+            <div className="lead-header-actions" style={{display:"flex", gap:8}}>
+              <button onClick={exportCSV} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><UploadIcon size={12} color="#6a9a7a" /> CSVエクスポート</button>
+              {!readOnly && <button onClick={() => { setShowImport(v=>!v); setImportResult(null); }} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><InboxIcon size={12} color="#6a9a7a" /> CSVインポート</button>}
+              {!readOnly && window.__appData?.zohoAuthenticated && (
+                <button onClick={() => setShowZohoImport(v=>!v)} style={{...S.btnSec, display:"flex", alignItems:"center", gap:4}}><ExternalLinkIcon size={12} color="#6a9a7a" /> Zohoから取込</button>
+              )}
+              {!readOnly && <button onClick={() => { setEditing(null); setShowForm(true); }} style={{...S.btnP, background:"linear-gradient(135deg,#f97316,#ea580c)"}}>＋ 新規追加</button>}
+            </div>
+          )}
         </Header>
+
+        {/* タブ切替：role==='outbound' は非表示 */}
+        {canSeeAppointments && (
+          <div style={{ display: 'flex', gap: 4, marginTop: 12, borderBottom: '2px solid #e2f0e8' }}>
+            {[
+              { key: 'all',          label: '全リスト' },
+              { key: 'appointments', label: 'アポ一覧' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => { setView(key); setOpenId(null); }}
+                style={{
+                  padding: '8px 20px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit',
+                  cursor: 'pointer', border: 'none', background: 'none',
+                  borderBottom: view === key ? '2px solid #059669' : '2px solid transparent',
+                  color: view === key ? '#059669' : '#6a9a7a',
+                  marginBottom: -2, transition: 'color 0.15s',
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Zoho未認証バナー */}
         {!readOnly && window.__appData?.zohoConfig?.clientId && !window.__appData?.zohoAuthenticated && (
@@ -172,15 +217,18 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
           <ZohoImportPanel onAdd={lead => { onAdd(lead); showToast(`「${lead.company || lead.contact}」を取込みました`); setEditing(lead); setShowForm(true); }} onClose={() => setShowZohoImport(false)} />
         )}
 
-        <LeadFilterBar
-          fQ={fQ} setFQ={setFQ} fSource={fSource} setFSrc={setFSrc}
-          fPortal={fPortal} setFPortal={setFPortal} fMonth={fMonth} setFMonth={setFMonth}
-          fNextAction={fNextAction} setFNextAction={setFNextAction}
-          fIS={fIS} setFIS={setFIS} fHasPortal={fHasPortal} setFHasPortal={setFHasPortal}
-          fMql={fMql} setFMql={setFMql} fStatuses={fStatuses} setFStatuses={setFStatuses}
-          sort={sort} setSort={setSort} sortDir={sortDir} setSortDir={setSortDir}
-          leads={leads} isMobile={isMobile}
-        />
+        {/* フィルターバー：全リストタブのみ表示（アポ一覧タブは独自フィルターを持つ） */}
+        {view === 'all' && (
+          <LeadFilterBar
+            fQ={fQ} setFQ={setFQ} fSource={fSource} setFSrc={setFSrc}
+            fPortal={fPortal} setFPortal={setFPortal} fMonth={fMonth} setFMonth={setFMonth}
+            fNextAction={fNextAction} setFNextAction={setFNextAction}
+            fIS={fIS} setFIS={setFIS} fHasPortal={fHasPortal} setFHasPortal={setFHasPortal}
+            fMql={fMql} setFMql={setFMql} fStatuses={fStatuses} setFStatuses={setFStatuses}
+            sort={sort} setSort={setSort} sortDir={sortDir} setSortDir={setSortDir}
+            leads={leads} isMobile={isMobile}
+          />
+        )}
       </div>
 
       {showImport && (
@@ -192,35 +240,50 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
       )}
 
       <div style={{display:"flex", gap:12, marginTop:16, flex:1, minHeight:0, overflow: isMobile ? "visible" : "hidden"}}>
-        {/* 左側：リード一覧 */}
-        <div style={{flex: isMobile ? "none" : "0 0 50%", width: isMobile ? "100%" : "50%", overflowY:"auto"}}>
-          <div style={{display:"flex", flexDirection:"column", gap:10}}>
-            {list.length === 0 && <div style={{...S.empty, padding:"32px"}}>リードがありません</div>}
-            {paged.map(lead => (
-              <LeadRow key={lead.id} lead={lead} openId={openId} setOpenId={setOpenId}
-                onEdit={readOnly ? null : () => { setEditing(lead); setShowForm(true); }}
-                onDelete={readOnly ? null : () => handleDeleteLead(lead.id)}
-                readOnly={readOnly}
-                currentUser={currentUser}
-                onStatusChange={s => {
-                  const patch = { status: s };
-                  if (lead.status === "商談確定" && s !== "商談確定") {
-                    patch.meeting_date = ""; patch.meeting_time = ""; patch.sales_member = "";
-                  }
-                  onUpdate(lead.id, patch);
-                  if (lead.zoho_lead_id && window.__appData?.zohoAuthenticated) {
-                    updateZohoLeadStatus(lead.zoho_lead_id, s);
-                  }
-                }}
-                onUpdate={p => onUpdate(lead.id, p)}
+        {/* 左側：リード一覧 or アポ一覧 */}
+        <div style={{
+          flex: isMobile ? "none" : (view === 'appointments' && !selectedLead ? "1 1 100%" : "0 0 50%"),
+          width: isMobile ? "100%" : (view === 'appointments' && !selectedLead ? "100%" : "50%"),
+          overflowY:"auto",
+        }}>
+          {view === 'appointments' ? (
+            <InboundAppointmentList
+              leads={appointmentLeads}
+              openId={openId}
+              setOpenId={setOpenId}
+              isMobile={isMobile}
+            />
+          ) : (
+            <>
+              <div style={{display:"flex", flexDirection:"column", gap:10}}>
+                {list.length === 0 && <div style={{...S.empty, padding:"32px"}}>リードがありません</div>}
+                {paged.map(lead => (
+                  <LeadRow key={lead.id} lead={lead} openId={openId} setOpenId={setOpenId}
+                    onEdit={readOnly ? null : () => { setEditing(lead); setShowForm(true); }}
+                    onDelete={readOnly ? null : () => handleDeleteLead(lead.id)}
+                    readOnly={readOnly}
+                    currentUser={currentUser}
+                    onStatusChange={s => {
+                      const patch = { status: s };
+                      if (lead.status === "商談確定" && s !== "商談確定") {
+                        patch.meeting_date = ""; patch.meeting_time = ""; patch.sales_member = "";
+                      }
+                      onUpdate(lead.id, patch);
+                      if (lead.zoho_lead_id && window.__appData?.zohoAuthenticated) {
+                        updateZohoLeadStatus(lead.zoho_lead_id, s);
+                      }
+                    }}
+                    onUpdate={p => onUpdate(lead.id, p)}
+                  />
+                ))}
+              </div>
+              <Pagination
+                page={page} totalPages={totalPages} total={list.length} pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={n => { setPageSize(n); setPage(1); }}
               />
-            ))}
-          </div>
-          <Pagination
-            page={page} totalPages={totalPages} total={list.length} pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={n => { setPageSize(n); setPage(1); }}
-          />
+            </>
+          )}
         </div>
 
         {/* デスクトップ: 右パネル */}

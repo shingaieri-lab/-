@@ -9,6 +9,10 @@ import {
   getPortalSites, getPortalPrice,
 } from '../lib/master.js';
 import { parseAppointPrice } from '../lib/outboundApi.js';
+import { InboundApoPanel } from '../components/dashboard/InboundApoPanel.jsx';
+import { AccuracyCrossPanel } from '../components/dashboard/AccuracyCrossPanel.jsx';
+import { DealStagePanel } from '../components/dashboard/DealStagePanel.jsx';
+import { DASHBOARD_CARD } from '../components/dashboard/cardStyle.js';
 
 const RANK_ITEMS = [
   { rank: 'A', color: '#ef4444' },
@@ -131,72 +135,74 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
     { label: "本日追客",   value: todayActions.length + "件", color: "#0ea5e9", sub: `期限切れ ${overdueActions.length}件`, filter: { nextActionDate: TODAY } },
   ];
 
-  const card = { background: '#fff', borderRadius: 14, padding: '14px 16px', boxShadow: '0 1px 8px #0569690a', border: '1px solid #e8f0ea' };
+  // パネル共通スタイル（cardStyle.js から取得）
+  const card = DASHBOARD_CARD;
 
   return (
-    <div style={{ padding: '20px 24px', height: isMobile ? 'auto' : 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', gap: 12, overflowY: 'auto' }}>
+    <div style={{ padding: '16px 20px', height: isMobile ? 'auto' : 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
 
       {/* ヘッダー */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <DashboardIcon size={20} color="#174f35" />
-          <span style={{ fontSize: 20, fontWeight: 800, color: '#174f35', letterSpacing: '-0.02em' }}>ダッシュボード</span>
-          <span style={{ fontSize: 13, color: '#6a9a7a', marginLeft: 4 }}>月次レポート</span>
+          <DashboardIcon size={18} color="#174f35" />
+          <span style={{ fontSize: 18, fontWeight: 800, color: '#174f35', letterSpacing: '-0.02em' }}>ダッシュボード</span>
+          <span style={{ fontSize: 12, color: '#6a9a7a', marginLeft: 4 }}>月次レポート</span>
         </div>
-        <select value={month} onChange={e => setMonth(e.target.value)} style={{ ...S.sel, fontSize: 15 }}>
+        <select value={month} onChange={e => setMonth(e.target.value)} style={{ ...S.sel, fontSize: 14, padding: '6px 10px' }}>
           {months.length === 0 && <option value={THIS_MONTH}>{THIS_MONTH.slice(0,4)}年{parseInt(THIS_MONTH.slice(5))}月</option>}
           {months.map(m => <option key={m} value={m}>{m.slice(0,4)}年{parseInt(m.slice(5))}月</option>)}
         </select>
       </div>
 
-      {/* KPIカード行 */}
+      {/* KPIカード行（スリム版） */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10, flexShrink: 0 }}>
         {kpiItems.map((k, i) => (
           <div key={i} onClick={() => onNavigate && onNavigate(k.filter)}
-            style={{ ...card, cursor: 'pointer', padding: '14px 16px', transition: 'transform 0.1s, box-shadow 0.1s' }}
+            style={{ ...card, cursor: 'pointer', padding: '12px 14px', transition: 'transform 0.1s, box-shadow 0.1s', position: 'relative', overflow: 'hidden' }}
             onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 6px 20px ${k.color}33`; }}
             onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 8px #0569690a'; }}>
-            <div style={{ fontSize: 13, color: '#6a9a7a', fontWeight: 600, marginBottom: 8 }}>{k.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 900, color: k.color, lineHeight: 1, marginBottom: 6 }}>{k.value}</div>
-            <div style={{ fontSize: 13, color: '#9ab8a4' }}>{k.sub}</div>
-            <div style={{ height: 3, background: k.color + '22', borderRadius: 2, marginTop: 12 }}>
-              <div style={{ height: '100%', width: '60%', background: k.color, borderRadius: 2, opacity: 0.5 }} />
-            </div>
+            {/* 左の縦アクセントバー */}
+            <span style={{ position: 'absolute', left: 0, top: 12, bottom: 12, width: 3, background: k.color, borderRadius: 2 }} />
+            <div style={{ fontSize: 12, color: '#6a9a7a', fontWeight: 600, marginBottom: 4, paddingLeft: 6 }}>{k.label}</div>
+            <div style={{ fontSize: 22, fontWeight: 900, color: k.color, lineHeight: 1, marginBottom: 4, paddingLeft: 6, fontVariantNumeric: 'tabular-nums' }}>{k.value}</div>
+            <div style={{ fontSize: 12, color: '#9ab8a4', paddingLeft: 6 }}>{k.sub}</div>
           </div>
         ))}
       </div>
 
-      {/* 中段：流入元別 + ステータス分布 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 12, flexShrink: 0 }}>
+      {/* 段2：流入元別 + ステータス分布（流入分析） */}
+      <div style={{ display: 'grid', gridTemplateColumns: '3fr 2fr', gap: 10, flexShrink: 0 }}>
 
         {/* 流入元別 */}
-        <div style={card}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#174f35', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 4, height: 16, background: '#10b981', borderRadius: 2, display: 'inline-block' }} />
-            流入元別 商談化実績
+        <div style={{ ...card, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ width: 4, height: 16, background: '#10b981', borderRadius: 2 }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#174f35' }}>流入元別 商談化実績</span>
+            </div>
+            <span style={{ fontSize: 11, color: '#b0c8ba' }}>棒＝商談設定数</span>
           </div>
-          <div style={{ fontSize: 13, color: '#9ab8a4', marginBottom: 12 }}>棒グラフの長さ＝商談設定数の多さ</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 60px 64px', gap: '4px 10px', alignItems: 'center', marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: '#b0c8ba' }}>流入元</span>
-            <span style={{ fontSize: 13, color: '#b0c8ba' }}>商談設定数 →</span>
-            <span style={{ fontSize: 13, color: '#b0c8ba', textAlign: 'right' }}>設定数</span>
-            <span style={{ fontSize: 13, color: '#b0c8ba', textAlign: 'right' }}>商談化率</span>
+          <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 44px 52px', gap: '2px 8px', alignItems: 'center', marginBottom: 4, fontSize: 11, color: '#b0c8ba', fontWeight: 600 }}>
+            <span>流入元</span>
+            <span></span>
+            <span style={{ textAlign: 'right' }}>件数</span>
+            <span style={{ textAlign: 'right' }}>商談化率</span>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sourceData.map(({ src, color, icon, total, valid, appt, mql }) => (
               <div key={src}>
-                <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 60px 64px', gap: '0 10px', alignItems: 'center' }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <SourceIconSVG iconKey={icon} size={15} />{src}
+                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 44px 52px', gap: '0 8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <SourceIconSVG iconKey={icon} size={13} />{src}
                   </span>
                   <HBar value={appt} max={maxAppt} color={color} />
-                  <span style={{ fontSize: 15, fontWeight: 700, color, textAlign: 'right' }}>{appt}件</span>
-                  <span style={{ fontSize: 14, color: '#6a9a7a', textAlign: 'right' }}>{rate(appt, valid)}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{appt}</span>
+                  <span style={{ fontSize: 12, color: '#6a9a7a', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{rate(appt, valid)}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 12, paddingLeft: 125, marginTop: 3 }}>
-                  <span style={{ fontSize: 13, color: '#b0c8ba' }}>反響 {total}件</span>
-                  <span style={{ fontSize: 13, color: '#b0c8ba' }}>有効リード {valid}件</span>
-                  <span style={{ fontSize: 13, color: '#06b6d4' }}>MQL {mql}件</span>
+                <div style={{ display: 'flex', gap: 10, paddingLeft: 105, marginTop: 1, fontSize: 11, color: '#b0c8ba' }}>
+                  <span>反響 {total}</span>
+                  <span>有効 {valid}</span>
+                  <span style={{ color: '#06b6d4' }}>MQL {mql}</span>
                 </div>
               </div>
             ))}
@@ -204,65 +210,75 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
         </div>
 
         {/* ステータス分布 */}
-        <div style={card}>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#174f35', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ width: 4, height: 16, background: '#8b5cf6', borderRadius: 2, display: 'inline-block' }} />
-            ステータス分布
+        <div style={{ ...card, padding: '12px 14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <span style={{ width: 4, height: 16, background: '#8b5cf6', borderRadius: 2 }} />
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#174f35' }}>ステータス分布</span>
           </div>
-          <div style={{ fontSize: 13, color: '#9ab8a4', marginBottom: 12 }}>各ステータスのリード数と全体に占める割合</div>
-          <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
-            <DonutChart data={statusData} total={fl.length} size={160} />
-            <div style={{ display: 'grid', gridTemplateColumns: '12px auto auto auto', gap: '8px 12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <DonutChart data={statusData} total={fl.length} size={110} />
+            <div style={{ display: 'grid', gridTemplateColumns: '10px auto 1fr auto', gap: '4px 8px', alignItems: 'center', flex: 1 }}>
               {statusData.filter(s => s.count > 0).flatMap(s => [
-                <span key={s.label+'-dot'} style={{ width: 10, height: 10, borderRadius: '50%', background: s.color }} />,
-                <span key={s.label+'-label'} style={{ fontSize: 13, color: '#174f35' }}>{s.label}</span>,
-                <span key={s.label+'-count'} style={{ fontSize: 15, fontWeight: 700, color: s.color, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{s.count}</span>,
-                <span key={s.label+'-pct'} style={{ fontSize: 13, color: '#b0c8ba', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fl.length ? Math.round(s.count/fl.length*100) : 0}%</span>,
+                <span key={s.label+'-dot'} style={{ width: 8, height: 8, borderRadius: '50%', background: s.color }} />,
+                <span key={s.label+'-label'} style={{ fontSize: 12, color: '#174f35', whiteSpace: 'nowrap' }}>{s.label}</span>,
+                <span key={s.label+'-count'} style={{ fontSize: 13, fontWeight: 700, color: s.color, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{s.count}</span>,
+                <span key={s.label+'-pct'} style={{ fontSize: 11, color: '#b0c8ba', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{fl.length ? Math.round(s.count/fl.length*100) : 0}%</span>,
               ])}
             </div>
           </div>
         </div>
+
       </div>
 
-      {/* 下段：アポ実績 + ポータル課金 */}
-      <div style={{ display: 'grid', gridTemplateColumns: isDemo ? '1fr' : '1fr 1fr', gap: 12, flexShrink: 0 }}>
+      {/* 段3：アポ品質分析（インバウンドアポ実績 + IS確度 vs 営業確度クロス集計） */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flexShrink: 0 }}>
+        <InboundApoPanel filteredLeads={fl} />
+        <AccuracyCrossPanel filteredLeads={fl} />
+      </div>
 
-        {/* アポ実績 */}
+      {/* 段4：結果・コスト（受注失注 + アウトバウンドアポ + ポータル課金） */}
+      {/* デモモードはアウトバウンド非表示なので 2列、それ以外は 3列 */}
+      <div style={{ display: 'grid', gridTemplateColumns: isDemo ? '1fr 1.5fr' : '1fr 1fr 1.4fr', gap: 10, flexShrink: 0 }}>
+
+        {/* 受注・失注集計 */}
+        <DealStagePanel filteredLeads={fl} />
+
+        {/* アウトバウンドアポ実績 */}
         {!isDemo && <div style={card}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 4, height: 16, background: '#8b5cf6', borderRadius: 2, display: 'inline-block' }} />
+              <span style={{ width: 4, height: 16, background: '#8b5cf6', borderRadius: 2 }} />
               <span style={{ fontSize: 13, fontWeight: 700, color: '#174f35' }}>アウトバウンドアポ実績</span>
             </div>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'baseline' }}>
-              <span style={{ fontSize: 13, color: '#6a9a7a' }}>獲得数 <strong style={{ fontSize: 20, color: '#8b5cf6' }}>{totalApoCount}</strong>件</span>
-              <span style={{ fontSize: 13, color: '#6a9a7a' }}>単価計 <strong style={{ fontSize: 18, color: '#059669' }}>¥{totalApoPrice.toLocaleString()}</strong></span>
+            <div style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
+              <span style={{ fontSize: 12, color: '#6a9a7a' }}>獲得 <strong style={{ fontSize: 18, color: '#8b5cf6', fontVariantNumeric: 'tabular-nums' }}>{totalApoCount}</strong>件</span>
+              <span style={{ fontSize: 12, color: '#6a9a7a' }}>計 <strong style={{ fontSize: 15, color: '#059669', fontVariantNumeric: 'tabular-nums' }}>¥{totalApoPrice.toLocaleString()}</strong></span>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {/* ランク別 */}
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#6a9a7a', marginBottom: 10 }}>ランク別（獲得件数）</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#b0c8ba', marginBottom: 6 }}>ランク別（件数 / 金額）</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {rankData.map(({ rank, color, count, price }) => (
-                  <div key={rank} style={{ background: color + '10', border: `1.5px solid ${color}44`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color, marginBottom: 4 }}>ランク {rank}</div>
-                    <div style={{ fontSize: 24, fontWeight: 900, color, lineHeight: 1 }}>{count}<span style={{ fontSize: 13, fontWeight: 600, marginLeft: 2 }}>件</span></div>
-                    <div style={{ fontSize: 13, color: color + 'aa', marginTop: 4 }}>{price > 0 ? '¥' + price.toLocaleString() : '—'}</div>
+                  <div key={rank} style={{ background: color + '0d', border: `1px solid ${color}33`, borderRadius: 8, padding: '6px 8px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 800, color, marginBottom: 2 }}>ランク {rank}</div>
+                    <div style={{ fontSize: 20, fontWeight: 900, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{count}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>件</span></div>
+                    <div style={{ fontSize: 11, color: color + 'aa', marginTop: 2 }}>{price > 0 ? '¥' + price.toLocaleString() : '—'}</div>
                   </div>
                 ))}
               </div>
             </div>
             {/* アポ種別 */}
             <div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#6a9a7a', marginBottom: 10 }}>アポ種別（獲得件数）</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#b0c8ba', marginBottom: 6 }}>アポ種別（件数 / 金額）</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {typeData.map(({ type, color, count, price }) => (
-                  <div key={type} style={{ background: color + '10', border: `1.5px solid ${color}44`, borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color }}>{type}</span>
+                  <div key={type} style={{ background: color + '0d', border: `1px solid ${color}33`, borderRadius: 8, padding: '7px 10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color }}>{type}</span>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 22, fontWeight: 900, color, lineHeight: 1 }}>{count}<span style={{ fontSize: 13, fontWeight: 600, marginLeft: 2 }}>件</span></div>
-                      <div style={{ fontSize: 13, color: color + 'aa', marginTop: 2 }}>{price > 0 ? '¥' + price.toLocaleString() : '—'}</div>
+                      <div style={{ fontSize: 18, fontWeight: 900, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{count}<span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>件</span></div>
+                      <div style={{ fontSize: 11, color: color + 'aa', marginTop: 1 }}>{price > 0 ? '¥' + price.toLocaleString() : '—'}</div>
                     </div>
                   </div>
                 ))}
@@ -273,14 +289,14 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
 
         {/* ポータル課金 */}
         <div style={{ ...card, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 4, height: 16, background: '#f59e0b', borderRadius: 2, display: 'inline-block' }} />
+              <span style={{ width: 4, height: 16, background: '#f59e0b', borderRadius: 2 }} />
               <span style={{ fontSize: 13, fontWeight: 700, color: '#174f35' }}>ポータルサイト 課金管理</span>
             </div>
-            <span style={{ fontSize: 13, color: '#6a9a7a' }}>合計 <strong style={{ fontSize: 20, color: '#f59e0b' }}>¥{cost.toLocaleString()}</strong></span>
+            <span style={{ fontSize: 12, color: '#6a9a7a' }}>合計 <strong style={{ fontSize: 18, color: '#f59e0b', fontVariantNumeric: 'tabular-nums' }}>¥{cost.toLocaleString()}</strong></span>
           </div>
-          <div style={{ display: 'flex', gap: 8, flex: 1 }}>
+          <div style={{ display: 'flex', gap: 6, flex: 1 }}>
             {getPortalSites().map(site => {
               const sl = portal.filter(l => l.portal_site === site);
               const sc = sl.filter(isCharged).reduce((s, l) => s + getPortalPrice(l.portal_site, l.portal_type), 0);
@@ -289,21 +305,21 @@ export function DashboardPage({ leads, currentUser, onNavigate, masterVer, isMob
               const charged = sl.filter(isCharged).length;
               const free = sl.filter(l => l.charge_applied).length;
               return (
-                <div key={site} style={{ background: '#f8fbf9', borderRadius: 10, padding: '14px', border: '1px solid #e2f0e8', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#174f35' }}>{site}</div>
-                  <div style={{ fontSize: 22, fontWeight: 900, color: '#174f35', lineHeight: 1 }}>{sl.length}<span style={{ fontSize: 13, color: '#6a9a7a', marginLeft: 2 }}>件</span></div>
-                  <div style={{ fontSize: 13, color: '#b0c8ba' }}>課金{charged} / 対象外{free}</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: '#f59e0b' }}>¥{sc.toLocaleString()}</div>
-                  <div style={{ fontSize: 13, color: '#b0c8ba' }}>単価 {unit}</div>
+                <div key={site} style={{ background: '#f8fbf9', borderRadius: 8, padding: '10px 12px', border: '1px solid #e2f0e8', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#174f35' }}>{site}</div>
+                  <div style={{ fontSize: 18, fontWeight: 900, color: '#174f35', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{sl.length}<span style={{ fontSize: 11, color: '#6a9a7a', marginLeft: 2 }}>件</span></div>
+                  <div style={{ fontSize: 11, color: '#b0c8ba' }}>課金{charged} / 対象外{free}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#f59e0b', fontVariantNumeric: 'tabular-nums' }}>¥{sc.toLocaleString()}</div>
+                  <div style={{ fontSize: 11, color: '#b0c8ba' }}>単価 {unit}</div>
                 </div>
               );
             })}
-            <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '14px', border: '1px solid #a7f3d0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 6 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <CheckCircleIcon size={13} color="#059669" /> 対象外申請済
+            <div style={{ background: '#f0fdf4', borderRadius: 8, padding: '10px 12px', border: '1px solid #a7f3d0', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 3 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <CheckCircleIcon size={12} color="#059669" /> 対象外申請済
               </div>
-              <div style={{ fontSize: 22, fontWeight: 900, color: '#059669', lineHeight: 1 }}>{applied.length}<span style={{ fontSize: 13, marginLeft: 2 }}>件</span></div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#10b981' }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#059669', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{applied.length}<span style={{ fontSize: 11, marginLeft: 2 }}>件</span></div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#10b981', fontVariantNumeric: 'tabular-nums' }}>
                 節約 ¥{applied.reduce((s, l) => s + getPortalPrice(l.portal_site, l.portal_type), 0).toLocaleString()}
               </div>
             </div>

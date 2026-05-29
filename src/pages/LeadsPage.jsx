@@ -18,7 +18,7 @@ import { updateZohoLeadStatus } from '../lib/zoho.js';
 import { Pagination } from '../components/ui/Pagination.jsx';
 import { Toast } from '../components/ui/Toast.jsx';
 
-export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile, onGoToZohoSettings }) {
+export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBulkAdd, onReplaceFromServer, initialFilter, onFilterConsumed, initialOpenId, onOpenIdConsumed, currentUser, readOnly, isMobile, onGoToZohoSettings }) {
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [showImport, setShowImport] = useState(false);
@@ -252,6 +252,12 @@ export function LeadsPage({ leads, onAdd, onUpdate, onDelete, onAddAction, onBul
               openId={openId}
               setOpenId={setOpenId}
               isMobile={isMobile}
+              onSyncResult={(updatedLeads) => {
+                // サーバーから返ってきた更新後のリード配列を親stateに反映
+                // （サーバー側で既に保存済みなので、追加の保存処理は不要）
+                if (onReplaceFromServer) onReplaceFromServer(updatedLeads);
+                showToast('Zoho同期が完了しました');
+              }}
             />
           ) : (
             <>

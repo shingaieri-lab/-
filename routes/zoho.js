@@ -189,6 +189,99 @@ router.get('/api/zoho/users', requireAuth, rateLimit, async (req, res) => {
   }
 });
 
+// Zohoから商談確定リードの「営業確度（初回商談時）」「ステージ」を一括同期
+// 対象：status==='商談確定' かつ zoho_lead_id があるリード
+//
+// フロー：
+//   ① zoho_deal_id をすでに持っていればそれを使う（キャッシュ）
+//   ② 持っていなければ Zoho Lead API を叩いて、コンバート済み Lead から Deal ID を取得
+//      （Zohoでは Lead を Deal にコンバートすると Lead.$converted_detail.Deals に Deal IDが入る）
+//   ③ Deal ID で /Deals/{id} を取得し field46（営業確度）と Stage（ステージ）を抽出
+//   ④ 取得した zoho_deal_id / sales_accuracy / deal_stage / sales_synced_at を本ツールに保存
+router.post('/api/zoho/sync-deals', requireAuth, rateLimit, async (req, res) => {
+  // outboundロール（業務委託）は同期不可（アポ一覧自体が非表示のため一貫性を保つ）
+  const accounts = (await readData('accounts')) || [];
+  const account = accounts.find(a => a.id === req.accountId);
+  if (account?.role === 'outbound') {
+    return res.status(403).json({ error: 'この機能を実行する権限がありません' });
+  }
+
+  try {
+    const leads = (await readData('leads')) || [];
+    // 同期対象：商談確定 かつ Zoho連携済み（zoho_lead_id あり）のリード
+    const targets = leads.filter(l => l.status === '商談確定' && l.zoho_lead_id);
+    // スキップ対象：商談確定だが Zoho 連携されていない（Zoho外で作成されたリード）
+    const skipped = leads.filter(l => l.status === '商談確定' && !l.zoho_lead_id).length;
+
+    if (targets.length === 0) {
+      return res.json({ ok: true, synced: 0, total: 0, skipped, leads });
+    }
+
+    const fetchedAt = new Date().toISOString();
+    // 並列でDeal情報を取得（Zoho APIのレート制限を考慮し、過剰並列は避ける）
+    const results = await Promise.all(
+      targets.map(async (lead) => {
+        try {
+          let dealId = lead.zoho_deal_id;
+
+          // ① キャッシュがなければ、Lead から Deal を逆引き
+          if (!dealId) {
+            const leadResp = await zohoApi('GET', `/Leads/${lead.zoho_lead_id}`);
+            const leadRec = leadResp.data?.[0];
+            if (!leadRec) return { leadId: lead.id, error: 'Zohoリードが見つかりません' };
+            if (!leadRec.$converted) return { leadId: lead.id, error: 'Zoho側でまだ商談化されていません' };
+            // $converted_detail.Deals に Deal ID が入る（V2 API）
+            dealId = leadRec.$converted_detail?.Deals;
+            if (!dealId) return { leadId: lead.id, error: '商談情報の取得に失敗しました' };
+          }
+
+          // ② Deal情報を取得して営業確度・ステージを抜き出す
+          const dealResp = await zohoApi('GET', `/Deals/${dealId}`);
+          const deal = dealResp.data?.[0];
+          if (!deal) return { leadId: lead.id, error: 'Zoho商談が見つかりません' };
+
+          return {
+            leadId:          lead.id,
+            zoho_deal_id:    dealId,            // 次回以降のキャッシュ
+            sales_accuracy:  deal.field46 || '',  // 営業確度（初回商談時）
+            deal_stage:      deal.Stage    || '',  // ステージ
+            sales_synced_at: fetchedAt,
+          };
+        } catch (e) {
+          return { leadId: lead.id, error: e.message };
+        }
+      })
+    );
+
+    // 成功した結果でリードを更新
+    const successResults = results.filter(r => r && !r.error);
+    const updatedLeads = leads.map(l => {
+      const r = successResults.find(r => r.leadId === l.id);
+      if (!r) return l;
+      return {
+        ...l,
+        zoho_deal_id:    r.zoho_deal_id,
+        sales_accuracy:  r.sales_accuracy,
+        deal_stage:      r.deal_stage,
+        sales_synced_at: r.sales_synced_at,
+      };
+    });
+
+    await writeData('leads', updatedLeads);
+
+    res.json({
+      ok: true,
+      synced: successResults.length,
+      total: targets.length,
+      skipped,
+      errors: results.filter(r => r && r.error).map(r => ({ leadId: r.leadId, error: r.error })),
+      leads: updatedLeads,
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // 【開発用】Zohoの指定モジュールのフィールド一覧を取得
 // 営業確度・ステージなど、ZohoのAPI名（半角英数字）を確認するためのデバッグ用
 // 管理者のみ実行可能

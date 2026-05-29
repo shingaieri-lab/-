@@ -64,3 +64,12 @@ export async function fetchZohoModuleFields(module = 'Deals') {
   if (!res.ok) throw new Error(data.error || 'フィールド取得失敗');
   return data.fields;
 }
+
+// Zohoから商談確定リード全件の営業確度・ステージを同期取得
+// 返却: { ok, synced, total, skipped, errors, leads }
+export async function syncZohoDeals() {
+  const res = await fetch('/api/zoho/sync-deals', { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || '同期失敗');
+  return data;
+}

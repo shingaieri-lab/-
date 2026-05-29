@@ -150,6 +150,9 @@ const mut = (next) => { setLeads(next); saveLeads(next); };
   const deleteLead = (id)      => mut(leads.filter(l => l.id !== id));
   const addAction  = (id, act) => mut(leads.map(l => l.id === id
     ? { ...l, actions: [{ ...act, recorded_by: currentUser?.name || "" }, ...(l.actions || [])] } : l));
+  // サーバー側で既に保存済みのリード配列を反映する（saveLeadsは呼ばない）
+  // Zoho同期など、サーバー応答で完成形のリードが返ってくるケースで使う
+  const replaceLeadsFromServer = (newLeads) => setLeads(newLeads);
 
   if (!loaded) return <Splash />;
   if (!currentUser) return <LoginScreen onLogin={selectUser} />;
@@ -164,6 +167,7 @@ const mut = (next) => { setLeads(next); saveLeads(next); };
         {page === "trend"     && <Trend leads={leads} apoLeads={apoLeads} />}
         {page === "leads"     && <LeadsPage leads={leads} initialFilter={dashFilter} onFilterConsumed={()=>setDashFilter(null)} initialOpenId={aiOpenLeadId} onOpenIdConsumed={()=>setAiOpenLeadId(null)} onAdd={addLead} onUpdate={updateLead} onDelete={deleteLead} onAddAction={addAction} currentUser={currentUser} isMobile={isMobile} readOnly={false}
           onBulkAdd={newLeads => { const next = [...newLeads, ...leads]; setLeads(next); saveLeads(next); }}
+          onReplaceFromServer={replaceLeadsFromServer}
           onGoToZohoSettings={() => { setSettingsTab("zoho"); navigate("settings"); }} />}
         {page === "ai"        && <AIPage leads={leads} onAdd={addLead} onUpdate={updateLead} onAddAction={addAction} goLeads={(leadId) => { setAiOpenLeadId(leadId||null); navigate("leads"); }} goCalendar={() => navigate("calendar")} aiConfig={effectiveAiConfig} currentUser={currentUser} isMobile={isMobile} />}
         {page === "calendar"  && <CalendarPage candidateSlots={candidateSlots} onSlotsChange={setCandidateSlots} slots={calendarSlots} setSlots={setCalendarSlots} searched={calendarSearched} setSearched={setCalendarSearched} searchedMembers={calendarSearchedMembers} setSearchedMembers={setCalendarSearchedMembers} onGoEmail={(leadId)=>{ setCalendarLeadId(leadId); navigate("email"); }} currentUser={currentUser} leads={leads} />}

@@ -4,9 +4,11 @@ import { S } from '../../styles/index.js';
 import { IS_COLORS, getSourceIcon, getSourceColor } from '../../lib/master.js';
 import { SourceIconSVG } from '../ui/SourceIconSVG.jsx';
 import { ACCURACY_COLORS, extractAccuracyRank, categorizeStage, STAGE_CATEGORIES } from '../../lib/salesAnalytics.js';
+import { InboundApoSyncBar } from './InboundApoSyncBar.jsx';
 
 // 親コンポーネント（LeadsPage）から status==='商談確定' に絞り込み済みの leads を受け取る
-export function InboundAppointmentList({ leads: apoLeads, openId, setOpenId, isMobile }) {
+// onSyncResult: Zoho同期完了時に呼ばれる。更新後のリード配列が渡される
+export function InboundAppointmentList({ leads: apoLeads, openId, setOpenId, isMobile, onSyncResult }) {
   // フィルター状態
   const [fIS, setFIS]         = useState('');
   const [fSource, setFSource] = useState('');
@@ -86,6 +88,9 @@ export function InboundAppointmentList({ leads: apoLeads, openId, setOpenId, isM
           </div>
         )}
       </div>
+
+      {/* Zoho同期バー（手動同期＋自動同期は別コンポーネントに分離） */}
+      <InboundApoSyncBar apoLeads={apoLeads} onSyncResult={onSyncResult} />
 
       {/* フィルターバー */}
       <div className="filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

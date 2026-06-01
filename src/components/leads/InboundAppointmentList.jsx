@@ -95,31 +95,35 @@ export function InboundAppointmentList({ leads: apoLeads, openId, setOpenId, isM
         transform: 'translateZ(0)',
         willChange: 'transform',
       }}>
-        {/* サマリーバー：合計＋ランク別件数 */}
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, background: '#fff', border: '1px solid #e2f0e8', borderRadius: 10, padding: '10px 16px', boxShadow: '0 1px 6px #0569690a' }}>
-            <span style={{ fontSize: 12, color: '#6a9a7a', fontWeight: 700 }}>アポ件数</span>
-            <span style={{ fontSize: 24, fontWeight: 900, color: '#059669', lineHeight: 1 }}>{stats.total}</span>
-            <span style={{ fontSize: 12, color: '#6a9a7a' }}>件</span>
+        {/* サマリー＋Zoho同期バーの横並び行：上部の余白を活用してコンパクトに
+            画面幅が足りない場合は flexWrap で自動的に折り返す */}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          {/* サマリーバー：合計＋ランク別件数 */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, background: '#fff', border: '1px solid #e2f0e8', borderRadius: 10, padding: '10px 16px', boxShadow: '0 1px 6px #0569690a' }}>
+              <span style={{ fontSize: 12, color: '#6a9a7a', fontWeight: 700 }}>アポ件数</span>
+              <span style={{ fontSize: 24, fontWeight: 900, color: '#059669', lineHeight: 1 }}>{stats.total}</span>
+              <span style={{ fontSize: 12, color: '#6a9a7a' }}>件</span>
+            </div>
+            {['A', 'B', 'C', 'D'].map(r => (
+              <div key={r} style={{ display: 'flex', alignItems: 'baseline', gap: 6, background: '#fff', border: `1.5px solid ${ACCURACY_COLORS[r]}44`, borderRadius: 10, padding: '10px 14px', boxShadow: '0 1px 6px #0569690a' }}>
+                <span style={{ fontSize: 13, color: ACCURACY_COLORS[r], fontWeight: 800 }}>{r}</span>
+                <span style={{ fontSize: 20, fontWeight: 900, color: ACCURACY_COLORS[r], lineHeight: 1 }}>{stats.ranks[r]}</span>
+                <span style={{ fontSize: 11, color: ACCURACY_COLORS[r] + 'aa' }}>件</span>
+              </div>
+            ))}
+            {stats.ranks.unset > 0 && (
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, background: '#fff', border: '1.5px solid #d1d5db', borderRadius: 10, padding: '10px 14px' }}>
+                <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 800 }}>未設定</span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: '#6b7280' }}>{stats.ranks.unset}</span>
+                <span style={{ fontSize: 11, color: '#6b7280aa' }}>件</span>
+              </div>
+            )}
           </div>
-          {['A', 'B', 'C', 'D'].map(r => (
-            <div key={r} style={{ display: 'flex', alignItems: 'baseline', gap: 6, background: '#fff', border: `1.5px solid ${ACCURACY_COLORS[r]}44`, borderRadius: 10, padding: '10px 14px', boxShadow: '0 1px 6px #0569690a' }}>
-              <span style={{ fontSize: 13, color: ACCURACY_COLORS[r], fontWeight: 800 }}>{r}</span>
-              <span style={{ fontSize: 20, fontWeight: 900, color: ACCURACY_COLORS[r], lineHeight: 1 }}>{stats.ranks[r]}</span>
-              <span style={{ fontSize: 11, color: ACCURACY_COLORS[r] + 'aa' }}>件</span>
-            </div>
-          ))}
-          {stats.ranks.unset > 0 && (
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, background: '#fff', border: '1.5px solid #d1d5db', borderRadius: 10, padding: '10px 14px' }}>
-              <span style={{ fontSize: 12, color: '#6b7280', fontWeight: 800 }}>未設定</span>
-              <span style={{ fontSize: 18, fontWeight: 900, color: '#6b7280' }}>{stats.ranks.unset}</span>
-              <span style={{ fontSize: 11, color: '#6b7280aa' }}>件</span>
-            </div>
-          )}
-        </div>
 
-        {/* Zoho同期バー（手動同期＋自動同期は別コンポーネントに分離） */}
-        <InboundApoSyncBar apoLeads={apoLeads} onSyncResult={onSyncResult} />
+          {/* Zoho同期バー（手動同期＋自動同期は別コンポーネントに分離） */}
+          <InboundApoSyncBar apoLeads={apoLeads} onSyncResult={onSyncResult} />
+        </div>
 
         {/* フィルターバー */}
         <div className="filter-bar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

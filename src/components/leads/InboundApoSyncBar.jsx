@@ -86,27 +86,11 @@ export function InboundApoSyncBar({ apoLeads, onSyncResult }) {
   if (!window.__appData?.zohoAuthenticated) return null;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8 }}>
+    // 外側コンテナは余計な背景・枠なしのプレーン flex 列。サマリーカード列の右側に並べる際にスッキリ見えるように
+    // ボタン自体が minHeight: 44 を持つので、件数カード（高さ約44px）と揃って見える
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <button
-          onClick={() => handleSync(false)}
-          disabled={syncing}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: '10px 18px',          // タッチターゲット44pxを満たすパディング
-            minHeight: 44,                  // WCAG推奨の44×44pxを確保
-            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
-            color: '#fff', border: 'none', borderRadius: 8,
-            fontSize: 12, fontWeight: 700, cursor: syncing ? 'wait' : 'pointer',
-            fontFamily: 'inherit',
-            opacity: syncing ? 0.75 : 1,    // 0.7以上を維持（UX_RULES準拠）
-          }}
-        >
-          {syncing
-            ? <><SpinnerIcon size={12} color="#fff" /> 同期中…</>
-            : <><ExternalLinkIcon size={12} color="#fff" /> Zohoから営業確度・ステージを同期</>
-          }
-        </button>
+        {/* 左側：最終同期日時・結果メッセージ・エラートグル（ボタンより前に配置） */}
         {lastSyncedAt && (
           <span style={{ fontSize: 11, color: '#0369a1' }}>
             最終同期：{new Date(lastSyncedAt).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
@@ -128,6 +112,26 @@ export function InboundApoSyncBar({ apoLeads, onSyncResult }) {
             ⚠ {syncErrors.length}件失敗 {errorsOpen ? '▲' : '▼'}
           </button>
         )}
+        {/* 右側：同期ボタン（最後に配置することで row 内の右端に並ぶ） */}
+        <button
+          onClick={() => handleSync(false)}
+          disabled={syncing}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '10px 18px',          // タッチターゲット44pxを満たすパディング
+            minHeight: 44,                  // WCAG推奨の44×44pxを確保（件数カードと同じ高さ）
+            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+            color: '#fff', border: 'none', borderRadius: 8,
+            fontSize: 12, fontWeight: 700, cursor: syncing ? 'wait' : 'pointer',
+            fontFamily: 'inherit',
+            opacity: syncing ? 0.75 : 1,    // 0.7以上を維持（UX_RULES準拠）
+          }}
+        >
+          {syncing
+            ? <><SpinnerIcon size={12} color="#fff" /> 同期中…</>
+            : <><ExternalLinkIcon size={12} color="#fff" /> Zohoから営業確度・ステージを同期</>
+          }
+        </button>
       </div>
       {/* 個別エラーの詳細リスト：失敗したリードごとに会社名とエラー内容を表示 */}
       {syncErrors.length > 0 && errorsOpen && (

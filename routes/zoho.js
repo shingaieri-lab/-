@@ -249,8 +249,17 @@ router.post('/api/zoho/sync-deals', requireAuth, rateLimit, async (req, res) => 
                 } else if (!leadRec.$converted) {
                   return { leadId: lead.id, error: 'Zoho側でまだ商談化されていません' };
                 } else {
-                  dealId = leadRec.$converted_detail?.Deals;
-                  if (!dealId) return { leadId: lead.id, error: '商談情報の取得に失敗しました' };
+                  // $converted_detail は Zoho APIのバージョン・設定によって構造が異なる：
+                  //   - 文字列:   "5928382000000123457"
+                  //   - オブジェクト: { id: "5928382...", name: "Deal名" }
+                  //   - 配列:     [{ Deals: "..." or {id,name}, ... }]
+                  // いずれの形式でも Deal ID を取り出せるよう防御的にパースする
+                  const detail = Array.isArray(leadRec.$converted_detail)
+                    ? leadRec.$converted_detail[0]
+                    : leadRec.$converted_detail;
+                  const dealsRef = detail?.Deals;
+                  dealId = typeof dealsRef === 'string' ? dealsRef : dealsRef?.id;
+                  if (!dealId) return { leadId: lead.id, error: '商談情報の取得に失敗しました（$converted_detail.Deals が空）' };
                 }
               }
             }

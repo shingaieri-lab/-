@@ -45,7 +45,9 @@ export const DEMO_LEADS = [
     meeting_date: '2026-05-20', meeting_time: '14:00',
     next_action_date: '2026-05-20', next_action_time: '14:00',
     next_action: '初回商談（オンライン）',
-    mql: 'MQL', zoho_url: '', hp_url: '', is_accuracy: '高',
+    mql: 'MQL', zoho_url: '', hp_url: '', is_accuracy: 'A（80％）',
+    // Zoho同期で取得される想定のダミー値（demo用）：営業も A 評価、ステージは商談中
+    sales_accuracy: 'A（80％）', deal_stage: 'メリットの訴求', sales_synced_at: '2026-05-25T10:00:00.000Z',
     created_at: 1743638400000,
     actions: [
       { id: 'a01a', date: '2026-04-03', time: '10:15', type: 'call', result: '取次', summary: 'HP問い合わせ後、即日折り返し架電。担当者に繋いでもらった。', talkPoints: ['予算感：3,000万円台', '希望エリア：都内南部'], next: '翌日再架電', nextDate: '2026-04-04', recorded_by: '田中 みなみ' },
@@ -61,7 +63,9 @@ export const DEMO_LEADS = [
     meeting_date: '2026-05-22', meeting_time: '11:00',
     next_action_date: '2026-05-22', next_action_time: '11:00',
     next_action: '第2回商談',
-    mql: 'MQL', zoho_url: '', hp_url: '', is_accuracy: '高',
+    mql: 'MQL', zoho_url: '', hp_url: '', is_accuracy: 'B（60％）',
+    // Zoho同期で取得される想定のダミー値：受注に至ったケース
+    sales_accuracy: 'B（60％）', deal_stage: '受注', sales_synced_at: '2026-05-25T10:00:00.000Z',
     created_at: 1744675200000,
     actions: [
       { id: 'a02a', date: '2026-04-15', time: '13:30', type: 'call', result: '取次', summary: 'HP経由問い合わせ。社長自ら対応。事業拡大のため物件探し中。', talkPoints: ['予算：1億円以上', '倉庫・事務所併設希望'], next: '詳細ヒアリング', nextDate: '2026-04-17', recorded_by: '佐藤 ゆり' },
@@ -76,7 +80,9 @@ export const DEMO_LEADS = [
     meeting_date: '2026-05-19', meeting_time: '10:00',
     next_action_date: '2026-05-19', next_action_time: '10:00',
     next_action: '初回商談',
-    mql: 'MQL', zoho_url: '', hp_url: '', is_accuracy: '中',
+    mql: 'MQL', zoho_url: '', hp_url: '', is_accuracy: 'C（40％）',
+    // Zoho同期で取得される想定のダミー値：失注に至ったケース
+    sales_accuracy: 'D（20％）', deal_stage: '失注', sales_synced_at: '2026-05-25T10:00:00.000Z',
     created_at: 1746057600000,
     actions: [
       { id: 'a03a', date: '2026-05-01', time: '11:00', type: 'call', result: '折り返し約束', summary: 'SUUMO反響。先方から折り返し希望。14時に再架電予約。', talkPoints: [], next: '再架電', nextDate: '2026-05-01', recorded_by: '山田 けいた' },
